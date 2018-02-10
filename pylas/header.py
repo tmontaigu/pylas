@@ -44,6 +44,11 @@ class BinaryReader:
         else:
             fmt_str = type_name_to_struct[data_type]
         b = self.stream.read(length)
+
+        # unpack returns a tuple even if the format string
+        # has only one element
+        if num > 1 and data_type != 'str':
+            return struct.unpack(fmt_str, b)
         return struct.unpack(fmt_str, b)[0]
 
 
@@ -99,6 +104,10 @@ class RawHeader:
         self.y_min = 0
         self.z_max = 0
         self.z_min = 0
+        # Added in las 1.3
+        self.start_of_waveform_data_packet_record = None
+
+
 
     @classmethod
     def read_from(cls, stream):
@@ -130,9 +139,11 @@ class RawHeader:
         header.x_max = data_stream.read('double')
         header.x_min = data_stream.read('double')
         header.y_max = data_stream.read('double')
-        header.y_max = data_stream.read('double')
+        header.y_min = data_stream.read('double')
+        header.z_max = data_stream.read('double')
         header.z_min = data_stream.read('double')
-        header.z_min = data_stream.read('double')
+        if header.version_major >= 1 and header.version_minor >= 3:
+            header.start_of_waveform_data_packet_record = data_stream.read('uint64')
         return header
 
 
