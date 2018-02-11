@@ -166,3 +166,5 @@ def test_blue(read_simple):
     f = read_simple
     assert f.blue.max() == 249
     assert f.blue.min() == 56
+
+
