@@ -10,6 +10,8 @@ class RawVLR:
         self.description = None
         self.record_data = None
 
+    def write_to(self, out):
+        pass
 
     @classmethod
     def read_from(cls, data_stream):
@@ -24,5 +26,3 @@ class RawVLR:
         if raw_vlr.record_length_after_header > 0:
             raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
         return raw_vlr
-
-

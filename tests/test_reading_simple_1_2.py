@@ -1,6 +1,8 @@
-import pytest
+import io
 import os
+
 import numpy as np
+import pytest
 
 from pylas.lasdata import LasData
 
@@ -168,3 +170,11 @@ def test_blue(read_simple):
     assert f.blue.min() == 56
 
 
+def test_nothing_changes(open_simple):
+    true_buffer = open_simple.read()
+    las = LasData.from_buffer(true_buffer)
+    out = io.BytesIO()
+    las.write_to(out)
+    buf = out.getvalue()
+
+    assert buf == true_buffer

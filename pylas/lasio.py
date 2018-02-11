@@ -63,5 +63,9 @@ class BinaryWriter:
             fmt_str = '{}{}'.format(num, type_name_to_struct[data_type])
         else:
             fmt_str = type_name_to_struct[data_type]
-        b = struct.pack(fmt_str, values)
+
+        if num > 1 and data_type != 'str':
+            b = struct.pack(fmt_str, *values)
+        else:
+            b = struct.pack(fmt_str, values)
         return self.stream.write(b)

@@ -1,3 +1,5 @@
+import io
+
 from pylas import pointdata, header, vlr
 from pylas import pointdimensions
 
@@ -171,7 +173,19 @@ class LasData:
     def blue(self, value):
         self.np_point_data['blue'] = value
 
+    def write_to(self, out_stream):
+        self.header.write_to(out_stream)
+        for _vlr in self.vlrs:
+            _vlr.write_to(out_stream)
+        self.np_point_data.write_to(out_stream)
+
+
     @classmethod
     def from_file(cls, filename):
         with open(filename, mode='rb') as f:
             return cls(f)
+
+    @classmethod
+    def from_buffer(cls, buf):
+        with io.BytesIO(buf) as stream:
+            return cls(stream)

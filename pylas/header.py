@@ -1,7 +1,7 @@
 import ctypes
 from collections import namedtuple
 
-from .lasio import BinaryReader, type_lengths, type_name_to_struct
+from .lasio import BinaryReader, type_lengths, BinaryWriter
 
 FILE_MAJOR_OFFSET_BYTES = 24
 
@@ -20,15 +20,6 @@ class RawGUID:
         self.data_2 = 0
         self.data_3 = 0
         self.data_4 = b'\x00' * type_lengths['uint8'] * 8
-
-    @classmethod
-    def read_from(cls, data_stream):
-        guid = cls()
-        guid.data_1 = data_stream.read('uint32')
-        guid.data_2 = data_stream.read('uint16')
-        guid.data_3 = data_stream.read('uint16')
-        guid.data_4 = data_stream.read('uint8', num=8)
-        return guid
 
 
 LAS_FILE_SIGNATURE = b'LASF'
@@ -122,6 +113,23 @@ class RawHeader:
         self.number_of_points_record_ = None
         self.number_of_points_by_return_ = None
 
+    def write_to(self, out_stream):
+        out_stream = BinaryWriter(out_stream)
+
+        for field in LAS_1_1_HEADER_FIELDS:
+            val = getattr(self, field.name)
+            out_stream.write(val, field.type, num=field.num)
+
+        if self.version_major >= 1 and self.version_minor >= 3:
+            for field in ADDITIONAL_LAS_1_3_FIELDS:
+                val = getattr(self, field.name)
+                out_stream.write(val, field.type, num=field.num)
+
+        if self.version_major >= 1 and self.version_minor >= 4:
+            for field in ADDITIONAL_LAS_1_4_FIELDS:
+                val = getattr(self, field.name)
+                out_stream.write(val, field.type, num=field.num)
+
     @classmethod
     def read_from(cls, stream):
         raw_header = cls()
@@ -143,14 +151,3 @@ class RawHeader:
                 setattr(raw_header, field.name, val)
 
         return raw_header
-
-
-
-class Spec:
-    def __init__(self, name, type_name, num=1):
-        self.name = name,
-        if num > 1:
-            self.struct_type = "{}{}".format(num, type_name_to_struct[type_name])
-        else:
-            self.struct_type = type_name_to_struct[type_name]
-        self.length = type_lengths[type_name] * num
