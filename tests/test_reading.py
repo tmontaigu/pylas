@@ -1,10 +1,17 @@
 import pytest
+import  os
+
 from pylas.lasdata import LasData
 
 
 @pytest.fixture()
 def read_simple():
     return LasData.from_file('simple.las')
+
+
+@pytest.fixture()
+def open_simple():
+    return open('simple.las', mode='rb')
 
 
 def test_raw_header(read_simple):
@@ -46,3 +53,10 @@ def test_waveform_is_none(read_simple):
 def test_no_vlr_for_simple(read_simple):
     f = read_simple
     assert f.vlrs == []
+
+
+def every_byte_has_been_read(open_simple):
+    fp = open_simple
+    _ = LasData(fp)
+    assert fp.tell() == os.path.getsize('simple.las')
+    fp.close()

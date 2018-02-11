@@ -19,6 +19,31 @@ class LasData:
             self.header.number_of_point_records
         )
 
+        # These dimensions have to be repacked together when writing
+        self.return_number = pointdimensions.bit_transform(
+            self.np_point_data['bit_fields'],
+            pointdimensions.RETURN_NUMBER_LOW_BIT,
+            pointdimensions.RETURN_NUMBER_HIGH_BIT
+        )
+
+        self.number_of_returns = pointdimensions.bit_transform(
+            self.np_point_data['bit_fields'],
+            pointdimensions.NUMBER_OF_RETURNS_LOW_BIT,
+            pointdimensions.NUMBER_OF_RETURNS_HIGH_BIT
+        )
+
+        self.scan_direction_flag = pointdimensions.bit_transform(
+            self.np_point_data['bit_fields'],
+            pointdimensions.SCAN_DIRECTION_FLAG_LOW_BIT,
+            pointdimensions.SCAN_DIRECTION_FLAG_HIGH_BIT
+        )
+
+        self.edge_of_flight_line = pointdimensions.bit_transform(
+            self.np_point_data['bit_fields'],
+            pointdimensions.EDGE_OF_FLIGHT_LINE_LOW_BIT,
+            pointdimensions.EDGE_OF_FLIGHT_LINE_HIGH_BIT
+        )
+
     @property
     def X(self):
         return self.np_point_data['X']
@@ -64,43 +89,8 @@ class LasData:
         self.np_point_data['intensity'] = value
 
     @property
-    def return_number(self):
-        return pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.RETURN_NUMBER_LOW_BIT,
-            pointdimensions.RETURN_NUMBER_HIGH_BIT
-        )
-
-    @property
-    def number_of_returns(self):
-        return pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.NUMBER_OF_RETURNS_LOW_BIT,
-            pointdimensions.NUMBER_OF_RETURNS_HIGH_BIT
-        )
-
-    @property
-    def scan_direction_flag(self):
-        return pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.SCAN_DIRECTION_FLAG_LOW_BIT,
-            pointdimensions.SCAN_DIRECTION_FLAG_HIGH_BIT
-        )
-
-
-    @property
-    def edge_of_flight_line(self):
-        return pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.EDGE_OF_FLIGHT_LINE_LOW_BIT,
-            pointdimensions.EDGE_OF_FLIGHT_LINE_HIGH_BIT
-        )
-
-
-    @property
     def classification(self):
         return self.np_point_data['classification']
-
 
     @property
     def scan_angle_rank(self):
