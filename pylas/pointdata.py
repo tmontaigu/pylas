@@ -1,5 +1,6 @@
 import numpy as np
 from pylas.pointdimensions import point_formats_dtype
+from pylas.errors import PointFormatNotSupported
 
 
 class NumpyPointData:
@@ -14,7 +15,13 @@ class NumpyPointData:
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count=-1):
-        points_dtype = point_formats_dtype[point_format_id]
+        try:
+            points_dtype = point_formats_dtype[point_format_id]
+        except IndexError:
+            raise PointFormatNotSupported("Point format '{}' is not supported".format(
+                point_format_id
+            ))
+
 
         point_data = cls()
         point_data.data = np.fromfile(stream, dtype=points_dtype, count=count)

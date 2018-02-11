@@ -1,0 +1,2 @@
+class PointFormatNotSupported(Exception):
+    pass
