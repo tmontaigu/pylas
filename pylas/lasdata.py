@@ -44,6 +44,31 @@ class LasData:
             pointdimensions.EDGE_OF_FLIGHT_LINE_HIGH_BIT
         )
 
+        # Split raw classification
+        self.classification = pointdimensions.bit_transform(
+            self.np_point_data['raw_classification'],
+            pointdimensions.CLASSIFICATION_LOW_BIT,
+            pointdimensions.CLASSIFICATION_HIGH_BIT
+        )
+
+        self.synthetic = pointdimensions.bit_transform(
+            self.np_point_data['raw_classification'],
+            pointdimensions.SYNTHETIC_LOW_BIT,
+            pointdimensions.SYNTHETIC_HIGH_BIT,
+        ).astype('bool')
+
+        self.key_point = pointdimensions.bit_transform(
+            self.np_point_data['raw_classification'],
+            pointdimensions.KEY_POINT_LOW_BIT,
+            pointdimensions.KEY_POINT_HIGH_BIT
+        ).astype('bool')
+
+        self.withheld = pointdimensions.bit_transform(
+            self.np_point_data['raw_classification'],
+            pointdimensions.WITHHELD_LOW_BIT,
+            pointdimensions.WITHHELD_HIGH_BIT
+        ).astype('bool')
+
     @property
     def X(self):
         return self.np_point_data['X']
@@ -87,10 +112,6 @@ class LasData:
     @intensity.setter
     def intensity(self, value):
         self.np_point_data['intensity'] = value
-
-    @property
-    def classification(self):
-        return self.np_point_data['classification']
 
     @property
     def scan_angle_rank(self):

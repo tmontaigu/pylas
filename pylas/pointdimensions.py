@@ -18,13 +18,23 @@ SCAN_DIRECTION_FLAG_HIGH_BIT = 7
 EDGE_OF_FLIGHT_LINE_LOW_BIT = 7
 EDGE_OF_FLIGHT_LINE_HIGH_BIT = 8
 
+CLASSIFICATION_LOW_BIT = 0
+CLASSIFICATION_HIGH_BIT = 4
+SYNTHETIC_LOW_BIT = 4
+SYNTHETIC_HIGH_BIT = 5
+KEY_POINT_LOW_BIT = 5
+KEY_POINT_HIGH_BIT = 6
+WITHHELD_LOW_BIT = 6
+WITHHELD_HIGH_BIT = 7
+
+
 dimensions = {
     'X': ('X', 'u4'),
     'Y': ('Y', 'u4'),
     'Z': ('Z', 'u4'),
     'intensity': ('intensity', 'u2'),
     'bit_fields': ('bit_fields', 'u1'),
-    'classification': ('classification', 'u1'),
+    'raw_classification': ('raw_classification', 'u1'),
     'scan_angle_rank': ('scan_angle_rank', 'i1'),
     'user_data': ('user_data', 'u1'),
     'point_source_id': ('point_source_id', 'u2'),
@@ -40,7 +50,7 @@ point_format_0 = (
     'Z',
     'intensity',
     'bit_fields',
-    'classification',
+    'raw_classification',
     'scan_angle_rank',
     'user_data',
     'point_source_id'
