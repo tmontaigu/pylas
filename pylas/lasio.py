@@ -41,10 +41,7 @@ class BinaryReader:
             return b''
 
         length = type_lengths[data_type] * num
-        if num > 1:
-            fmt_str = '{}{}'.format(num, type_name_to_struct[data_type])
-        else:
-            fmt_str = type_name_to_struct[data_type]
+        fmt_str = '{}{}{}'.format(self.endian, num, type_name_to_struct[data_type])
         b = self.stream.read(length)
 
         # unpack returns a tuple even if the format string
@@ -57,6 +54,7 @@ class BinaryReader:
         return self.stream.read(type_lengths[data_type])
 
 
+# TODO : endian, remove if-else on num (when writing tests are ready)
 class BinaryWriter:
     def __init__(self, stream):
         self.stream = stream
