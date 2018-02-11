@@ -8,7 +8,6 @@ def scale_dimension(array_dim, scale, offset):
     return (array_dim * scale) + offset
 
 
-# FIXME: I don't think using properties make sense for most of the dimensions
 class LasData:
     def __init__(self, data_stream):
         self.data_stream = data_stream

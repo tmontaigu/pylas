@@ -13,6 +13,11 @@ class RawVLR:
     def write_to(self, out):
         pass
 
+    def __repr__(self):
+        return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
+            self.user_id, self.record_id, self.record_length_after_header
+        )
+
     @classmethod
     def read_from(cls, data_stream):
         bin_reader = BinaryReader(data_stream)
@@ -22,7 +27,6 @@ class RawVLR:
         raw_vlr.record_id = bin_reader.read('uint16')
         raw_vlr.record_length_after_header = bin_reader.read('uint16')
         raw_vlr.description = bin_reader.read('str', num=32)
-        # TODO: what to to in this situation ?
-        if raw_vlr.record_length_after_header > 0:
-            raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
+        # TODO: Warn if empty payload ?
+        raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
         return raw_vlr

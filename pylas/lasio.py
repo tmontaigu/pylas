@@ -37,6 +37,9 @@ class BinaryReader:
         self.endian = '<' if endianness == 'little' else '>'
 
     def read(self, data_type, num=1):
+        if num == 0:
+            return b''
+
         length = type_lengths[data_type] * num
         if num > 1:
             fmt_str = '{}{}'.format(num, type_name_to_struct[data_type])
