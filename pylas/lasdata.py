@@ -14,6 +14,7 @@ class LasData:
         self.vlrs = []
         for _ in range(self.header.number_of_vlr):
             self.vlrs.append(vlr.RawVLR.read_from(self.data_stream))
+
         self.np_point_data = pointdata.NumpyPointData.from_stream(
             self.data_stream,
             self.header.point_data_format_id,

@@ -41,6 +41,7 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
         ('reserved', ctypes.c_uint16, 15)
     ]
 
+
 class BinaryReader:
     def __init__(self, stream):
         self.stream = stream
@@ -101,8 +102,8 @@ class RawHeader:
         self.number_of_vlr = 0
         self.point_data_format_id = 0
         self.point_data_record_length = 0
-        self.number_of_point_records = 0
-        self.number_of_points_by_return = 0
+        self.number_of_point_records = 0  # Legacy-ed in 1.4
+        self.number_of_points_by_return = 0  # Legacy-ed in 1.4
         self.x_scale = 0
         self.y_scale = 0
         self.z_scale = 0
@@ -117,8 +118,11 @@ class RawHeader:
         self.z_min = 0
         # Added in las 1.3
         self.start_of_waveform_data_packet_record = None
-
-
+        # Added in las 1.4
+        self.start_of_first_evlr = None
+        self.number_of_evlr = None
+        self.number_of_points_record_ = None
+        self.number_of_points_by_return_ = None
 
     @classmethod
     def read_from(cls, stream):
@@ -153,8 +157,16 @@ class RawHeader:
         header.y_min = data_stream.read('double')
         header.z_max = data_stream.read('double')
         header.z_min = data_stream.read('double')
+
         if header.version_major >= 1 and header.version_minor >= 3:
             header.start_of_waveform_data_packet_record = data_stream.read('uint64')
+
+        if header.version_major >= 1 and header.version_minor >= 4:
+            header.start_of_first_evlr = data_stream.read('uint64')
+            header.number_of_evlr= data_stream.read('uint32')
+            header.number_of_points_record_ = data_stream.read('uint64')
+            header.number_of_points_by_return_ = data_stream.read('uint64', num=5)
+
         return header
 
 

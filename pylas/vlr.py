@@ -20,7 +20,9 @@ class RawVLR:
         raw_vlr.record_id = bin_reader.read('uint16')
         raw_vlr.record_length_after_header = bin_reader.read('uint16')
         raw_vlr.description = bin_reader.read('str', num=32)
-        raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
+        # TODO: what to to in this situation ?
+        if raw_vlr.record_length_after_header > 0:
+            raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
         return raw_vlr
 
 
