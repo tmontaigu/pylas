@@ -130,6 +130,8 @@ class RawHeader:
                 val = getattr(self, field.name)
                 out_stream.write(val, field.type, num=field.num)
 
+    # FIXME: Maybe we shouldn't continue to read if the file signature is
+    # not LASF ans raise an exception
     @classmethod
     def read_from(cls, stream):
         raw_header = cls()

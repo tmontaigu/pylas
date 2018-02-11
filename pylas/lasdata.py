@@ -23,6 +23,18 @@ class LasData:
             self.header.number_of_point_records
         )
 
+        self.X = self.np_point_data['X']
+        self.Y = self.np_point_data['Y']
+        self.Z = self.np_point_data['Z']
+        self.intensity = self.np_point_data['intensity']
+        self.scan_angle_rank = self.np_point_data['scan_angle_rank']
+        self.user_data = self.np_point_data['user_data']
+        self.point_source_id = self.np_point_data['point_source_id']
+
+        self.x = scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
+        self.y = scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
+        self.z = scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
+
         # These dimensions have to be repacked together when writing
         self.return_number = pointdimensions.bit_transform(
             self.np_point_data['bit_fields'],
@@ -74,74 +86,6 @@ class LasData:
         ).astype('bool')
 
     @property
-    def X(self):
-        return self.np_point_data['X']
-
-    @X.setter
-    def X(self, value):
-        self.np_point_data['X'] = value
-
-    @property
-    def Y(self):
-        return self.np_point_data['Y']
-
-    @Y.setter
-    def Y(self, value):
-        self.np_point_data['Y'] = value
-
-    @property
-    def Z(self):
-        return self.np_point_data['Z']
-
-    @Z.setter
-    def Z(self, value):
-        self.np_point_data['Z'] = value
-
-    @property
-    def x(self):
-        return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
-
-    @property
-    def y(self):
-        return scale_dimension(self.y, self.header.y_scale, self.header.y_offset)
-
-    @property
-    def z(self):
-        return scale_dimension(self.z, self.header.z_scale, self.header.z_offset)
-
-    @property
-    def intensity(self):
-        return self.np_point_data['intensity']
-
-    @intensity.setter
-    def intensity(self, value):
-        self.np_point_data['intensity'] = value
-
-    @property
-    def scan_angle_rank(self):
-        return self.np_point_data['scan_angle_rank']
-
-    @scan_angle_rank.setter
-    def scan_angle_rank(self, value):
-        self.np_point_data['scan_angle_rank'] = value
-
-    @property
-    def user_data(self):
-        return self.np_point_data['user_data']
-
-    @user_data.setter
-    def user_data(self, value):
-        self.np_point_data['user_data'] = value
-
-    @property
-    def point_source_id(self):
-        return self.np_point_data['point_source_id']
-
-    @point_source_id.setter
-    def point_source_id(self, value):
-        self.np_point_data['point_source_id'] = value
-
-    @property
     def gps_time(self):
         return self.np_point_data['gps_time']
 
@@ -178,7 +122,6 @@ class LasData:
         for _vlr in self.vlrs:
             _vlr.write_to(out_stream)
         self.np_point_data.write_to(out_stream)
-
 
     @classmethod
     def from_file(cls, filename):
