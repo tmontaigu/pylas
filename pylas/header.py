@@ -1,4 +1,5 @@
 import ctypes
+from collections import namedtuple
 
 from .lasio import BinaryReader, type_lengths, type_name_to_struct
 
@@ -31,6 +32,54 @@ class RawGUID:
 
 
 LAS_FILE_SIGNATURE = b'LASF'
+
+HeaderField = namedtuple('HeaderField', ('name', 'type', 'num'))
+
+LAS_1_1_HEADER_FIELDS = (
+    HeaderField('file_signature', 'str', 4),
+    HeaderField('file_source_id', 'uint16', 1),
+    HeaderField('reserved', 'uint16', 1),
+    HeaderField('guid_data_1', 'uint32', 1),
+    HeaderField('guid_data_2', 'uint16', 1),
+    HeaderField('guid_data_3', 'uint16', 1),
+    HeaderField('guid_data_4', 'uint8', 8),
+    HeaderField('version_major', 'uint8', 1),
+    HeaderField('version_minor', 'uint8', 1),
+    HeaderField('system_identifier', 'str', 32),
+    HeaderField('generating_software', 'str', 32),
+    HeaderField('creation_day_of_year', 'uint16', 1),
+    HeaderField('creation_year', 'uint16', 1),
+    HeaderField('header_size', 'uint16', 1),
+    HeaderField('offset_to_point_data', 'uint32', 1),
+    HeaderField('number_of_vlr', 'uint32', 1),
+    HeaderField('point_data_format_id', 'uint8', 1),
+    HeaderField('point_data_record_length', 'uint16', 1),
+    HeaderField('number_of_point_records', 'uint32', 1),
+    HeaderField('number_of_points_by_return', 'uint32', 5),
+    HeaderField('x_scale', 'double', 1),
+    HeaderField('y_scale', 'double', 1),
+    HeaderField('z_scale', 'double', 1),
+    HeaderField('x_offset', 'double', 1),
+    HeaderField('y_offset', 'double', 1),
+    HeaderField('z_offset', 'double', 1),
+    HeaderField('x_max', 'double', 1),
+    HeaderField('x_min', 'double', 1),
+    HeaderField('y_max', 'double', 1),
+    HeaderField('y_min', 'double', 1),
+    HeaderField('z_max', 'double', 1),
+    HeaderField('z_min', 'double', 1),
+)
+
+ADDITIONAL_LAS_1_3_FIELDS = (
+    HeaderField('start_of_waveform_data_packet_record', 'uint64', 1),
+)
+
+ADDITIONAL_LAS_1_4_FIELDS = (
+    HeaderField('start_of_first_evlr', 'uint64', 1),
+    HeaderField('number_of_evlr', 'uint32', 1),
+    HeaderField('number_of_points_records', 'uint64', 1),
+    HeaderField('number_of_points_by_return', 'uint64', 5),
+)
 
 
 # TODO: better defaults
@@ -75,48 +124,26 @@ class RawHeader:
 
     @classmethod
     def read_from(cls, stream):
+        raw_header = cls()
         data_stream = BinaryReader(stream)
-        header = cls()
-        header.file_signature = data_stream.read('str', num=4)
-        header.file_source_id = data_stream.read('uint16')
-        header.global_encoding = GlobalEncoding.from_buffer_copy(data_stream.read_raw('uint16'))
-        header.guid = RawGUID.read_from(data_stream)
-        header.version_major = data_stream.read('uint8')
-        header.version_minor = data_stream.read('uint8')
-        header.system_identifier = data_stream.read('str', num=32)
-        header.generating_software = data_stream.read('str', num=32)
-        header.creation_day_of_year = data_stream.read('uint16')
-        header.creation_year = data_stream.read('uint16')
-        header.header_size = data_stream.read('uint16')
-        header.offset_to_point_data = data_stream.read('uint32')
-        header.number_of_vlr = data_stream.read('uint32')
-        header.point_data_format_id = data_stream.read('uint8')
-        header.point_data_record_length = data_stream.read('uint16')
-        header.number_of_point_records = data_stream.read('uint32')
-        header.number_of_points_by_return = data_stream.read('uint32', num=5)
-        header.x_scale = data_stream.read('double')
-        header.y_scale = data_stream.read('double')
-        header.z_scale = data_stream.read('double')
-        header.x_offset = data_stream.read('double')
-        header.y_offset = data_stream.read('double')
-        header.z_offset = data_stream.read('double')
-        header.x_max = data_stream.read('double')
-        header.x_min = data_stream.read('double')
-        header.y_max = data_stream.read('double')
-        header.y_min = data_stream.read('double')
-        header.z_max = data_stream.read('double')
-        header.z_min = data_stream.read('double')
 
-        if header.version_major >= 1 and header.version_minor >= 3:
-            header.start_of_waveform_data_packet_record = data_stream.read('uint64')
+        # There must be a way to factorize this nicely
+        for field in LAS_1_1_HEADER_FIELDS:
+            val = data_stream.read(field.type, num=field.num)
+            setattr(raw_header, field.name, val)
 
-        if header.version_major >= 1 and header.version_minor >= 4:
-            header.start_of_first_evlr = data_stream.read('uint64')
-            header.number_of_evlr= data_stream.read('uint32')
-            header.number_of_points_record_ = data_stream.read('uint64')
-            header.number_of_points_by_return_ = data_stream.read('uint64', num=5)
+        if raw_header.version_major >= 1 and raw_header.version_minor >= 3:
+            for field in ADDITIONAL_LAS_1_3_FIELDS:
+                val = data_stream.read(field.type, num=field.num)
+                setattr(raw_header, field.name, val)
 
-        return header
+        if raw_header.version_major >= 1 and raw_header.version_minor >= 4:
+            for field in ADDITIONAL_LAS_1_4_FIELDS:
+                val = data_stream.read(field.type, num=field.num)
+                setattr(raw_header, field.name, val)
+
+        return raw_header
+
 
 
 class Spec:
