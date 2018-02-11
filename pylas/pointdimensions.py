@@ -60,7 +60,7 @@ point_formats = (
     point_format_0,
     point_format_0 + ('gps_time',),
     point_format_0 + ('red', 'green', 'blue',),
-    point_format_0 + ('red', 'green', 'blue', 'gps_time',),
+    point_format_0 + ('gps_time', 'red', 'green', 'blue'),
 )
 
 point_formats_dtype = tuple(np.dtype(point_format_to_dtype(point_fmt)) for point_fmt in point_formats)

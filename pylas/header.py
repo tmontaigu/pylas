@@ -1,4 +1,5 @@
 import struct
+import ctypes
 
 type_name_to_struct = {
     'uint8': 'B',
@@ -33,6 +34,13 @@ type_lengths = {
 FILE_MAJOR_OFFSET_BYTES = 24
 
 
+class GlobalEncoding(ctypes.LittleEndianStructure):
+    _pack_ = 1
+    _fields_ = [
+        ('gps_time_type', ctypes.c_uint16, 1),
+        ('reserved', ctypes.c_uint16, 15)
+    ]
+
 class BinaryReader:
     def __init__(self, stream):
         self.stream = stream
@@ -50,6 +58,9 @@ class BinaryReader:
         if num > 1 and data_type != 'str':
             return struct.unpack(fmt_str, b)
         return struct.unpack(fmt_str, b)[0]
+
+    def read_raw(self, data_type):
+        return self.stream.read(type_lengths[data_type])
 
 
 class RawGUID:
@@ -115,7 +126,7 @@ class RawHeader:
         header = cls()
         header.file_signature = data_stream.read('str', num=4)
         header.file_source_id = data_stream.read('uint16')
-        header.global_encoding = data_stream.read('uint16')
+        header.global_encoding = GlobalEncoding.from_buffer_copy(data_stream.read_raw('uint16'))
         header.guid = RawGUID.read_from(data_stream)
         header.version_major = data_stream.read('uint8')
         header.version_minor = data_stream.read('uint8')

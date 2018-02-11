@@ -6,6 +6,7 @@ def scale_dimension(array_dim, scale, offset):
     return (array_dim * scale) + offset
 
 
+# FIXME: I don't think using properties make sense for most of the dimensions
 class LasData:
     def __init__(self, data_stream):
         self.data_stream = data_stream
@@ -79,19 +80,19 @@ class LasData:
 
     @property
     def Y(self):
-        return self.np_point_data['X']
+        return self.np_point_data['Y']
 
     @Y.setter
     def Y(self, value):
-        self.np_point_data['X'] = value
+        self.np_point_data['Y'] = value
 
     @property
     def Z(self):
-        return self.np_point_data['X']
+        return self.np_point_data['Z']
 
     @Z.setter
     def Z(self, value):
-        self.np_point_data['X'] = value
+        self.np_point_data['Z'] = value
 
     @property
     def x(self):
@@ -136,6 +137,38 @@ class LasData:
     @point_source_id.setter
     def point_source_id(self, value):
         self.np_point_data['point_source_id'] = value
+
+    @property
+    def gps_time(self):
+        return self.np_point_data['gps_time']
+
+    @gps_time.setter
+    def gps_time(self, value):
+        self.np_point_data['gps_time'] = value
+
+    @property
+    def red(self):
+        return self.np_point_data['red']
+
+    @red.setter
+    def red(self, value):
+        self.np_point_data['red'] = value
+
+    @property
+    def green(self):
+        return self.np_point_data['green']
+
+    @green.setter
+    def green(self, value):
+        self.np_point_data['green'] = value
+
+    @property
+    def blue(self):
+        return self.np_point_data['blue']
+
+    @blue.setter
+    def blue(self, value):
+        self.np_point_data['blue'] = value
 
     @classmethod
     def from_file(cls, filename):

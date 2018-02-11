@@ -1,5 +1,6 @@
 import pytest
-import  os
+import os
+import numpy as np
 
 from pylas.lasdata import LasData
 
@@ -14,6 +15,7 @@ def open_simple():
     return open('simple.las', mode='rb')
 
 
+# TODO add test of global encoding
 def test_raw_header(read_simple):
     f = read_simple
     header = f.header
@@ -60,3 +62,107 @@ def every_byte_has_been_read(open_simple):
     _ = LasData(fp)
     assert fp.tell() == os.path.getsize('simple.las')
     fp.close()
+
+
+def test_unscaled_x(read_simple):
+    f = read_simple
+    assert f.X.max() == 63898255
+    assert f.X.min() == 63561985
+
+
+def test_unscaled_y(read_simple):
+    f = read_simple
+    assert f.Y.max() == 85353543
+    assert f.Y.min() == 84889970
+
+
+def test_unscaled_z(read_simple):
+    f = read_simple
+    assert f.Z.max() == 58638
+    assert f.Z.min() == 40659
+
+
+def test_intensity(read_simple):
+    f = read_simple
+    assert f.intensity.max() == 254
+    assert f.intensity.min() == 0
+
+
+def test_return_number(read_simple):
+    f = read_simple
+    assert f.return_number.max() == 4
+    assert f.return_number.min() == 1
+
+
+def test_number_of_returns(read_simple):
+    f = read_simple
+    assert f.number_of_returns.max() == 4
+    assert f.number_of_returns.min() == 1
+
+
+def test_edge_of_flight_line(read_simple):
+    f = read_simple
+    assert f.edge_of_flight_line.max() == 0
+    assert f.edge_of_flight_line.min() == 0
+
+
+def test_scan_direction_flag(read_simple):
+    f = read_simple
+    assert f.scan_direction_flag.max() == 1
+    assert f.scan_direction_flag.min() == 0
+
+
+def test_scan_angle_rank(read_simple):
+    f = read_simple
+    assert f.scan_angle_rank.max() == 18
+    assert f.scan_angle_rank.min() == -19
+
+
+def test_classification_max_min(read_simple):
+    f = read_simple
+    assert f.classification.max() == 2
+    assert f.classification.min() == 1
+
+
+def test_classification_count(read_simple):
+    f = read_simple
+    uniques, counts = np.unique(f.classification, return_counts=True)
+    assert np.all(uniques == [1, 2])
+    assert counts[0] == 789  # class code 1
+    assert counts[1] == 276  # class code 2
+
+
+def test_user_data(read_simple):
+    f = read_simple
+    assert f.user_data.max() == 149
+    assert f.user_data.min() == 117
+
+
+def test_point_source_id(read_simple):
+    f = read_simple
+    assert f.point_source_id.max() == 7334
+    assert f.point_source_id.min() == 7326
+
+
+def test_gps_time(read_simple):
+    f = read_simple
+    assert f.gps_time.max() == pytest.approx(249783.162158)
+    assert f.gps_time.min() == pytest.approx(245370.417075)
+
+
+def test_red(read_simple):
+    f = read_simple
+    assert f.red.max() == 249
+    assert f.red.min() == 39
+
+
+def test_green(read_simple):
+    f = read_simple
+    assert f.green.max() == 239
+    assert f.green.min() == 57
+
+
+def test_blue(read_simple):
+    f = read_simple
+    assert f.blue.max() == 249
+    assert f.blue.min() == 56
