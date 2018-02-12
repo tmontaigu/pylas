@@ -29,9 +29,9 @@ WITHHELD_HIGH_BIT = 7
 
 
 dimensions = {
-    'X': ('X', 'u4'),
-    'Y': ('Y', 'u4'),
-    'Z': ('Z', 'u4'),
+    'X': ('X', 'i4'),
+    'Y': ('Y', 'i4'),
+    'Z': ('Z', 'i4'),
     'intensity': ('intensity', 'u2'),
     'bit_fields': ('bit_fields', 'u1'),
     'raw_classification': ('raw_classification', 'u1'),

@@ -7,20 +7,26 @@ import pytest
 from pylas.lasdata import LasData
 
 
-@pytest.fixture()
-def read_simple():
-    return LasData.from_file('simple.las')
+@pytest.fixture(params=['simple.las', 'simple.laz'])
+def read_simple(request):
+    return LasData.from_file(request.param)
 
 
 @pytest.fixture()
 def open_simple():
     return open('simple.las', mode='rb')
 
+@pytest.fixture()
+def read_uncompressed():
+    return LasData.from_file('simple.las')
+
+@pytest.fixture()
+def get_header():
+    return LasData.from_file('simple.las').header
 
 # TODO add test of global encoding
-def test_raw_header(read_simple):
-    f = read_simple
-    header = f.header
+def test_raw_header(get_header):
+    header = get_header
     assert header.file_signature == b'LASF'
     assert header.file_source_id == 0
     assert header.version_major == 1
@@ -54,8 +60,8 @@ def test_waveform_is_none(read_simple):
     assert read_simple.header.start_of_waveform_data_packet_record is None
 
 
-def test_no_vlr_for_simple(read_simple):
-    f = read_simple
+def test_no_vlr_for_simple(read_uncompressed):
+    f = read_uncompressed
     assert f.vlrs == []
 
 
