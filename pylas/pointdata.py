@@ -2,7 +2,7 @@ import numpy as np
 
 from pylas.errors import PointFormatNotSupported
 from pylas.pointdimensions import point_formats_dtype
-from pylas.compression import decompress_stream
+from pylas.compression import decompress_stream, decompress_stream2
 
 
 class NumpyPointData:
@@ -31,10 +31,12 @@ class NumpyPointData:
         return point_data
 
     @classmethod
-    def from_compressed_stream(cls, compressed_stream, point_format_id, count):
-        point_data = cls()
-        point_data.data = decompress_stream(compressed_stream, point_format_id, count)
-        return point_data
+    def from_compressed_stream(cls, compressed_stream, point_format_id, count, laszip_vlr):
+        uncompressed = decompress_stream2(compressed_stream, point_format_id, count, laszip_vlr)
+        # import io
+        # return cls.from_stream(io.BytesIO(uncompressed), point_format_id, count)
+        return uncompressed
+
 
 
 
