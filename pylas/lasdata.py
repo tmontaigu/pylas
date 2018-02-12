@@ -2,6 +2,7 @@ import io
 
 from pylas import pointdata, header, vlr
 from pylas import pointdimensions
+from pylas.compression import is_point_format_compressed, compressed_id_to_uncompressed
 
 
 def scale_dimension(array_dim, scale, offset):
@@ -16,11 +17,19 @@ class LasData:
         for _ in range(self.header.number_of_vlr):
             self.vlrs.append(vlr.RawVLR.read_from(self.data_stream))
 
-        self.np_point_data = pointdata.NumpyPointData.from_stream(
-            self.data_stream,
-            self.header.point_data_format_id,
-            self.header.number_of_point_records
-        )
+
+        if is_point_format_compressed(self.header.point_data_format_id):
+            self.np_point_data = pointdata.NumpyPointData.from_compressed_stream(
+                self.data_stream,
+                compressed_id_to_uncompressed(self.header.point_data_format_id),
+                self.header.number_of_point_records
+            )
+        else:
+            self.np_point_data = pointdata.NumpyPointData.from_stream(
+                self.data_stream,
+                self.header.point_data_format_id,
+                self.header.number_of_point_records
+            )
 
         self.X = self.np_point_data['X']
         self.Y = self.np_point_data['Y']

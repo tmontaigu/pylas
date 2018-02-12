@@ -2,6 +2,7 @@ import numpy as np
 
 from pylas.errors import PointFormatNotSupported
 from pylas.pointdimensions import point_formats_dtype
+from pylas.compression import decompress_stream
 
 
 class NumpyPointData:
@@ -22,11 +23,18 @@ class NumpyPointData:
         try:
             points_dtype = point_formats_dtype[point_format_id]
         except IndexError:
-            raise PointFormatNotSupported("Point format '{}' is not supported".format(
-                point_format_id
-            ))
+            raise PointFormatNotSupported(point_format_id)
 
         point_data_buffer = stream.read(count * points_dtype.itemsize)
         point_data = cls()
         point_data.data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
         return point_data
+
+    @classmethod
+    def from_compressed_stream(cls, compressed_stream, point_format_id, count):
+        point_data = cls()
+        point_data.data = decompress_stream(compressed_stream, point_format_id, count)
+        return point_data
+
+
+
