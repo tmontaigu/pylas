@@ -1,5 +1,7 @@
 import numpy as np
 
+from pylas.errors import PointFormatNotSupported
+
 
 def point_format_to_dtype(point_format):
     return [dimensions[dim_name] for dim_name in point_format]
@@ -64,3 +66,12 @@ point_formats = (
 )
 
 point_formats_dtype = tuple(np.dtype(point_format_to_dtype(point_fmt)) for point_fmt in point_formats)
+
+
+def get_dtype_of_format_id(point_format_id):
+    try:
+        points_dtype = point_formats_dtype[point_format_id]
+    except IndexError:
+        raise PointFormatNotSupported(point_format_id)
+
+    return points_dtype
