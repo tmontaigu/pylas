@@ -19,10 +19,13 @@ class LasData:
 
 
         if is_point_format_compressed(self.header.point_data_format_id):
+            # first 8 bytes after header + vlr + evlrs are laszip data
+            self.data_stream.seek(self.header.offset_to_point_data + 8)
             self.np_point_data = pointdata.NumpyPointData.from_compressed_stream(
                 self.data_stream,
                 compressed_id_to_uncompressed(self.header.point_data_format_id),
-                self.header.number_of_point_records
+                self.header.number_of_point_records,
+                self.vlrs[0]
             )
         else:
             self.np_point_data = pointdata.NumpyPointData.from_stream(
