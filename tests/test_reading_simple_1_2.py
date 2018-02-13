@@ -184,3 +184,29 @@ def test_nothing_changes(open_simple):
     buf = out.getvalue()
 
     assert buf == true_buffer
+
+def test_decompression_is_same_as_uncompressed():
+    u_las = LasData.from_file('simple.las')
+    c_las = LasData.from_file('simple.laz')
+
+    u_point_buffer = u_las.np_point_data.data.tobytes()
+    c_points_buffer = c_las.np_point_data.data.tobytes()
+
+    assert u_point_buffer == c_points_buffer
+
+
+def test_write_uncompressed_no_changes():
+    c_las = LasData.from_file('simple.laz')
+
+    with io.BytesIO() as out:
+        c_las.write_to(out, do_compress=False)
+        out_buf = out.getvalue()
+
+    with open('simple.las', mode='rb') as f:
+        expected = f.read()
+
+    assert out_buf == expected
+
+
+
+

@@ -12,6 +12,22 @@ try:
 except ModuleNotFoundError:
     HAS_LAZPERF = False
 
+schema = [
+    {u'type': u'signed', u'name': u'X', u'size': 4},
+    {u'type': u'signed', u'name': u'Y', u'size': 4},
+    {u'type': u'signed', u'name': u'Z', u'size': 4},
+    {u'type': u'unsigned', u'name': u'Intensity', u'size': 2},
+    {u'type': u'unsigned', u'name': u'BitFields', u'size': 1},
+    {u'type': u'unsigned', u'name': u'Classification', u'size': 1},
+    {u'type': u'signed', u'name': u'ScanAngleRank', u'size': 1},
+    {u'type': u'unsigned', u'name': u'UserData', u'size': 1},
+    {u'type': u'unsigned', u'name': u'PointSourceId', u'size': 2},
+    {u'type': u'floating', u'name': u'GpsTime', u'size': 8},
+    {u'type': u'unsigned', u'name': u'Red', u'size': 2},
+    {u'type': u'unsigned', u'name': u'Green', u'size': 2},
+    {u'type': u'unsigned', u'name': u'Blue', u'size': 2},
+]
+
 
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
@@ -53,3 +69,14 @@ def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vl
         begin = end
 
     return point_uncompressed
+
+
+def compress_buffer(uncompressed_buffer, point_format_id, point_count):
+    raise_if_no_lazperf()
+    import json
+    assert sum(dim['size'] for dim in schema) == 34
+
+    compressor = lazperf.Compressor(json.dumps(schema))
+    uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
+    compressed = compressor.compress(uncompressed_buffer)
+    return compressed

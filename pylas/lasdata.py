@@ -20,7 +20,8 @@ class LasData:
 
         if is_point_format_compressed(self.header.point_data_format_id):
             # first 8 bytes after header + vlr + evlrs are laszip data
-            self.data_stream.seek(self.header.offset_to_point_data + 8)
+            # self.data_stream.seek(self.header.offset_to_point_data)
+            self.save_me = self.data_stream.read(8)
             self.np_point_data = pointdata.NumpyPointData.from_compressed_stream(
                 self.data_stream,
                 compressed_id_to_uncompressed(self.header.point_data_format_id),
@@ -128,11 +129,17 @@ class LasData:
     def blue(self, value):
         self.np_point_data['blue'] = value
 
-    def write_to(self, out_stream):
+    def write_to(self, out_stream, do_compress=False):
+        self.header.point_data_format_id = compressed_id_to_uncompressed(self.header.point_data_format_id)
         self.header.write_to(out_stream)
-        for _vlr in self.vlrs:
-            _vlr.write_to(out_stream)
-        self.np_point_data.write_to(out_stream)
+        print(self.header.header_size)
+        # for _vlr in self.vlrs:
+        #     if _vlr.user_id.rstrip(b'\0') == 'laszip encoded' and _vlr.record_id == 22204:
+        #         print('skipping')
+        #         continue
+        #     _vlr.write_to(out_stream)
+        # out_stream.write(self.save_me)
+        self.np_point_data.write_to(out_stream, do_compress=do_compress)
 
     @classmethod
     def from_file(cls, filename):
