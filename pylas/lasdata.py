@@ -21,12 +21,20 @@ class LasData:
         if is_point_format_compressed(self.header.point_data_format_id):
             # first 8 bytes after header + vlr + evlrs are laszip data
             # self.data_stream.seek(self.header.offset_to_point_data)
+            for _vlr in self.vlrs:
+                print(_vlr, _vlr.user_id.rstrip(b'\x00'))
+                if _vlr.user_id.rstrip(b'\x00') == b'laszip encoded' and _vlr.record_id == 22204:
+                    laszip_vlr = _vlr
+                    break
+            else:
+                raise ValueError('No Laszip VLR found')
+
             self.save_me = self.data_stream.read(8)
             self.np_point_data = pointdata.NumpyPointData.from_compressed_stream(
                 self.data_stream,
                 compressed_id_to_uncompressed(self.header.point_data_format_id),
                 self.header.number_of_point_records,
-                self.vlrs[0]
+                laszip_vlr
             )
         else:
             self.np_point_data = pointdata.NumpyPointData.from_stream(
