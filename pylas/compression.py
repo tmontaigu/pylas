@@ -54,19 +54,9 @@ def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vl
     ndtype = get_dtype_of_format_id(point_format_id)
     point_compressed = np.frombuffer(compressed_stream.read(), dtype=np.uint8)
 
-    # print('point compressed size:', point_compressed.shape)
     vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
     decompressor = lazperf.VLRDecompressor(point_compressed, vlr_data)
-    # point_buffer = np.zeros((ndtype.itemsize,), dtype=np.uint8)
-    # point_uncompressed = np.zeros(point_count * ndtype.itemsize, dtype=np.uint8)
-    # begin, point_size = 0, ndtype.itemsize
-    # for _ in range(point_count):
-    #     decompressor.decompress(point_buffer)
-    #     end = begin + point_size
-    #     point_uncompressed[begin:end] = point_buffer
-    #     begin = end
 
-    print('size:', len(laszip_vlr.record_data))
     point_uncompressed = decompressor.decompress_points(point_count)
 
     point_uncompressed = np.frombuffer(point_uncompressed, dtype=ndtype)
