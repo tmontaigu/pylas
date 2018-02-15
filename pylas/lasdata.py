@@ -1,6 +1,7 @@
 import io
 
-from . import pointdata, header, vlr, pointdimensions
+from . import pointdata, vlr, pointdimensions
+from pylas.header import rawheader
 from .compression import is_point_format_compressed, compressed_id_to_uncompressed
 
 
@@ -11,7 +12,7 @@ def scale_dimension(array_dim, scale, offset):
 class LasData:
     def __init__(self, data_stream):
         self.data_stream = data_stream
-        self.header = header.RawHeader.read_from(self.data_stream)
+        self.header = rawheader.RawHeader.read_from(self.data_stream)
         self.vlrs = []
         for _ in range(self.header.number_of_vlr):
             raw = vlr.RawVLR.read_from(self.data_stream)
