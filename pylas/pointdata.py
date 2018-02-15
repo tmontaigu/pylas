@@ -1,7 +1,7 @@
 import numpy as np
 
-from pylas.compression import decompress_stream, compress_buffer
-from pylas.pointdimensions import get_dtype_of_format_id
+from .compression import decompress_stream, compress_buffer
+from .pointdimensions import get_dtype_of_format_id
 
 
 class NumpyPointData:

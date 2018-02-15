@@ -1,4 +1,4 @@
-from pylas.header import BinaryReader
+from .lasio import BinaryReader
 
 NULL_BYTE = b'\x00'
 

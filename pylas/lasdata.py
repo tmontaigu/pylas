@@ -1,8 +1,7 @@
 import io
 
-from pylas import pointdata, header, vlr
-from pylas import pointdimensions
-from pylas.compression import is_point_format_compressed, compressed_id_to_uncompressed
+from . import pointdata, header, vlr, pointdimensions
+from .compression import is_point_format_compressed, compressed_id_to_uncompressed
 
 
 def scale_dimension(array_dim, scale, offset):
