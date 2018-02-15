@@ -1,6 +1,17 @@
-from .lasio import BinaryReader
+from .lasio import BinaryReader, BinaryWriter
+from collections import namedtuple
 
 NULL_BYTE = b'\x00'
+
+VLRField = namedtuple('VLRField', ('name', 'type', 'num'))
+VLR_FIELDS = (
+    VLRField('_reserved', 'uint16', 1),
+    VLRField('user_id', 'str', 16),
+    VLRField('record_id', 'uint16', 1),
+    VLRField('record_length_after_header', 'uint16', 1),
+    VLRField('description', 'str', 32),
+)
+
 
 class RawVLR:
     def __init__(self):
@@ -27,9 +38,11 @@ class RawVLR:
     def description(self, value):
         self._description = value + (32 - len(value)) * NULL_BYTE
 
-
     def write_to(self, out):
-        pass
+        out_stream = BinaryWriter(out)
+        for field in VLR_FIELDS:
+            value = getattr(self, field.name)
+            out_stream.write(value, field.type, num=field.num)
 
     def __repr__(self):
         return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
@@ -40,11 +53,10 @@ class RawVLR:
     def read_from(cls, data_stream):
         bin_reader = BinaryReader(data_stream)
         raw_vlr = cls()
-        raw_vlr._reserved = bin_reader.read('uint16')
-        raw_vlr._user_id = bin_reader.read('str', num=16)
-        raw_vlr.record_id = bin_reader.read('uint16')
-        raw_vlr.record_length_after_header = bin_reader.read('uint16')
-        raw_vlr.description = bin_reader.read('str', num=32)
+        for field in VLR_FIELDS:
+            value = bin_reader.read(field.type, num=field.num)
+            setattr(raw_vlr, field.name, value)
+
         # TODO: Warn if empty payload ?
         raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
         return raw_vlr
@@ -60,6 +72,9 @@ class VLR:
         self.record_length = len(self.record_data)
         if self.record_length < 0:
             raise ValueError('record length must be >= 0')
+
+    def is_laszip_vlr(self):
+        return self.user_id == 'laszip encoded' and self.record_id == 22204
 
     def into_raw(self):
         raw_vlr = RawVLR()
@@ -82,5 +97,49 @@ class VLR:
         return vlr
 
     def __repr__(self):
-        return "VLR(user_id: '{}', record_id: '{}', len: '{}'".format(
+        return "VLR(user_id: '{}', record_id: '{}', len: '{}')".format(
             self.user_id, self.record_id, self.record_length)
+
+
+# is it overkill to have something like that?
+class VLRList:
+    def __init__(self):
+        self.vlrs = []
+
+    def append(self, vlr):
+        self.vlrs.append(vlr)
+
+    def find_laszip_vlr(self):
+        for vlr in self.vlrs:
+            if vlr.is_laszip_vlr():
+                return vlr
+        else:
+            return None
+
+    # todo add the compressed optionnal param to know if include laszip vlr
+    def write_to(self, out):
+        for vlr in self.vlrs:
+            if not vlr.is_laszip_vlr():
+                vlr.into_raw().write_to(out)
+
+    def __iter__(self):
+        yield from iter(self.vlrs)
+
+    def __len__(self):
+        return len(self.vlrs)
+
+    def __eq__(self, other):
+        if isinstance(other, list):
+            return self.vlrs == other
+
+    def __repr__(self):
+        return "[{}]".format(", ".join(repr(vlr) for vlr in self.vlrs))
+
+    @classmethod
+    def read_from(cls, data_stream, num_to_read):
+        vlrlist = cls()
+        for _ in range(num_to_read):
+            raw = RawVLR.read_from(data_stream)
+            vlrlist.append(VLR.from_raw(raw))
+
+        return vlrlist
