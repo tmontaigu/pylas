@@ -1,7 +1,7 @@
 import ctypes
 from collections import namedtuple
 
-from .lasio import BinaryReader, type_lengths, BinaryWriter
+from pylas.lasio import BinaryReader, type_lengths, BinaryWriter
 
 FILE_MAJOR_OFFSET_BYTES = 24
 
