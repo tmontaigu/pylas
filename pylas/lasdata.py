@@ -15,15 +15,15 @@ class LasData:
         self.header = header.RawHeader.read_from(self.data_stream)
         self.vlrs = []
         for _ in range(self.header.number_of_vlr):
-            self.vlrs.append(vlr.RawVLR.read_from(self.data_stream))
+            raw = vlr.RawVLR.read_from(self.data_stream)
+            self.vlrs.append(vlr.VLR.from_raw(raw))
 
 
         if is_point_format_compressed(self.header.point_data_format_id):
             # first 8 bytes after header + vlr + evlrs are laszip data
             # self.data_stream.seek(self.header.offset_to_point_data)
             for _vlr in self.vlrs:
-                print(_vlr, _vlr.user_id.rstrip(b'\x00'))
-                if _vlr.user_id.rstrip(b'\x00') == b'laszip encoded' and _vlr.record_id == 22204:
+                if _vlr.user_id == 'laszip encoded' and _vlr.record_id == 22204:
                     laszip_vlr = _vlr
                     break
             else:
