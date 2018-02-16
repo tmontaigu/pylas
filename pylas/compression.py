@@ -65,12 +65,15 @@ def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vl
     return point_uncompressed
 
 
-def compress_buffer(uncompressed_buffer, point_format_id, point_count):
+def compress_buffer(uncompressed_buffer, point_format_id, point_count, offset_to_data):
     raise_if_no_lazperf()
-    import json
-    assert sum(dim['size'] for dim in schema) == 34
 
-    compressor = lazperf.Compressor(json.dumps(schema))
+    record_schema = lazperf.RecordSchema()
+    record_schema.add_gps_time()
+    record_schema.add_rgb()
+
+    compressor = lazperf.VLRCompressor(record_schema, offset_to_data)
     uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
-    compressed = compressor.compress(uncompressed_buffer)
-    return compressed
+    compressed = compressor.compress(uncompressed_buffer, point_count)
+
+    return compressed, compressor.get_vlr_data()

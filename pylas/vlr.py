@@ -1,5 +1,6 @@
-from .lasio import BinaryReader, BinaryWriter
 from collections import namedtuple
+
+from .lasio import BinaryReader, BinaryWriter
 
 NULL_BYTE = b'\x00'
 
@@ -15,7 +16,7 @@ VLR_FIELDS = (
 
 class RawVLR:
     def __init__(self):
-        self._reserved = 2 * NULL_BYTE
+        self._reserved = 0
         self._user_id = 16 * NULL_BYTE
         self.record_id = None
         self.record_length_after_header = 0
@@ -43,6 +44,7 @@ class RawVLR:
         for field in VLR_FIELDS:
             value = getattr(self, field.name)
             out_stream.write(value, field.type, num=field.num)
+        out_stream.write_raw(self.record_data)
 
     def __repr__(self):
         return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
@@ -101,7 +103,10 @@ class VLR:
             self.user_id, self.record_id, self.record_length)
 
 
-# is it overkill to have something like that?
+class LasZipVlr(VLR):
+    def __init__(self, data):
+        super().__init__('laszip encoded', 22204, 'http://laszip.org', data)
+
 class VLRList:
     def __init__(self):
         self.vlrs = []
@@ -116,7 +121,7 @@ class VLRList:
         else:
             return None
 
-    # todo add the compressed optionnal param to know if include laszip vlr
+    # todo add the compressed optional param to know if include laszip vlr
     def write_to(self, out):
         for vlr in self.vlrs:
             if not vlr.is_laszip_vlr():
@@ -143,3 +148,9 @@ class VLRList:
             vlrlist.append(VLR.from_raw(raw))
 
         return vlrlist
+
+    @classmethod
+    def from_list(cls, vlr_list):
+        vlrs = cls()
+        vlrs.vlrs = vlr_list
+        return vlrs
