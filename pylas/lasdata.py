@@ -4,7 +4,8 @@ import numpy as np
 
 from pylas.header import rawheader
 from . import pointdata, vlr, pointdimensions
-from .compression import is_point_format_compressed, compressed_id_to_uncompressed, compress_buffer
+from .compression import is_point_format_compressed, compressed_id_to_uncompressed, compress_buffer, \
+    create_vlr_compressor
 
 
 def scale_dimension(array_dim, scale, offset):
@@ -17,9 +18,10 @@ class LasData:
         self.header = rawheader.RawHeader.read_from(self.data_stream)
         self.vlrs = vlr.VLRList.read_from(data_stream, num_to_read=self.header.number_of_vlr)
         print("fmt:", self.header.point_data_format_id)
+        print("offset read:", self.header.offset_to_point_data)
 
         if is_point_format_compressed(self.header.point_data_format_id):
-            laszip_vlr = self.vlrs.find_laszip_vlr()
+            laszip_vlr = self.vlrs.extract_laszip_vlr()
             if laszip_vlr is None:
                 print(self.vlrs)
                 raise ValueError('Could not find Laszip VLR')
@@ -135,32 +137,47 @@ class LasData:
 
     def write_to(self, out_stream, do_compress=False):
         if do_compress:
-            print("Data fmt", self.header.point_data_format_id)
-            self.header.offset_to_point_data = self.header.header_size + 52 + 54
-            print('offset', self.header.offset_to_point_data)
-            self.header.point_data_format_id = 131
-            self.header.number_of_vlr = 1
-            self.header.write_to(out_stream)
-            # self.vlrs.vlrs = [_vlr for _vlr in self.vlrs if not _vlr.is_laszip_vlr()]
-            # self.vlrs.write_to(out_stream)
 
-            c, vlr_data = compress_buffer(
-                np.frombuffer(self.np_point_data.data, np.uint8),
-                0,
-                self.header.number_of_point_records,
+            # vlrs = vlr.VLRList()
+            # for _vlr in self.vlrs:
+            #     vlrs.append(_vlr)
+            # # self.vlrs.append(vlr.LasZipVlr(vlr_compressor.get_vlr_data().tobytes()))
+            # self.vlrs = vlrs
+            # self.vlrs = vlr.VLRList()
+            len_of_vlrs = sum(len(_vlr) for _vlr in self.vlrs) + vlr.LasZipVlr.len()
+            self.header.offset_to_point_data = self.header.header_size + 106
+
+            vlr_compressor = create_vlr_compressor(
+                self.header.point_data_format_id,
                 self.header.offset_to_point_data
             )
-            laszip_vlr = vlr.LasZipVlr(vlr_data.tobytes())
-            print(laszip_vlr)
-            print('a', out_stream.tell())
-            laszip_vlr.into_raw().write_to(out_stream)
-            print('b', out_stream.tell())
-            out_stream.write(c.tobytes())
-        else:
-            self.header.point_data_format_id = compressed_id_to_uncompressed(self.header.point_data_format_id)
+            self.vlrs.append(vlr.LasZipVlr(vlr_compressor.get_vlr_data().tobytes()))
+
+            self.header.point_data_format_id = 131
+            self.header.number_of_vlr = len(self.vlrs)
+
+            compressed_points = compress_buffer(
+                np.frombuffer(self.np_point_data.data, np.uint8),
+                vlr_compressor,
+                self.header.number_of_point_records,
+            )
+
+            print('len of vlrs', len_of_vlrs)
+            print('offset', self.header.offset_to_point_data)
+            print('num vlr', self.header.number_of_vlr)
+
             self.header.write_to(out_stream)
-            print(self.header.header_size)
             self.vlrs.write_to(out_stream)
+            print(compressed_points.shape)
+            assert out_stream.tell() == self.header.offset_to_point_data
+            out_stream.write(compressed_points.tobytes())
+        else:
+            # self.header.point_data_format_id = compressed_id_to_uncompressed(self.header.point_data_format_id)
+            self.header.write_to(out_stream)
+            # print(self.header.header_size)
+            # self.vlrs.write_to(out_stream)
+            self.header.number_of_vlr = 0
+            self.header.offset_to_point_data = self.header.header_size
             self.np_point_data.write_to(out_stream, do_compress=do_compress)
 
     @classmethod
