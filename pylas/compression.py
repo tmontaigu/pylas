@@ -66,25 +66,24 @@ def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vl
     return point_uncompressed
 
 
-def create_vlr_compressor(point_format_id, offset_to_point_data):
+def create_laz_vlr(point_format_id):
     raise_if_no_lazperf()
     record_schema = lazperf.RecordSchema()
 
     if 'gps_time' in point_formats_dimensions[point_format_id]:
-        print('gps')
         record_schema.add_gps_time()
 
     if 'red' in point_formats_dimensions[point_format_id]:
-        print('rgb')
         record_schema.add_rgb()
-    print('offestsetser', offset_to_point_data)
-    return lazperf.VLRCompressor(record_schema, offset_to_point_data)
+
+    return lazperf.LazVLR(record_schema)
 
 
-def compress_buffer(uncompressed_buffer, compressor, point_count):
+def compress_buffer(uncompressed_buffer, record_schema, offset):
     raise_if_no_lazperf()
 
+    compressor = lazperf.VLRCompressor(record_schema, offset)
     uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
-    compressed = compressor.compress(uncompressed_buffer, point_count)
+    compressed = compressor.compress(uncompressed_buffer)
 
     return compressed

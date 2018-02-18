@@ -4,8 +4,10 @@ import numpy as np
 
 from pylas.header import rawheader
 from . import pointdata, vlr, pointdimensions
-from .compression import is_point_format_compressed, compressed_id_to_uncompressed, compress_buffer, \
-    create_vlr_compressor
+from .compression import (is_point_format_compressed,
+                          compressed_id_to_uncompressed,
+                          compress_buffer,
+                          create_laz_vlr)
 
 
 def scale_dimension(array_dim, scale, offset):
@@ -137,38 +139,25 @@ class LasData:
 
     def write_to(self, out_stream, do_compress=False):
         if do_compress:
+            lazvrl = create_laz_vlr(self.header.point_data_format_id)
+            self.vlrs.append(vlr.LasZipVlr(lazvrl.data()))
 
-            # vlrs = vlr.VLRList()
-            # for _vlr in self.vlrs:
-            #     vlrs.append(_vlr)
-            # # self.vlrs.append(vlr.LasZipVlr(vlr_compressor.get_vlr_data().tobytes()))
-            # self.vlrs = vlrs
-            # self.vlrs = vlr.VLRList()
-            len_of_vlrs = sum(len(_vlr) for _vlr in self.vlrs) + vlr.LasZipVlr.len()
-            self.header.offset_to_point_data = self.header.header_size + 106
-
-            vlr_compressor = create_vlr_compressor(
-                self.header.point_data_format_id,
-                self.header.offset_to_point_data
-            )
-            self.vlrs.append(vlr.LasZipVlr(vlr_compressor.get_vlr_data().tobytes()))
-
+            self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
             self.header.point_data_format_id = 131
             self.header.number_of_vlr = len(self.vlrs)
 
             compressed_points = compress_buffer(
                 np.frombuffer(self.np_point_data.data, np.uint8),
-                vlr_compressor,
-                self.header.number_of_point_records,
+                lazvrl.schema,
+                self.header.offset_to_point_data,
             )
 
-            print('len of vlrs', len_of_vlrs)
+            print('len of vlrs', self.vlrs.total_size_in_bytes())
             print('offset', self.header.offset_to_point_data)
             print('num vlr', self.header.number_of_vlr)
 
             self.header.write_to(out_stream)
             self.vlrs.write_to(out_stream)
-            print(compressed_points.shape)
             assert out_stream.tell() == self.header.offset_to_point_data
             out_stream.write(compressed_points.tobytes())
         else:

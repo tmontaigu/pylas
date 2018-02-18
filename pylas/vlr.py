@@ -112,18 +112,6 @@ class VLR:
 class LasZipVlr(VLR):
     def __init__(self, data):
         super().__init__('laszip encoded', 22204, 'http://laszip.org', data)
-        if self.record_length != LasZipVlr.data_len():
-            # If in the future the laszip data len changes, then there will be things to change
-            # in our code and lazperf
-            raise ValueError('Expected length of laszip vlr data to be 52 bytes')
-
-    @staticmethod
-    def data_len():
-        return 52
-
-    @staticmethod
-    def len():
-        return VLR_HEADER_SIZE + LasZipVlr.data_len()
 
 
 class VLRList:
@@ -140,10 +128,12 @@ class VLRList:
         else:
             return None
 
-    # todo add the compressed optional param to know if include laszip vlr
     def write_to(self, out):
         for vlr in self.vlrs:
             vlr.into_raw().write_to(out)
+
+    def total_size_in_bytes(self):
+        return sum(len(vlr) for vlr in self.vlrs)
 
     def __iter__(self):
         yield from iter(self.vlrs)
