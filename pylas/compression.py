@@ -1,7 +1,7 @@
 import numpy as np
 
 from .errors import LazPerfNotFound
-from .pointdimensions import get_dtype_of_format_id
+from .pointdimensions import get_dtype_of_format_id, point_formats_dimensions
 
 HAS_LAZPERF = False
 
@@ -48,6 +48,7 @@ def is_point_format_compressed(point_format_id):
 def compressed_id_to_uncompressed(point_format_id):
     return point_format_id & 0x3f
 
+
 def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vlr):
     raise_if_no_lazperf()
 
@@ -65,12 +66,24 @@ def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vl
     return point_uncompressed
 
 
-def compress_buffer(uncompressed_buffer, point_format_id, point_count):
+def create_laz_vlr(point_format_id):
     raise_if_no_lazperf()
-    import json
-    assert sum(dim['size'] for dim in schema) == 34
+    record_schema = lazperf.RecordSchema()
 
-    compressor = lazperf.Compressor(json.dumps(schema))
+    if 'gps_time' in point_formats_dimensions[point_format_id]:
+        record_schema.add_gps_time()
+
+    if 'red' in point_formats_dimensions[point_format_id]:
+        record_schema.add_rgb()
+
+    return lazperf.LazVLR(record_schema)
+
+
+def compress_buffer(uncompressed_buffer, record_schema, offset):
+    raise_if_no_lazperf()
+
+    compressor = lazperf.VLRCompressor(record_schema, offset)
     uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
     compressed = compressor.compress(uncompressed_buffer)
+
     return compressed

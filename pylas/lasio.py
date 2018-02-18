@@ -67,3 +67,6 @@ class BinaryWriter:
         else:
             b = struct.pack(fmt_str, values)
         return self.stream.write(b)
+
+    def write_raw(self, b):
+        return self.stream.write(b)
