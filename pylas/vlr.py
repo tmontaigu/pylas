@@ -91,7 +91,6 @@ class VLR:
 
     @classmethod
     def from_raw(cls, raw_vlr):
-        print(raw_vlr)
         vlr = cls(
             raw_vlr.user_id.rstrip(NULL_BYTE).decode(),
             raw_vlr.record_id,
@@ -121,11 +120,10 @@ class VLRList:
         self.vlrs.append(vlr)
 
     def extract_laszip_vlr(self):
-        for vlr in self.vlrs:
-            if vlr.is_laszip_vlr():
-                return vlr
-        else:
-            return None
+        laszip_vlr_idx = self._laszip_vlr_idx()
+        if laszip_vlr_idx is not None:
+            return self.vlrs.pop(laszip_vlr_idx)
+        return None
 
     def write_to(self, out):
         for vlr in self.vlrs:
@@ -133,6 +131,13 @@ class VLRList:
 
     def total_size_in_bytes(self):
         return sum(len(vlr) for vlr in self.vlrs)
+
+    def _laszip_vlr_idx(self):
+        for i, vlr in enumerate(self.vlrs):
+            if vlr.is_laszip_vlr():
+                return i
+        else:
+            return None
 
     def __iter__(self):
         yield from iter(self.vlrs)

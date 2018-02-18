@@ -6,6 +6,7 @@ from pylas.header import rawheader
 from . import pointdata, vlr, pointdimensions
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed,
+                          uncompressed_id_to_compressed,
                           compress_buffer,
                           create_laz_vlr)
 
@@ -19,19 +20,19 @@ class LasData:
         self.data_stream = data_stream
         self.header = rawheader.RawHeader.read_from(self.data_stream)
         self.vlrs = vlr.VLRList.read_from(data_stream, num_to_read=self.header.number_of_vlr)
-        print("fmt:", self.header.point_data_format_id)
-        print("offset read:", self.header.offset_to_point_data)
 
         if is_point_format_compressed(self.header.point_data_format_id):
             laszip_vlr = self.vlrs.extract_laszip_vlr()
             if laszip_vlr is None:
                 raise ValueError('Could not find Laszip VLR')
+            self.header.point_data_format_id = compressed_id_to_uncompressed(
+                self.header.point_data_format_id)
 
-            # first 8 bytes after header + vlr + evlrs are laszip data
-            self.save_me = self.data_stream.read(8)
+            # first 8 bytes after header + vlr + evlrs is the offset to the laz chunk table
+            self.save_me = self.data_stream.seek(8, io.SEEK_CUR)
             self.np_point_data = pointdata.NumpyPointData.from_compressed_stream(
                 self.data_stream,
-                compressed_id_to_uncompressed(self.header.point_data_format_id),
+                self.header.point_data_format_id,
                 self.header.number_of_point_records,
                 laszip_vlr
             )
@@ -142,7 +143,7 @@ class LasData:
             self.vlrs.append(vlr.LasZipVlr(lazvrl.data()))
 
             self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
-            self.header.point_data_format_id = 131
+            self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
             self.header.number_of_vlr = len(self.vlrs)
 
             compressed_points = compress_buffer(
@@ -160,13 +161,12 @@ class LasData:
             assert out_stream.tell() == self.header.offset_to_point_data
             out_stream.write(compressed_points.tobytes())
         else:
-            # self.header.point_data_format_id = compressed_id_to_uncompressed(self.header.point_data_format_id)
+            self.header.number_of_vlr = len(self.vlrs)
+            self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
+
             self.header.write_to(out_stream)
-            # print(self.header.header_size)
-            # self.vlrs.write_to(out_stream)
-            self.header.number_of_vlr = 0
-            self.header.offset_to_point_data = self.header.header_size
-            self.np_point_data.write_to(out_stream, do_compress=do_compress)
+            self.vlrs.write_to(out_stream)
+            self.np_point_data.write_to(out_stream)
 
     @classmethod
     def from_file(cls, filename):

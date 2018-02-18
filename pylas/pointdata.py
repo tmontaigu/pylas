@@ -1,6 +1,6 @@
 import numpy as np
 
-from .compression import decompress_stream, compress_buffer
+from .compression import decompress_stream
 from .pointdimensions import get_dtype_of_format_id
 
 
@@ -14,14 +14,12 @@ class NumpyPointData:
     def __setitem__(self, key, value):
         self.data[key] = value
 
-    def write_to(self, out, do_compress=False):
-        if do_compress:
-            compressed = compress_buffer(self.data, 0, 0).tobytes()
-            print(compressed)
-            out.write(compressed)
-        else:
-            raw_bytes = self.data.tobytes()
-            out.write(raw_bytes)
+    def __len__(self):
+        return self.data.shape[0]
+
+    def write_to(self, out):
+        raw_bytes = self.data.tobytes()
+        out.write(raw_bytes)
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count):
