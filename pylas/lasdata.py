@@ -137,7 +137,27 @@ class LasData:
     def blue(self, value):
         self.np_point_data['blue'] = value
 
+    def repack_bit_fields(self):
+        self.np_point_data['bit_fields'] = pointdata.bitpack(
+            (self.return_number, self.number_of_returns, self.scan_direction_flag, self.edge_of_flight_line),
+            ((pointdimensions.RETURN_NUMBER_LOW_BIT, pointdimensions.RETURN_NUMBER_HIGH_BIT),
+             (pointdimensions.NUMBER_OF_RETURNS_LOW_BIT, pointdimensions.NUMBER_OF_RETURNS_HIGH_BIT),
+             (pointdimensions.SCAN_DIRECTION_FLAG_LOW_BIT, pointdimensions.SCAN_DIRECTION_FLAG_HIGH_BIT),
+             (pointdimensions.EDGE_OF_FLIGHT_LINE_LOW_BIT, pointdimensions.EDGE_OF_FLIGHT_LINE_HIGH_BIT)
+             ))
+
+    def repack_classification(self):
+        self.np_point_data['raw_classification'] = pointdata.bitpack(
+            (self.classification, self.synthetic, self.key_point, self.withheld),
+            ((pointdimensions.CLASSIFICATION_LOW_BIT, pointdimensions.CLASSIFICATION_HIGH_BIT),
+             (pointdimensions.SYNTHETIC_LOW_BIT, pointdimensions.SYNTHETIC_HIGH_BIT),
+             (pointdimensions.KEY_POINT_LOW_BIT, pointdimensions.KEY_POINT_HIGH_BIT),
+             (pointdimensions.WITHHELD_LOW_BIT, pointdimensions.WITHHELD_HIGH_BIT)
+             ))
+
     def write_to(self, out_stream, do_compress=False):
+        # self.repack_bit_fields()
+        self.repack_classification()
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
             self.vlrs.append(vlr.LasZipVlr(lazvrl.data()))
@@ -167,6 +187,15 @@ class LasData:
             self.header.write_to(out_stream)
             self.vlrs.write_to(out_stream)
             self.np_point_data.write_to(out_stream)
+
+    @classmethod
+    def open(cls, source):
+        if isinstance(source, bytes):
+            return cls.from_buffer(source)
+        elif isinstance(source, str):
+            return cls.from_file(source)
+        else:
+            return cls(source)
 
     @classmethod
     def from_file(cls, filename):

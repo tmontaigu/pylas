@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pytest
 
+import pylas
 from pylas.lasdata import LasData
 
 
@@ -22,7 +23,8 @@ def read_uncompressed():
 
 @pytest.fixture()
 def get_header():
-    return LasData.from_file('simple.las').header
+    with open('simple.las', mode='rb') as fin:
+        return pylas.header.rawheader.RawHeader.read_from(fin)
 
 # TODO add test of global encoding
 def test_raw_header(get_header):
