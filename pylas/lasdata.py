@@ -53,12 +53,20 @@ class LasData:
         self.user_data = self.np_point_data['user_data']
         self.point_source_id = self.np_point_data['point_source_id']
 
-        self.x = scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
-        self.y = scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
-        self.z = scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
-
         self.unpack_bit_fields()
         self.unpack_raw_classification()
+
+    @property
+    def x(self):
+        return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
+
+    @property
+    def y(self):
+        return scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
+
+    @property
+    def z(self):
+        return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
     @property
     def gps_time(self):
