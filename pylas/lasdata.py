@@ -15,105 +15,78 @@ def scale_dimension(array_dim, scale, offset):
     return (array_dim * scale) + offset
 
 
-class LasData:
-    def __init__(self, data_stream):
-        self.data_stream = data_stream
-        self.header = rawheader.RawHeader.read_from(self.data_stream)
-        assert data_stream.tell() == self.header.header_size
-        self.vlrs = vlr.VLRList.read_from(data_stream, num_to_read=self.header.number_of_vlr)
-
-        self.data_stream.seek(self.header.offset_to_point_data)
-        if is_point_format_compressed(self.header.point_data_format_id):
-            laszip_vlr = self.vlrs.extract_laszip_vlr()
-            if laszip_vlr is None:
-                raise ValueError('Could not find Laszip VLR')
-            self.header.point_data_format_id = compressed_id_to_uncompressed(
-                self.header.point_data_format_id)
-
-            # first 8 bytes after header + vlr + evlrs is the offset to the laz chunk table
-            self.save_me = self.data_stream.seek(8, io.SEEK_CUR)
-            self.np_point_data = pointdata.NumpyPointData.from_compressed_stream(
-                self.data_stream,
-                self.header.point_data_format_id,
-                self.header.number_of_point_records,
-                laszip_vlr
-            )
+class LasBase(object):
+    def __init__(self, header=None, vlrs=None, points=None):
+        self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
+        self.__dict__['vlrs'] = vlrs if vlrs is not None else vlr.VLRList()
+        if points is not None:
+            self.__dict__['np_point_data'] = points
         else:
-            self.np_point_data = pointdata.NumpyPointData.from_stream(
-                self.data_stream,
-                self.header.point_data_format_id,
-                self.header.number_of_point_records
-            )
+            self.__dict__['np_point_data'] = pointdata.NumpyPointData.empty(self.header.point_data_format_id)
 
-        self.X = self.np_point_data['X']
-        self.Y = self.np_point_data['Y']
-        self.Z = self.np_point_data['Z']
-        self.intensity = self.np_point_data['intensity']
+    @property
+    def x(self):
+        return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
+
+    @property
+    def y(self):
+        return scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
+
+    @property
+    def z(self):
+        return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
+
+    @property
+    def classification(self):
+        return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
+
+    @classification.setter
+    def classification(self, value):
+        print('kok')
+        self.__dict__['np_point_data']['classification'] = pointdims.pack_into(
+            self.np_point_data['raw_classification'], value, pointdims.CLASSIFICATION_MASK)
+
+    def __getattr__(self, item):
+        return self.np_point_data[item]
+
+    def __setattr__(self, key, value):
+        self.np_point_data[key] = value
+
+
+class LasData(LasBase):
+    def __init__(self, header=None, vlrs=None, points=None):
+        super().__init__(header, vlrs, points)
         self.scan_angle_rank = self.np_point_data['scan_angle_rank']
         self.user_data = self.np_point_data['user_data']
         self.point_source_id = self.np_point_data['point_source_id']
 
-        self.x = scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
-        self.y = scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
-        self.z = scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
-
-        self.unpack_bit_fields()
-        self.unpack_raw_classification()
+    @property
+    def return_number(self):
+        return pointdims.unpack(self.np_point_data['bit_fields'], pointdims.RETURN_NUMBER_MASK)
 
     @property
-    def gps_time(self):
-        return self.np_point_data['gps_time']
-
-    @gps_time.setter
-    def gps_time(self, value):
-        self.np_point_data['gps_time'] = value
+    def number_of_returns(self):
+        return pointdims.unpack(self.np_point_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK)
 
     @property
-    def red(self):
-        return self.np_point_data['red']
-
-    @red.setter
-    def red(self, value):
-        self.np_point_data['red'] = value
+    def scan_direction_flag(self):
+        return pointdims.unpack(self.np_point_data['bit_fields'], pointdims.SCAN_DIRECTION_FLAG_MASK)
 
     @property
-    def green(self):
-        return self.np_point_data['green']
-
-    @green.setter
-    def green(self, value):
-        self.np_point_data['green'] = value
+    def edge_of_flight_line(self):
+        return pointdims.unpack(self.np_point_data['bit_fields'], pointdims.EDGE_OF_FLIGHT_LINE_MASK)
 
     @property
-    def blue(self):
-        return self.np_point_data['blue']
+    def synthetic(self):
+        return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.SYNTHETIC_MASK).astype('bool')
 
-    @blue.setter
-    def blue(self, value):
-        self.np_point_data['blue'] = value
+    @property
+    def key_point(self):
+        return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.KEY_POINT_MASK).astype('bool')
 
-    def unpack_bit_fields(self):
-        # These dimensions have to be repacked together when writing
-        self.return_number = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.RETURN_NUMBER_MASK)
-
-        self.number_of_returns = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK)
-        self.scan_direction_flag = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.SCAN_DIRECTION_FLAG_MASK)
-        self.edge_of_flight_line = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.EDGE_OF_FLIGHT_LINE_MASK)
-
-    def unpack_raw_classification(self):
-        # Split raw classification
-        self.classification = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
-        self.synthetic = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.SYNTHETIC_MASK).astype('bool')
-        self.key_point = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.KEY_POINT_MASK).astype('bool')
-        self.withheld = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.WITHHELD_MASK).astype('bool')
+    @property
+    def withheld(self):
+        return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.WITHHELD_MASK).astype('bool')
 
     def repack_bit_fields(self):
         self.np_point_data['bit_fields'] = pointdims.repack(
@@ -123,6 +96,18 @@ class LasData:
              pointdims.SCAN_DIRECTION_FLAG_MASK,
              pointdims.EDGE_OF_FLIGHT_LINE_MASK)
         )
+
+    @number_of_returns.setter
+    def number_of_returns(self, value):
+        pointdims.pack_into(self.np_point_data['number_of_returns'], value, pointdims.NUMBER_OF_RETURNS_MASK)
+
+    @scan_direction_flag.setter
+    def scan_direction_flag(self, value):
+        pointdims.pack_into(self.np_point_data['scan_direction_flag'], value, pointdims.SCAN_DIRECTION_FLAG_MASK)
+
+    @edge_of_flight_line.setter
+    def edge_of_flight_line(self, value):
+        pointdims.pack_into(self.np_point_data['edge_of_flight_line'], value, pointdims.EDGE_OF_FLIGHT_LINE_MASK)
 
     def repack_classification(self):
         self.np_point_data['raw_classification'] = pointdims.repack(
@@ -147,6 +132,9 @@ class LasData:
     def write_to(self, out_stream, do_compress=False):
         self.repack_bit_fields()
         self.repack_classification()
+
+        self.header.number_of_point_records = len(self.np_point_data)
+        self.header.number_of_points_by_return_ = len(self.np_point_data)
 
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
@@ -201,9 +189,40 @@ class LasData:
     @classmethod
     def from_file(cls, filename):
         with open(filename, mode='rb') as f:
-            return cls(f)
+            return cls.from_file_obj(f)
 
     @classmethod
     def from_buffer(cls, buf):
         with io.BytesIO(buf) as stream:
-            return cls(stream)
+            return cls.from_file_obj(stream)
+
+    @classmethod
+    def from_file_obj(cls, data_stream):
+        header = rawheader.RawHeader.read_from(data_stream)
+        assert data_stream.tell() == header.header_size
+        vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
+
+        data_stream.seek(header.offset_to_point_data)
+        if is_point_format_compressed(header.point_data_format_id):
+            laszip_vlr = vlrs.extract_laszip_vlr()
+            if laszip_vlr is None:
+                raise ValueError('Could not find Laszip VLR')
+            header.point_data_format_id = compressed_id_to_uncompressed(
+                header.point_data_format_id)
+
+            # first 8 bytes after header + vlr + evlrs is the offset to the laz chunk table
+            data_stream.seek(8, io.SEEK_CUR)
+            np_point_data = pointdata.NumpyPointData.from_compressed_stream(
+                data_stream,
+                header.point_data_format_id,
+                header.number_of_point_records,
+                laszip_vlr
+            )
+        else:
+            np_point_data = pointdata.NumpyPointData.from_stream(
+                data_stream,
+                header.point_data_format_id,
+                header.number_of_point_records
+            )
+
+        return cls(header, vlrs, np_point_data)

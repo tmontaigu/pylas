@@ -12,6 +12,11 @@ class NumpyPointData:
         return self.data[item]
 
     def __setitem__(self, key, value):
+        if len(value) > len(self.data):
+            self.data = np.append(
+                self.data,
+                np.zeros(len(value) - len(self.data), dtype=self.data.dtype)
+            )
         self.data[key] = value
 
     def __len__(self):
@@ -28,8 +33,6 @@ class NumpyPointData:
             except ValueError:
                 pass
         self.data = new_data
-
-
 
     def write_to(self, out):
         raw_bytes = self.data.tobytes()
@@ -49,3 +52,8 @@ class NumpyPointData:
         uncompressed = decompress_stream(compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
         return cls(uncompressed)
+
+    @classmethod
+    def empty(cls, point_format_id):
+        data = np.zeros(0, dtype=get_dtype_of_format_id(point_format_id))
+        return cls(data)
