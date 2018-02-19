@@ -108,6 +108,17 @@ class LasData:
     def blue(self, value):
         self.np_point_data['blue'] = value
 
+    def to_point_format(self, new_point_format):
+        if new_point_format == self.header.point_data_format_id:
+            return
+        self.repack_classification()
+        self.repack_bit_fields()
+        self.np_point_data.to_point_format(new_point_format)
+        self.header.point_data_format_id = new_point_format
+        self.header.point_data_record_length = self.np_point_data.data.dtype.itemsize
+        print(self.header.point_data_format_id)
+        print(self.header.point_data_record_length)
+
     def repack_bit_fields(self):
         self.np_point_data['bit_fields'] = pointdims.repack(
             (self.return_number, self.number_of_returns, self.scan_direction_flag, self.edge_of_flight_line),
@@ -126,9 +137,12 @@ class LasData:
              pointdims.EDGE_OF_FLIGHT_LINE_MASK,)
         )
 
+
     def write_to(self, out_stream, do_compress=False):
         self.repack_bit_fields()
         self.repack_classification()
+
+
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
             self.vlrs.append(vlr.LasZipVlr(lazvrl.data()))

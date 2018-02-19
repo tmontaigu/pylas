@@ -17,6 +17,20 @@ class NumpyPointData:
     def __len__(self):
         return self.data.shape[0]
 
+    def to_point_format(self, new_point_format):
+        new_dtype = get_dtype_of_format_id(new_point_format)
+
+        new_data = np.zeros_like(self.data, dtype=new_dtype)
+
+        for dim_name in self.data.dtype.names:
+            try:
+                new_data[dim_name] = self.data[dim_name]
+            except ValueError:
+                pass
+        self.data = new_data
+
+
+
     def write_to(self, out):
         raw_bytes = self.data.tobytes()
         out.write(raw_bytes)
