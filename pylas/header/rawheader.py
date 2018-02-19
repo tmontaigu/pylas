@@ -69,7 +69,7 @@ ADDITIONAL_LAS_1_4_FIELDS = (
     HeaderField('start_of_first_evlr', 'uint64', 1),
     HeaderField('number_of_evlr', 'uint32', 1),
     HeaderField('number_of_points_records', 'uint64', 1),
-    HeaderField('number_of_points_by_return', 'uint64', 5),
+    HeaderField('number_of_points_by_return', 'uint64', 15),
 )
 
 

@@ -19,8 +19,10 @@ class LasData:
     def __init__(self, data_stream):
         self.data_stream = data_stream
         self.header = rawheader.RawHeader.read_from(self.data_stream)
+        assert data_stream.tell() == self.header.header_size
         self.vlrs = vlr.VLRList.read_from(data_stream, num_to_read=self.header.number_of_vlr)
 
+        self.data_stream.seek(self.header.offset_to_point_data)
         if is_point_format_compressed(self.header.point_data_format_id):
             laszip_vlr = self.vlrs.extract_laszip_vlr()
             if laszip_vlr is None:
@@ -55,26 +57,8 @@ class LasData:
         self.y = scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
         self.z = scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
-        # These dimensions have to be repacked together when writing
-        self.return_number = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.RETURN_NUMBER_MASK)
-
-        self.number_of_returns = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK)
-        self.scan_direction_flag = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.SCAN_DIRECTION_FLAG_MASK)
-        self.edge_of_flight_line = pointdims.unpack(
-            self.np_point_data['bit_fields'], pointdims.EDGE_OF_FLIGHT_LINE_MASK)
-
-        # Split raw classification
-        self.classification = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
-        self.synthetic = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.SYNTHETIC_MASK).astype('bool')
-        self.key_point = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.KEY_POINT_MASK).astype('bool')
-        self.withheld = pointdims.unpack(
-            self.np_point_data['raw_classification'], pointdims.WITHHELD_MASK).astype('bool')
+        self.unpack_bit_fields()
+        self.unpack_raw_classification()
 
     @property
     def gps_time(self):
@@ -108,16 +92,28 @@ class LasData:
     def blue(self, value):
         self.np_point_data['blue'] = value
 
-    def to_point_format(self, new_point_format):
-        if new_point_format == self.header.point_data_format_id:
-            return
-        self.repack_classification()
-        self.repack_bit_fields()
-        self.np_point_data.to_point_format(new_point_format)
-        self.header.point_data_format_id = new_point_format
-        self.header.point_data_record_length = self.np_point_data.data.dtype.itemsize
-        print(self.header.point_data_format_id)
-        print(self.header.point_data_record_length)
+    def unpack_bit_fields(self):
+        # These dimensions have to be repacked together when writing
+        self.return_number = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.RETURN_NUMBER_MASK)
+
+        self.number_of_returns = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK)
+        self.scan_direction_flag = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.SCAN_DIRECTION_FLAG_MASK)
+        self.edge_of_flight_line = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.EDGE_OF_FLIGHT_LINE_MASK)
+
+    def unpack_raw_classification(self):
+        # Split raw classification
+        self.classification = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
+        self.synthetic = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.SYNTHETIC_MASK).astype('bool')
+        self.key_point = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.KEY_POINT_MASK).astype('bool')
+        self.withheld = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.WITHHELD_MASK).astype('bool')
 
     def repack_bit_fields(self):
         self.np_point_data['bit_fields'] = pointdims.repack(
@@ -137,11 +133,20 @@ class LasData:
              pointdims.EDGE_OF_FLIGHT_LINE_MASK,)
         )
 
+    def to_point_format(self, new_point_format):
+        if new_point_format == self.header.point_data_format_id:
+            return
+        self.repack_classification()
+        self.repack_bit_fields()
+        self.np_point_data.to_point_format(new_point_format)
+        self.header.point_data_format_id = new_point_format
+        self.header.point_data_record_length = self.np_point_data.data.dtype.itemsize
+        self.unpack_bit_fields()
+        self.unpack_raw_classification()
 
     def write_to(self, out_stream, do_compress=False):
         self.repack_bit_fields()
         self.repack_classification()
-
 
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
@@ -173,10 +178,14 @@ class LasData:
             self.vlrs.write_to(out_stream)
             self.np_point_data.write_to(out_stream)
 
+    def write_to_file(self, filename):
+        do_compress = filename.split('.')[-1] == 'laz'
+        with open(filename, mode='wb') as out:
+            self.write_to(out, do_compress=do_compress)
+
     def write(self, destination):
         if isinstance(destination, str):
-            with open(destination, mode='wb') as out:
-                self.write_to(out)
+            self.write_to_file(destination)
         else:
             self.write_to(destination)
 

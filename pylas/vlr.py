@@ -81,8 +81,8 @@ class VLR:
 
     def into_raw(self):
         raw_vlr = RawVLR()
-        raw_vlr.user_id = self.user_id.encode()
-        raw_vlr.description = self.description.encode()
+        raw_vlr.user_id = self.user_id.encode('utf8')
+        raw_vlr.description = self.description.encode('utf8')
         raw_vlr.record_id = self.record_id
         raw_vlr.record_length_after_header = len(self.record_data)
         raw_vlr.record_data = self.record_data
@@ -157,7 +157,10 @@ class VLRList:
         vlrlist = cls()
         for _ in range(num_to_read):
             raw = RawVLR.read_from(data_stream)
-            vlrlist.append(VLR.from_raw(raw))
+            try:
+                vlrlist.append(VLR.from_raw(raw))
+            except UnicodeDecodeError:
+                print("Failed to decode VLR: {}".format(raw))
 
         return vlrlist
 
