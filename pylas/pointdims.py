@@ -7,28 +7,41 @@ def point_format_to_dtype(point_format):
     return [dimensions[dim_name] for dim_name in point_format]
 
 
-def bit_transform(x, low, high):
-    return np.right_shift(np.bitwise_and(x, 2 ** high - 1), low)
+def unpack(source_array, mask):
+    lsb = least_significant_bit(mask)
+    return (source_array & mask) >> lsb
 
 
-RETURN_NUMBER_LOW_BIT = 0
-RETURN_NUMBER_HIGH_BIT = 3
-NUMBER_OF_RETURNS_LOW_BIT = 3
-NUMBER_OF_RETURNS_HIGH_BIT = 6
-SCAN_DIRECTION_FLAG_LOW_BIT = 6
-SCAN_DIRECTION_FLAG_HIGH_BIT = 7
-EDGE_OF_FLIGHT_LINE_LOW_BIT = 7
-EDGE_OF_FLIGHT_LINE_HIGH_BIT = 7
+# TODO: The error message could be more useful
+# if we somehow knew the dimension that is overflowed
 
-CLASSIFICATION_LOW_BIT = 0
-CLASSIFICATION_HIGH_BIT = 4
-SYNTHETIC_LOW_BIT = 4
-SYNTHETIC_HIGH_BIT = 5
-KEY_POINT_LOW_BIT = 5
-KEY_POINT_HIGH_BIT = 6
-WITHHELD_LOW_BIT = 6
-WITHHELD_HIGH_BIT = 7
+def repack(arrays, masks):
+    packed = np.zeros_like(arrays[0])
+    for array, mask in zip(arrays, masks):
+        lsb = least_significant_bit(mask)
+        msb = (mask >> lsb).bit_length()
+        max_value = (2 ** msb) - 1
+        if array.max() > max_value:
+            raise ValueError("value ({}) is greater than allowed (max: {})".format(
+                array.max(), max_value
+            ))
+        packed = packed | ((array << lsb) & mask)
+    return packed
 
+
+def least_significant_bit(val):
+    return (val & -val).bit_length() - 1
+
+
+RETURN_NUMBER_MASK = 0b00000111
+NUMBER_OF_RETURNS_MASK = 0b00111000
+SCAN_DIRECTION_FLAG_MASK = 0b01000000
+EDGE_OF_FLIGHT_LINE_MASK = 0b10000000
+
+CLASSIFICATION_MASK = 0b00011111
+SYNTHETIC_MASK = 0b00100000
+KEY_POINT_MASK = 0b01000000
+WITHHELD_MASK = 0b10000000
 
 dimensions = {
     'X': ('X', 'i4'),

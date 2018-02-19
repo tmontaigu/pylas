@@ -3,7 +3,7 @@ import io
 import numpy as np
 
 from pylas.header import rawheader
-from . import pointdata, vlr, pointdimensions
+from . import pointdata, vlr, pointdims
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed,
                           uncompressed_id_to_compressed,
@@ -56,54 +56,25 @@ class LasData:
         self.z = scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
         # These dimensions have to be repacked together when writing
-        self.return_number = pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.RETURN_NUMBER_LOW_BIT,
-            pointdimensions.RETURN_NUMBER_HIGH_BIT
-        )
+        self.return_number = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.RETURN_NUMBER_MASK)
 
-        self.number_of_returns = pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.NUMBER_OF_RETURNS_LOW_BIT,
-            pointdimensions.NUMBER_OF_RETURNS_HIGH_BIT
-        )
-
-        self.scan_direction_flag = pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.SCAN_DIRECTION_FLAG_LOW_BIT,
-            pointdimensions.SCAN_DIRECTION_FLAG_HIGH_BIT
-        )
-
-        self.edge_of_flight_line = pointdimensions.bit_transform(
-            self.np_point_data['bit_fields'],
-            pointdimensions.EDGE_OF_FLIGHT_LINE_LOW_BIT,
-            pointdimensions.EDGE_OF_FLIGHT_LINE_HIGH_BIT
-        )
+        self.number_of_returns = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK)
+        self.scan_direction_flag = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.SCAN_DIRECTION_FLAG_MASK)
+        self.edge_of_flight_line = pointdims.unpack(
+            self.np_point_data['bit_fields'], pointdims.EDGE_OF_FLIGHT_LINE_MASK)
 
         # Split raw classification
-        self.classification = pointdimensions.bit_transform(
-            self.np_point_data['raw_classification'],
-            pointdimensions.CLASSIFICATION_LOW_BIT,
-            pointdimensions.CLASSIFICATION_HIGH_BIT
-        )
-
-        self.synthetic = pointdimensions.bit_transform(
-            self.np_point_data['raw_classification'],
-            pointdimensions.SYNTHETIC_LOW_BIT,
-            pointdimensions.SYNTHETIC_HIGH_BIT,
-        ).astype('bool')
-
-        self.key_point = pointdimensions.bit_transform(
-            self.np_point_data['raw_classification'],
-            pointdimensions.KEY_POINT_LOW_BIT,
-            pointdimensions.KEY_POINT_HIGH_BIT
-        ).astype('bool')
-
-        self.withheld = pointdimensions.bit_transform(
-            self.np_point_data['raw_classification'],
-            pointdimensions.WITHHELD_LOW_BIT,
-            pointdimensions.WITHHELD_HIGH_BIT
-        ).astype('bool')
+        self.classification = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
+        self.synthetic = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.SYNTHETIC_MASK).astype('bool')
+        self.key_point = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.KEY_POINT_MASK).astype('bool')
+        self.withheld = pointdims.unpack(
+            self.np_point_data['raw_classification'], pointdims.WITHHELD_MASK).astype('bool')
 
     @property
     def gps_time(self):
@@ -138,25 +109,25 @@ class LasData:
         self.np_point_data['blue'] = value
 
     def repack_bit_fields(self):
-        self.np_point_data['bit_fields'] = pointdata.bitpack(
+        self.np_point_data['bit_fields'] = pointdims.repack(
             (self.return_number, self.number_of_returns, self.scan_direction_flag, self.edge_of_flight_line),
-            ((pointdimensions.RETURN_NUMBER_LOW_BIT, pointdimensions.RETURN_NUMBER_HIGH_BIT),
-             (pointdimensions.NUMBER_OF_RETURNS_LOW_BIT, pointdimensions.NUMBER_OF_RETURNS_HIGH_BIT),
-             (pointdimensions.SCAN_DIRECTION_FLAG_LOW_BIT, pointdimensions.SCAN_DIRECTION_FLAG_HIGH_BIT),
-             (pointdimensions.EDGE_OF_FLIGHT_LINE_LOW_BIT, pointdimensions.EDGE_OF_FLIGHT_LINE_HIGH_BIT)
-             ))
+            (pointdims.RETURN_NUMBER_MASK,
+             pointdims.NUMBER_OF_RETURNS_MASK,
+             pointdims.SCAN_DIRECTION_FLAG_MASK,
+             pointdims.EDGE_OF_FLIGHT_LINE_MASK)
+        )
 
     def repack_classification(self):
-        self.np_point_data['raw_classification'] = pointdata.bitpack(
+        self.np_point_data['raw_classification'] = pointdims.repack(
             (self.classification, self.synthetic, self.key_point, self.withheld),
-            ((pointdimensions.CLASSIFICATION_LOW_BIT, pointdimensions.CLASSIFICATION_HIGH_BIT),
-             (pointdimensions.SYNTHETIC_LOW_BIT, pointdimensions.SYNTHETIC_HIGH_BIT),
-             (pointdimensions.KEY_POINT_LOW_BIT, pointdimensions.KEY_POINT_HIGH_BIT),
-             (pointdimensions.WITHHELD_LOW_BIT, pointdimensions.WITHHELD_HIGH_BIT)
-             ))
+            (pointdims.CLASSIFICATION_MASK,
+             pointdims.NUMBER_OF_RETURNS_MASK,
+             pointdims.SCAN_DIRECTION_FLAG_MASK,
+             pointdims.EDGE_OF_FLIGHT_LINE_MASK,)
+        )
 
     def write_to(self, out_stream, do_compress=False):
-        # self.repack_bit_fields()
+        self.repack_bit_fields()
         self.repack_classification()
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
@@ -187,6 +158,13 @@ class LasData:
             self.header.write_to(out_stream)
             self.vlrs.write_to(out_stream)
             self.np_point_data.write_to(out_stream)
+
+    def write(self, destination):
+        if isinstance(destination, str):
+            with open(destination, mode='wb') as out:
+                self.write_to(out)
+        else:
+            self.write_to(destination)
 
     @classmethod
     def open(cls, source):
