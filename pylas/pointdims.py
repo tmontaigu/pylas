@@ -173,6 +173,9 @@ def dtype_append(dtype, extra_dims_tuples):
     return np.dtype(descr)
 
 
+def size_of_point_format(point_format_id):
+    return get_dtype_of_format_id(point_format_id).itemsize
+
 # TODO maybe the dtype construction for point formats should be delayed
 # and only construct the list that will be used to construct the dtype
 def get_dtype_of_format_id(point_format_id, extra_dims=None):
