@@ -1,0 +1,7 @@
+**/*.las
+**/*.laz
+**/*.pyc
+
+.idea
+tests/.cache
+tests/.pytest_cache
