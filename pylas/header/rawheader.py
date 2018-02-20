@@ -78,24 +78,27 @@ class RawHeader:
     def __init__(self):
         self.file_signature = LAS_FILE_SIGNATURE
         self.file_source_id = 0
-        self.global_encoding = 0
-        self.guid = RawGUID()
+        self.reserved = 0  # global_encoding
+        self.guid_data_1 = 0
+        self.guid_data_2 = 0
+        self.guid_data_3 = 0
+        self.guid_data_4 = b'\x00' * type_lengths['char'] * 8
         self.version_major = 1
         self.version_minor = 2
         self.system_identifier = b'\x00' * type_lengths['char'] * 32
         self.generating_software = b'\x00' * type_lengths['char'] * 32
         self.creation_day_of_year = 0
         self.creation_year = 0
-        self.header_size = 0
+        self.header_size = 227
         self.offset_to_point_data = 0
         self.number_of_vlr = 0
         self.point_data_format_id = 0
         self.point_data_record_length = 0
         self.number_of_point_records = 0  # Legacy-ed in 1.4
-        self.number_of_points_by_return = 0  # Legacy-ed in 1.4
-        self.x_scale = 0
-        self.y_scale = 0
-        self.z_scale = 0
+        self.number_of_points_by_return = (0, 0, 0, 0, 0)  # Legacy-ed in 1.4
+        self.x_scale = 0.01
+        self.y_scale = 0.01
+        self.z_scale = 0.01
         self.x_offset = 0
         self.y_offset = 0
         self.z_offset = 0
@@ -118,6 +121,7 @@ class RawHeader:
 
         for field in LAS_1_1_HEADER_FIELDS:
             val = getattr(self, field.name)
+            print(field.name, val)
             out_stream.write(val, field.type, num=field.num)
 
         if self.version_major >= 1 and self.version_minor >= 3:

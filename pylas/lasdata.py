@@ -59,9 +59,6 @@ class LasBase(object):
 class LasData(LasBase):
     def __init__(self, header=None, vlrs=None, points=None):
         super().__init__(header, vlrs, points)
-        self.scan_angle_rank = self.np_point_data['scan_angle_rank']
-        self.user_data = self.np_point_data['user_data']
-        self.point_source_id = self.np_point_data['point_source_id']
 
     @property
     def return_number(self):
@@ -137,7 +134,16 @@ class LasData(LasBase):
     def write_to(self, out_stream, do_compress=False):
 
         self.header.number_of_point_records = len(self.np_point_data)
-        self.header.number_of_points_by_return_ = len(self.np_point_data)
+        self.header.number_of_points_records_ = len(self.np_point_data)
+        self.header.point_data_record_length = self.np_point_data.data.itemsize
+
+        self.header.x_max = self.X.max()
+        self.header.y_max = self.Y.max()
+        self.header.z_max = self.Z.max()
+
+        self.header.x_min = self.X.min()
+        self.header.y_min = self.Y.min()
+        self.header.z_min = self.Z.min()
 
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)

@@ -1,4 +1,3 @@
-import io
 import os
 
 import numpy as np
@@ -178,14 +177,29 @@ def test_blue(read_simple):
     assert f.blue.min() == 56
 
 
-def test_nothing_changes(open_simple):
-    true_buffer = open_simple.read()
-    las = LasData.from_buffer(true_buffer)
-    out = io.BytesIO()
-    las.write_to(out)
-    buf = out.getvalue()
+# Can't work anymore since min/maxs in header
+# are recalculated, redo test in better way
 
-    assert buf == true_buffer
+# def test_nothing_changes(open_simple):
+#     true_buffer = open_simple.read()
+#     las = LasData.from_buffer(true_buffer)
+#     out = io.BytesIO()
+#     las.write_to(out)
+#     buf = out.getvalue()
+#
+#     assert buf == true_buffer
+
+# def test_write_uncompressed_no_changes():
+#     c_las = LasData.from_file('simple.laz')
+#
+#     with io.BytesIO() as out:
+#         c_las.write_to(out, do_compress=False)
+#         out_buf = out.getvalue()
+#
+#     with open('simple.las', mode='rb') as f:
+#         expected = f.read()
+#
+#     assert out_buf == expected
 
 def test_decompression_is_same_as_uncompressed():
     u_las = LasData.from_file('simple.las')
@@ -196,18 +210,6 @@ def test_decompression_is_same_as_uncompressed():
 
     assert u_point_buffer == c_points_buffer
 
-
-def test_write_uncompressed_no_changes():
-    c_las = LasData.from_file('simple.laz')
-
-    with io.BytesIO() as out:
-        c_las.write_to(out, do_compress=False)
-        out_buf = out.getvalue()
-
-    with open('simple.las', mode='rb') as f:
-        expected = f.read()
-
-    assert out_buf == expected
 
 
 
