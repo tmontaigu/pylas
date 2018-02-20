@@ -21,7 +21,8 @@ def open_simple():
 def read_uncompressed():
     return pylas.open('simple.las')
 
-@pytest.fixture()
+
+@pytest.fixture(params=['simple.las', 'simple.laz'])
 def get_header():
     with open('simple.las', mode='rb') as fin:
         return pylas.header.rawheader.RawHeader.read_from(fin)
@@ -62,8 +63,8 @@ def test_waveform_is_none(read_simple):
     assert read_simple.header.start_of_waveform_data_packet_record is None
 
 
-def test_no_vlr_for_simple(read_uncompressed):
-    f = read_uncompressed
+def test_no_vlr_for_simple(read_simple):
+    f = read_simple
     assert f.vlrs == []
 
 
