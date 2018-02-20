@@ -5,8 +5,9 @@ from .pointdims import get_dtype_of_format_id
 
 
 class NumpyPointData:
-    def __init__(self, data):
+    def __init__(self, data, point_fmt_id):
         self.data = data
+        self.point_format_id = point_fmt_id
 
     def __getitem__(self, item):
         return self.data[item]
@@ -33,6 +34,7 @@ class NumpyPointData:
             except ValueError:
                 pass
         self.data = new_data
+        self.point_format_id = new_point_format
 
     def write_to(self, out):
         raw_bytes = self.data.tobytes()
@@ -45,15 +47,15 @@ class NumpyPointData:
         point_data_buffer = stream.read(count * points_dtype.itemsize)
         data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
         data.flags.writeable = True
-        return cls(data)
+        return cls(data, point_format_id)
 
     @classmethod
     def from_compressed_stream(cls, compressed_stream, point_format_id, count, laszip_vlr):
         uncompressed = decompress_stream(compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
-        return cls(uncompressed)
+        return cls(uncompressed, point_format_id)
 
     @classmethod
     def empty(cls, point_format_id):
         data = np.zeros(0, dtype=get_dtype_of_format_id(point_format_id))
-        return cls(data)
+        return cls(data, point_format_id)

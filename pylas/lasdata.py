@@ -39,6 +39,8 @@ def read_las_stream(data_stream):
     assert data_stream.tell() == header.header_size
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
+    # version 1.4 -> EVLRs
+
     data_stream.seek(header.offset_to_point_data)
     if is_point_format_compressed(header.point_data_format_id):
         laszip_vlr = vlrs.extract_laszip_vlr()
@@ -62,8 +64,10 @@ def read_las_stream(data_stream):
             header.number_of_point_records
         )
 
-    return LasData(header, vlrs, np_point_data)
+    if header.version_major >= 1 and header.version_minor >= 4:
+        return LasData_1_4(header, vlrs, np_point_data)
 
+    return LasData(header, vlrs, np_point_data)
 
 class LasBase(object):
     def __init__(self, header=None, vlrs=None, points=None):
@@ -96,15 +100,25 @@ class LasBase(object):
             self.np_point_data[key] = value
         except ValueError as e:
             prop = getattr(self.__class__, key, None)
-            print(key, prop)
             if prop is not None and isinstance(prop, property):
                 if prop.fset is None:
                     raise AttributeError("Cannot set {}".format(key))
-                print('using property')
                 prop.fset(self, value)
             else:
                 super().__setattr__(key, value)
 
+    def update_header(self):
+        self.header.number_of_point_records = len(self.np_point_data)
+        self.header.number_of_points_records_ = len(self.np_point_data)
+        self.header.point_data_record_length = self.np_point_data.data.itemsize
+
+        self.header.x_max = self.X.max()
+        self.header.y_max = self.Y.max()
+        self.header.z_max = self.Z.max()
+
+        self.header.x_min = self.X.min()
+        self.header.y_min = self.Y.min()
+        self.header.z_min = self.Z.min()
 
 class LasData(LasBase):
     def __init__(self, header=None, vlrs=None, points=None):
@@ -141,6 +155,8 @@ class LasData(LasBase):
     @property
     def classification(self):
         return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
+
+    # Setters #
 
     @number_of_returns.setter
     def number_of_returns(self, value):
@@ -182,18 +198,7 @@ class LasData(LasBase):
         self.header.point_data_record_length = self.np_point_data.data.dtype.itemsize
 
     def write_to(self, out_stream, do_compress=False):
-
-        self.header.number_of_point_records = len(self.np_point_data)
-        self.header.number_of_points_records_ = len(self.np_point_data)
-        self.header.point_data_record_length = self.np_point_data.data.itemsize
-
-        self.header.x_max = self.X.max()
-        self.header.y_max = self.Y.max()
-        self.header.z_max = self.Z.max()
-
-        self.header.x_min = self.X.min()
-        self.header.y_min = self.Y.min()
-        self.header.z_min = self.Z.min()
+        self.update_header()
 
         if do_compress:
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
@@ -236,3 +241,50 @@ class LasData(LasBase):
         else:
             self.write_to(destination)
 
+
+# TODO Classification_flags setter,  and proper subfields
+class LasData_1_4(LasBase):
+    def __init__(self, header=None, vlrs=None, points=None):
+        super().__init__(header, vlrs, points)
+
+    @property
+    def return_number(self):
+        return pointdims.unpack(self.np_point_data['bit_fields'], pointdims.RETURN_NUMBER_MASK_1_4)
+
+    @property
+    def number_of_returns(self):
+        return pointdims.unpack(self.np_points_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK_1_4)
+
+    @property
+    def classification_flags(self):
+        return pointdims.unpack(self.np_point_data['classification_flags'], pointdims.CLASSIFICATION_FLAGS_MASK)
+
+    @property
+    def scanner_channel(self):
+        return pointdims.unpack(self.np_point_data['classification_flags'], pointdims.SCANNER_CHANNEL_MASK)
+
+    @property
+    def scan_direction_flag(self):
+        return pointdims.unpack(self.np_point_data['classification_flags'], pointdims.SCAN_DIRECTION_FLAG_MASK_1_4)
+
+    @property
+    def edge_of_flight_line(self):
+        return pointdims.unpack(self.np_point_data['classification_flags'], pointdims.EDGE_OF_FLIGHT_LINE_MASK_1_4)
+
+    # Setters #
+
+    @return_number.setter
+    def return_number(self, value):
+        pointdims.pack_into(self.np_point_data['bit_fields'], value, pointdims.RETURN_NUMBER_MASK_1_4, inplace=True)
+
+    @number_of_returns.setter
+    def number_of_returns(self, value):
+        pointdims.pack_into(self.np_point_data['bit_fields'], value, pointdims.NUMBER_OF_RETURNS_MASK_1_4, inplace=True)
+
+    @scan_direction_flag.setter
+    def scan_direction_flag(self, value):
+        pointdims.pack_into(self.np_point_data['bit_fields']), value, pointdims.SCAN_DIRECTION_FLAG_MASK_1_4
+
+    @edge_of_flight_line.setter
+    def edge_of_flight_line(self, value):
+        pointdims.pack_into(self.np_point_data['bifields'], value, pointdims.EDGE_OF_FLIGHT_LINE_MASK_1_4, inplace=True)
