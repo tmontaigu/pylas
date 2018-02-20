@@ -9,7 +9,7 @@ from pylas.lasdata import LasData
 
 @pytest.fixture(params=['simple.las', 'simple.laz'])
 def read_simple(request):
-    return LasData.from_file(request.param)
+    return pylas.open(request.param)
 
 
 @pytest.fixture()
@@ -18,7 +18,7 @@ def open_simple():
 
 @pytest.fixture()
 def read_uncompressed():
-    return LasData.from_file('simple.las')
+    return pylas.open('simple.las')
 
 @pytest.fixture()
 def get_header():
@@ -202,8 +202,8 @@ def test_blue(read_simple):
 #     assert out_buf == expected
 
 def test_decompression_is_same_as_uncompressed():
-    u_las = LasData.from_file('simple.las')
-    c_las = LasData.from_file('simple.laz')
+    u_las = pylas.open('simple.las')
+    c_las = pylas.open('simple.laz')
 
     u_point_buffer = u_las.np_point_data.data.tobytes()
     c_points_buffer = c_las.np_point_data.data.tobytes()

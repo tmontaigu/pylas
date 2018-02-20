@@ -1,5 +1,2 @@
 from .lasdata import LasData
-
-
-def open(source):
-    return LasData.open(source)
+from .lasdata import open_las as open

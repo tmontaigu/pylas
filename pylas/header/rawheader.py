@@ -121,7 +121,6 @@ class RawHeader:
 
         for field in LAS_1_1_HEADER_FIELDS:
             val = getattr(self, field.name)
-            print(field.name, val)
             out_stream.write(val, field.type, num=field.num)
 
         if self.version_major >= 1 and self.version_minor >= 3:

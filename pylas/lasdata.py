@@ -15,6 +15,56 @@ def scale_dimension(array_dim, scale, offset):
     return (array_dim * scale) + offset
 
 
+def open_las(source):
+    if isinstance(source, bytes):
+        return read_las_buffer(source)
+    elif isinstance(source, str):
+        return read_las_file(source)
+    else:
+        return read_las_stream(source)
+
+
+def read_las_file(filename):
+    with open(filename, mode='rb') as fin:
+        return read_las_stream(fin)
+
+
+def read_las_buffer(buffer):
+    with io.BytesIO(buffer) as stream:
+        return read_las_stream(stream)
+
+
+def read_las_stream(data_stream):
+    header = rawheader.RawHeader.read_from(data_stream)
+    assert data_stream.tell() == header.header_size
+    vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
+
+    data_stream.seek(header.offset_to_point_data)
+    if is_point_format_compressed(header.point_data_format_id):
+        laszip_vlr = vlrs.extract_laszip_vlr()
+        if laszip_vlr is None:
+            raise ValueError('Could not find Laszip VLR')
+        header.point_data_format_id = compressed_id_to_uncompressed(
+            header.point_data_format_id)
+
+        # first 8 bytes after header + vlr + evlrs is the offset to the laz chunk table
+        data_stream.seek(8, io.SEEK_CUR)
+        np_point_data = pointdata.NumpyPointData.from_compressed_stream(
+            data_stream,
+            header.point_data_format_id,
+            header.number_of_point_records,
+            laszip_vlr
+        )
+    else:
+        np_point_data = pointdata.NumpyPointData.from_stream(
+            data_stream,
+            header.point_data_format_id,
+            header.number_of_point_records
+        )
+
+    return LasData(header, vlrs, np_point_data)
+
+
 class LasBase(object):
     def __init__(self, header=None, vlrs=None, points=None):
         self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
@@ -186,63 +236,3 @@ class LasData(LasBase):
         else:
             self.write_to(destination)
 
-    @classmethod
-    def open(cls, source):
-        if isinstance(source, bytes):
-            return cls.from_buffer(source)
-        elif isinstance(source, str):
-            return cls.from_file(source)
-        else:
-            return cls(source)
-
-    # def __setattr__(self, key, value):
-    #     prop = getattr(self.__class__, key, None)
-    #     print(key, prop)
-    #     if prop is not None and isinstance(prop, property):
-    #         if prop.fset is None:
-    #             raise AttributeError("Cannot set {}".format(key))
-    #         print('using property')
-    #         prop.fset(self, value)
-    #     else:
-    #         super().__setattr__(key, value)
-
-    @classmethod
-    def from_file(cls, filename):
-        with open(filename, mode='rb') as f:
-            return cls.from_file_obj(f)
-
-    @classmethod
-    def from_buffer(cls, buf):
-        with io.BytesIO(buf) as stream:
-            return cls.from_file_obj(stream)
-
-    @classmethod
-    def from_file_obj(cls, data_stream):
-        header = rawheader.RawHeader.read_from(data_stream)
-        assert data_stream.tell() == header.header_size
-        vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
-
-        data_stream.seek(header.offset_to_point_data)
-        if is_point_format_compressed(header.point_data_format_id):
-            laszip_vlr = vlrs.extract_laszip_vlr()
-            if laszip_vlr is None:
-                raise ValueError('Could not find Laszip VLR')
-            header.point_data_format_id = compressed_id_to_uncompressed(
-                header.point_data_format_id)
-
-            # first 8 bytes after header + vlr + evlrs is the offset to the laz chunk table
-            data_stream.seek(8, io.SEEK_CUR)
-            np_point_data = pointdata.NumpyPointData.from_compressed_stream(
-                data_stream,
-                header.point_data_format_id,
-                header.number_of_point_records,
-                laszip_vlr
-            )
-        else:
-            np_point_data = pointdata.NumpyPointData.from_stream(
-                data_stream,
-                header.point_data_format_id,
-                header.number_of_point_records
-            )
-
-        return cls(header, vlrs, np_point_data)
