@@ -109,7 +109,86 @@ class VLR:
 
 class LasZipVlr(VLR):
     def __init__(self, data):
-        super().__init__('laszip encoded', 22204, 'http://laszip.org', data)
+        super().__init__(
+            LasZipVlr.official_user_id(),
+            LasZipVlr.official_record_id(),
+            'http://laszip.org',
+            data
+        )
+
+    @staticmethod
+    def official_user_id():
+        return 'laszip encoded'
+
+    @staticmethod
+    def official_record_id():
+        return 2204
+
+    @classmethod
+    def from_raw(cls, raw_vlr):
+        return cls(raw_vlr.record_data)
+
+
+import ctypes
+
+
+# extra_bytes_fields = 'reserved data_type options name unused no_data min max scale offset description'
+# ExtraBytes = namedtuple('ExtraBytes', extra_bytes_fields)
+# ExtraBytes._make(struct.unpack(2))
+class ExtraBytes(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ('reserved', ctypes.c_uint8 * 2),
+        ('data_type', ctypes.c_uint8),
+        ('options', ctypes.c_uint8),
+        ('name', ctypes.c_char * 32),
+        ('unused', ctypes.c_uint8 * 4),
+        ('no_data', ctypes.c_ubyte * 3),
+        ('min', ctypes.c_ubyte * 3),
+        ('max', ctypes.c_ubyte * 3),
+        ('scale', ctypes.c_double * 3),
+        ('offset', ctypes.c_double * 3),
+        ('description', ctypes.c_char * 32),
+    ]
+
+
+class ExtraBytesVlr(VLR):
+    def __init__(self, data):
+        if (len(data) % 192) != 0:
+            raise ValueError("Data length of ExtraBytes vlr must be a multiple of 192")
+        super().__init__('LASF_Spec', 4, 'extra_bytes', data)
+        self.parse_data()
+
+    def parse_data(self):
+        num_extra_bytes_structs = len(self.record_data) // 192
+        self.extra_bytes_structs = [None * num_extra_bytes_structs]
+        for i in range(num_extra_bytes_structs):
+            self.extra_bytes_structs[i] = ExtraBytes.from_buffer_copy(self.record_data[192 * i: 192 * (i + 1)])
+
+    def __repr__(self):
+        return 'ExtraBytesVlr(extra bytes structs: {})'.format(len(self.extra_bytes_structs))
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Spec'
+
+    @staticmethod
+    def official_record_id():
+        return 4
+
+    @classmethod
+    def from_raw(cls, raw_vlr):
+        return cls(raw_vlr.record_data)
+
+
+# TODO in a better way
+def vlr_factory(raw_vlr):
+    user_id = raw_vlr.user_id.rstrip(NULL_BYTE).decode()
+    if user_id == ExtraBytesVlr.official_user_id() and raw_vlr.record_id == ExtraBytesVlr.official_record_id():
+        return ExtraBytesVlr.from_raw(raw_vlr)
+    elif user_id == LasZipVlr.official_user_id() and raw_vlr.record_id == LasZipVlr.official_record_id():
+        return LasZipVlr.from_raw(raw_vlr)
+    else:
+        return VLR.from_raw(raw_vlr)
 
 
 class VLRList:
@@ -158,7 +237,7 @@ class VLRList:
         for _ in range(num_to_read):
             raw = RawVLR.read_from(data_stream)
             try:
-                vlrlist.append(VLR.from_raw(raw))
+                vlrlist.append(vlr_factory(raw))
             except UnicodeDecodeError:
                 print("Failed to decode VLR: {}".format(raw))
 
