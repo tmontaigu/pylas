@@ -79,6 +79,9 @@ class VLR:
     def is_laszip_vlr(self):
         return self.user_id == 'laszip encoded' and self.record_id == 22204
 
+    def is_extra_bytes_vlr(self):
+        return self.user_id == ExtraBytesVlr.official_user_id() and self.record_id == ExtraBytesVlr.official_record_id()
+
     def into_raw(self):
         raw_vlr = RawVLR()
         raw_vlr.user_id = self.user_id.encode('utf8')
@@ -131,10 +134,13 @@ class LasZipVlr(VLR):
 
 import ctypes
 
-
 # extra_bytes_fields = 'reserved data_type options name unused no_data min max scale offset description'
 # ExtraBytes = namedtuple('ExtraBytes', extra_bytes_fields)
 # ExtraBytes._make(struct.unpack(2))
+
+from .extradims import get_type_for_extra_dim
+
+
 class ExtraBytes(ctypes.LittleEndianStructure):
     _fields_ = [
         ('reserved', ctypes.c_uint8 * 2),
@@ -150,19 +156,31 @@ class ExtraBytes(ctypes.LittleEndianStructure):
         ('description', ctypes.c_char * 32),
     ]
 
+    def format_name(self):
+        return self.name.rstrip(NULL_BYTE).decode().replace(' ', "_").replace('-', '_')
+
+    def type_tuple(self):
+        if self.data_type == 0:
+            return self.format_name(), '{}u1'.format(self.options)
+        return self.format_name(), get_type_for_extra_dim(self.data_type)
+
 
 class ExtraBytesVlr(VLR):
     def __init__(self, data):
         if (len(data) % 192) != 0:
             raise ValueError("Data length of ExtraBytes vlr must be a multiple of 192")
         super().__init__('LASF_Spec', 4, 'extra_bytes', data)
+        self.extra_bytes_structs = []
         self.parse_data()
 
     def parse_data(self):
         num_extra_bytes_structs = len(self.record_data) // 192
-        self.extra_bytes_structs = [None * num_extra_bytes_structs]
+        self.extra_bytes_structs = [None] * num_extra_bytes_structs
         for i in range(num_extra_bytes_structs):
             self.extra_bytes_structs[i] = ExtraBytes.from_buffer_copy(self.record_data[192 * i: 192 * (i + 1)])
+
+    def type_of_extra_dims(self):
+        return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
 
     def __repr__(self):
         return 'ExtraBytesVlr(extra bytes structs: {})'.format(len(self.extra_bytes_structs))
@@ -198,6 +216,13 @@ class VLRList:
     def append(self, vlr):
         self.vlrs.append(vlr)
 
+    def get_extra_bytes_vlr(self):
+        for vlr in self.vlrs:
+            if vlr.is_extra_bytes_vlr():
+                return vlr
+        else:
+            return None
+
     def extract_laszip_vlr(self):
         laszip_vlr_idx = self._laszip_vlr_idx()
         if laszip_vlr_idx is not None:
@@ -220,6 +245,9 @@ class VLRList:
 
     def __iter__(self):
         yield from iter(self.vlrs)
+
+    def __getitem__(self, item):
+        return self.vlrs[item]
 
     def __len__(self):
         return len(self.vlrs)

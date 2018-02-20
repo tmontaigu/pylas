@@ -167,10 +167,19 @@ point_formats_dtype_1_4 = {fmt_id: point_format_to_dtype(point_fmt, dimensions_1
 all_point_formats = {**point_formats_dtype_base, **point_formats_dtype_1_4}
 
 
-def get_dtype_of_format_id(point_format_id):
+def dtype_append(dtype, extra_dims_tuples):
+    descr = dtype.descr
+    descr.extend(extra_dims_tuples)
+    return np.dtype(descr)
+
+
+# TODO maybe the dtype construction for point formats should be delayed
+# and only construct the list that will be used to construct the dtype
+def get_dtype_of_format_id(point_format_id, extra_dims=None):
     try:
         points_dtype = all_point_formats[point_format_id]
     except KeyError:
         raise PointFormatNotSupported(point_format_id)
-
+    if extra_dims is not None:
+        return dtype_append(points_dtype, extra_dims)
     return points_dtype

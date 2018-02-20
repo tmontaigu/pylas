@@ -39,6 +39,12 @@ def read_las_stream(data_stream):
     assert data_stream.tell() == header.header_size
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
+    extra_bytes_vlr = vlrs.get_extra_bytes_vlr()
+    if extra_bytes_vlr is not None:
+        extra_dims = extra_bytes_vlr.type_of_extra_dims()
+    else:
+        extra_dims = None
+
     # version 1.4 -> EVLRs
 
     data_stream.seek(header.offset_to_point_data)
@@ -61,7 +67,8 @@ def read_las_stream(data_stream):
         np_point_data = pointdata.NumpyPointData.from_stream(
             data_stream,
             header.point_data_format_id,
-            header.number_of_point_records
+            header.number_of_point_records,
+            extra_dims
         )
 
     if header.version_major >= 1 and header.version_minor >= 4:
