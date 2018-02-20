@@ -36,21 +36,24 @@ class LasBase(object):
     def z(self):
         return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
-    @property
-    def classification(self):
-        return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
-
-    @classification.setter
-    def classification(self, value):
-        print('kok')
-        self.__dict__['np_point_data']['classification'] = pointdims.pack_into(
-            self.np_point_data['raw_classification'], value, pointdims.CLASSIFICATION_MASK)
-
     def __getattr__(self, item):
         return self.np_point_data[item]
 
     def __setattr__(self, key, value):
-        self.np_point_data[key] = value
+        # try to set directly the dimension in the numpy array
+        # if it does not exists, search for an existing property-setter
+        try:
+            self.np_point_data[key] = value
+        except ValueError as e:
+            prop = getattr(self.__class__, key, None)
+            print(key, prop)
+            if prop is not None and isinstance(prop, property):
+                if prop.fset is None:
+                    raise AttributeError("Cannot set {}".format(key))
+                print('using property')
+                prop.fset(self, value)
+            else:
+                super().__setattr__(key, value)
 
 
 class LasData(LasBase):
@@ -88,50 +91,50 @@ class LasData(LasBase):
     def withheld(self):
         return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.WITHHELD_MASK).astype('bool')
 
-    def repack_bit_fields(self):
-        self.np_point_data['bit_fields'] = pointdims.repack(
-            (self.return_number, self.number_of_returns, self.scan_direction_flag, self.edge_of_flight_line),
-            (pointdims.RETURN_NUMBER_MASK,
-             pointdims.NUMBER_OF_RETURNS_MASK,
-             pointdims.SCAN_DIRECTION_FLAG_MASK,
-             pointdims.EDGE_OF_FLIGHT_LINE_MASK)
-        )
+    @property
+    def classification(self):
+        return pointdims.unpack(self.np_point_data['raw_classification'], pointdims.CLASSIFICATION_MASK)
 
     @number_of_returns.setter
     def number_of_returns(self, value):
-        pointdims.pack_into(self.np_point_data['number_of_returns'], value, pointdims.NUMBER_OF_RETURNS_MASK)
+        pointdims.pack_into(
+            self.np_point_data['bit_fields'], value, pointdims.NUMBER_OF_RETURNS_MASK, inplace=True)
 
     @scan_direction_flag.setter
     def scan_direction_flag(self, value):
-        pointdims.pack_into(self.np_point_data['scan_direction_flag'], value, pointdims.SCAN_DIRECTION_FLAG_MASK)
+        pointdims.pack_into(
+            self.np_point_data['bit_fields'], value, pointdims.SCAN_DIRECTION_FLAG_MASK, inplace=True)
 
     @edge_of_flight_line.setter
     def edge_of_flight_line(self, value):
-        pointdims.pack_into(self.np_point_data['edge_of_flight_line'], value, pointdims.EDGE_OF_FLIGHT_LINE_MASK)
+        pointdims.pack_into(
+            self.np_point_data['bit_fields'], value, pointdims.EDGE_OF_FLIGHT_LINE_MASK, inplace=True)
 
-    def repack_classification(self):
-        self.np_point_data['raw_classification'] = pointdims.repack(
-            (self.classification, self.synthetic, self.key_point, self.withheld),
-            (pointdims.CLASSIFICATION_MASK,
-             pointdims.NUMBER_OF_RETURNS_MASK,
-             pointdims.SCAN_DIRECTION_FLAG_MASK,
-             pointdims.EDGE_OF_FLIGHT_LINE_MASK,)
-        )
+    @classification.setter
+    def classification(self, value):
+        pointdims.pack_into(
+            self.np_point_data['raw_classification'], value, pointdims.CLASSIFICATION_MASK, inplace=True)
+
+    @synthetic.setter
+    def synthetic(self, value):
+        pointdims.pack_into(self.np_point_data['raw_classification'], value, pointdims.SYNTHETIC_MASK, inplace=True)
+
+    @key_point.setter
+    def key_point(self, value):
+        pointdims.pack_into(self.np_point_data['raw_classification'], value, pointdims.KEY_POINT_MASK, inplace=True)
+
+    @withheld.setter
+    def withheld(self, value):
+        pointdims.pack_into(self.np_point_data['raw_classification'], value, pointdims.WITHHELD_MASK, inplace=True)
 
     def to_point_format(self, new_point_format):
         if new_point_format == self.header.point_data_format_id:
             return
-        self.repack_classification()
-        self.repack_bit_fields()
         self.np_point_data.to_point_format(new_point_format)
         self.header.point_data_format_id = new_point_format
         self.header.point_data_record_length = self.np_point_data.data.dtype.itemsize
-        self.unpack_bit_fields()
-        self.unpack_raw_classification()
 
     def write_to(self, out_stream, do_compress=False):
-        self.repack_bit_fields()
-        self.repack_classification()
 
         self.header.number_of_point_records = len(self.np_point_data)
         self.header.number_of_points_by_return_ = len(self.np_point_data)
@@ -185,6 +188,17 @@ class LasData(LasBase):
             return cls.from_file(source)
         else:
             return cls(source)
+
+    # def __setattr__(self, key, value):
+    #     prop = getattr(self.__class__, key, None)
+    #     print(key, prop)
+    #     if prop is not None and isinstance(prop, property):
+    #         if prop.fset is None:
+    #             raise AttributeError("Cannot set {}".format(key))
+    #         print('using property')
+    #         prop.fset(self, value)
+    #     else:
+    #         super().__setattr__(key, value)
 
     @classmethod
     def from_file(cls, filename):

@@ -1,5 +1,4 @@
 import numpy as np
-from pipenv.patched.prettytoml.parser.parser import array_element
 
 from pylas.errors import PointFormatNotSupported
 
@@ -30,7 +29,7 @@ def repack(arrays, masks):
     return packed
 
 
-def pack_into(array, array_in, mask):
+def pack_into(array, array_in, mask, inplace=False):
     lsb = least_significant_bit(mask)
     msb = (mask >> lsb).bit_length()
     max_value = (2 ** msb) - 1
@@ -38,7 +37,10 @@ def pack_into(array, array_in, mask):
         raise OverflowError("value ({}) is greater than allowed (max: {})".format(
             array.max(), max_value
         ))
-    return array | ((array_in << lsb) & mask)
+    if inplace:
+        array[:] = array | ((array_in << lsb) & mask)
+    else:
+        return array | ((array_in << lsb) & mask)
 
 
 def least_significant_bit(val):
