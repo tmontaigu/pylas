@@ -69,6 +69,7 @@ def read_las_stream(data_stream):
 
     return LasData(header, vlrs, np_point_data)
 
+
 class LasBase(object):
     def __init__(self, header=None, vlrs=None, points=None):
         self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
@@ -119,6 +120,7 @@ class LasBase(object):
         self.header.x_min = self.X.min()
         self.header.y_min = self.Y.min()
         self.header.z_min = self.Z.min()
+
 
 class LasData(LasBase):
     def __init__(self, header=None, vlrs=None, points=None):
@@ -242,7 +244,7 @@ class LasData(LasBase):
             self.write_to(destination)
 
 
-# TODO Classification_flags setter,  and proper subfields
+# TODO Classification_flags setter, and proper subfields
 class LasData_1_4(LasBase):
     def __init__(self, header=None, vlrs=None, points=None):
         super().__init__(header, vlrs, points)
@@ -253,7 +255,7 @@ class LasData_1_4(LasBase):
 
     @property
     def number_of_returns(self):
-        return pointdims.unpack(self.np_points_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK_1_4)
+        return pointdims.unpack(self.np_point_data['bit_fields'], pointdims.NUMBER_OF_RETURNS_MASK_1_4)
 
     @property
     def classification_flags(self):
