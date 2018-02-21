@@ -292,7 +292,8 @@ class LasData_1_4(LasBase):
 
     @scan_direction_flag.setter
     def scan_direction_flag(self, value):
-        pointdims.pack_into(self.np_point_data['bit_fields']), value, pointdims.SCAN_DIRECTION_FLAG_MASK_1_4
+        pointdims.pack_into(self.np_point_data['bit_fields'], value, pointdims.SCAN_DIRECTION_FLAG_MASK_1_4,
+                            inplace=True)
 
     @edge_of_flight_line.setter
     def edge_of_flight_line(self, value):
