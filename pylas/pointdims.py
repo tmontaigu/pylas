@@ -28,7 +28,7 @@ def repack(arrays, masks):
     return packed
 
 
-def pack_into(array, array_in, mask, inplace=False, astype=np.uint8):
+def pack_into(array, array_in, mask, inplace=False):
     lsb = least_significant_bit(mask)
     msb = (mask >> lsb).bit_length()
     max_value = (2 ** msb) - 1
@@ -37,9 +37,9 @@ def pack_into(array, array_in, mask, inplace=False, astype=np.uint8):
             array.max(), max_value
         ))
     if inplace:
-        array[:] = (array | mask) & ((array_in << lsb) & mask).astype(astype)
+        array[:] = (array | mask) & ((array_in << lsb) & mask).astype(array.dtype)
     else:
-        return (array | mask) & ((array_in << lsb) & mask).astype(astype)
+        return (array | mask) & ((array_in << lsb) & mask).astype(array.dtype)
 
 
 def least_significant_bit(val):

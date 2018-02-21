@@ -48,4 +48,40 @@ def test_synthetic_change(tmpdir, las):
     out = tmpdir.join('tmp.las').open('rb')
     las = pylas.open(out)
 
-    assert s == las.synthetic
+    assert np.allclose(s, las.synthetic)
+
+
+def test_key_point_change(tmpdir, las):
+    kp = las.key_point
+    kp[:] = False
+    kp[25] = True
+
+    las.key_point = kp
+    assert np.allclose(kp, las.key_point)
+
+    out = tmpdir.join('tmp.las').open('wb')
+    las.write_to(out)
+    out.close()
+
+    out = tmpdir.join('tmp.las').open('rb')
+    las = pylas.open(out)
+
+    assert np.allclose(kp, las.key_point)
+
+
+def test_withheld_changes(tmpdir, las):
+    withheld = las.withheld
+    withheld[:] = False
+    withheld[180] = True
+
+    las.withheld = withheld
+    assert np.allclose(withheld, las.withheld)
+
+    out = tmpdir.join('tmp.las').open('wb')
+    las.write_to(out)
+    out.close()
+
+    out = tmpdir.join('tmp.las').open('rb')
+    las = pylas.open(out)
+
+    assert np.allclose(withheld, las.withheld)
