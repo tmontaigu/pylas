@@ -126,6 +126,9 @@ class RawHeader:
         # Added in las 1.4
         self.start_of_first_evlr = None
         self.number_of_evlr = None
+        # This 2 members won't be read nor written
+        # because in the HEADER_FIELDS definitions
+        # they have the same name in 1.2 header & 1.4 additional header
         self.number_of_points_record_ = None
         self.number_of_points_by_return_ = None
 
