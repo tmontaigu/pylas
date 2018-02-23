@@ -1,6 +1,6 @@
 import numpy as np
 
-from .compression import decompress_stream
+from .compression import decompress_buffer
 from .pointdims import get_dtype_of_format_id
 
 
@@ -50,7 +50,7 @@ class NumpyPointData:
 
     @classmethod
     def from_compressed_stream(cls, compressed_stream, point_format_id, count, laszip_vlr):
-        uncompressed = decompress_stream(compressed_stream, point_format_id, count, laszip_vlr)
+        uncompressed = decompress_buffer(compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
         return cls(uncompressed, point_format_id)
 

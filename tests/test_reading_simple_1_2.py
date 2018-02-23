@@ -5,7 +5,6 @@ import numpy as np
 import pytest
 
 import pylas
-from pylas.lasdata import LasData
 
 
 @pytest.fixture(params=['simple.las', 'simple.laz'])

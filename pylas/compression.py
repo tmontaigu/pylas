@@ -53,11 +53,11 @@ def uncompressed_id_to_compressed(point_format_id):
     return (2 ** 7) | point_format_id
 
 
-def decompress_stream(compressed_stream, point_format_id, point_count, laszip_vlr):
+def decompress_buffer(compressed_buffer, point_format_id, point_count, laszip_vlr):
     raise_if_no_lazperf()
 
     ndtype = get_dtype_of_format_id(point_format_id)
-    point_compressed = np.frombuffer(compressed_stream.read(), dtype=np.uint8)
+    point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
     vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
     decompressor = lazperf.VLRDecompressor(point_compressed, vlr_data)

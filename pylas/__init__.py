@@ -1,2 +1,1 @@
-from .lasdata import LasData
-from .lasdata import open_las as open
+from .lib import open_las as open
