@@ -23,6 +23,12 @@ class LasBase(object):
     def z(self):
         return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
+    def __getitem__(self, item):
+        return self.np_point_data[item]
+
+    def __setitem__(self, key, value):
+        self.np_point_data[key] = value
+
     def __getattr__(self, item):
         return self.np_point_data[item]
 
