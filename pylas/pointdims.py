@@ -1,6 +1,6 @@
 import numpy as np
 
-from pylas.errors import PointFormatNotSupported
+from . import errors
 
 
 # TODO Get rid of the duplication in de dimensions dict
@@ -176,13 +176,26 @@ def dtype_append(dtype, extra_dims_tuples):
 def size_of_point_format(point_format_id):
     return get_dtype_of_format_id(point_format_id).itemsize
 
+
 # TODO maybe the dtype construction for point formats should be delayed
 # and only construct the list that will be used to construct the dtype
 def get_dtype_of_format_id(point_format_id, extra_dims=None):
     try:
         points_dtype = all_point_formats[point_format_id]
     except KeyError:
-        raise PointFormatNotSupported(point_format_id)
+        raise errors.PointFormatNotSupported(point_format_id)
     if extra_dims is not None:
         return dtype_append(points_dtype, extra_dims)
     return points_dtype
+
+
+def np_dtype_to_point_format(dtype):
+    for format_id in all_point_formats:
+        fmt_dtype = get_dtype_of_format_id(format_id)
+        if fmt_dtype == dtype:
+            return format_id
+    else:
+        raise errors.IncompatibleDataFormat(
+            'Data type of array is not compatible with any point format (array dtype: {})'.format(
+                dtype
+            ))

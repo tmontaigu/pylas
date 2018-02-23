@@ -1,13 +1,13 @@
 import numpy as np
 
 from .compression import decompress_buffer
-from .pointdims import get_dtype_of_format_id
+from .pointdims import get_dtype_of_format_id, np_dtype_to_point_format
 
 
 class NumpyPointData:
-    def __init__(self, data, point_fmt_id):
+    def __init__(self, data, point_fmt_id=None):
         self.array = data
-        self.point_format_id = point_fmt_id
+        self.point_format_id = np_dtype_to_point_format(data.dtype) if point_fmt_id is None else point_fmt_id
 
     def __getitem__(self, item):
         return self.array[item]

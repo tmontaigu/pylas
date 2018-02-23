@@ -8,3 +8,7 @@ class PointFormatNotSupported(Exception):
 
 class LazPerfNotFound(Exception):
     pass
+
+
+class IncompatibleDataFormat(Exception):
+    pass
