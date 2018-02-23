@@ -6,39 +6,45 @@ from .pointdims import get_dtype_of_format_id
 
 class NumpyPointData:
     def __init__(self, data, point_fmt_id):
-        self.data = data
+        self.array = data
         self.point_format_id = point_fmt_id
 
     def __getitem__(self, item):
-        return self.data[item]
+        return self.array[item]
 
     def __setitem__(self, key, value):
-        if len(value) > len(self.data):
-            self.data = np.append(
-                self.data,
-                np.zeros(len(value) - len(self.data), dtype=self.data.dtype)
+        if len(value) > len(self.array):
+            self.array = np.append(
+                self.array,
+                np.zeros(len(value) - len(self.array), dtype=self.array.dtype)
             )
-        self.data[key] = value
+        self.array[key] = value
 
     def __len__(self):
-        return self.data.shape[0]
+        return self.array.shape[0]
+
+    @property
+    def point_size(self):
+        return self.array.dtype.itemsize
 
     def to_point_format(self, new_point_format):
         new_dtype = get_dtype_of_format_id(new_point_format)
 
-        new_data = np.zeros_like(self.data, dtype=new_dtype)
+        new_data = np.zeros_like(self.array, dtype=new_dtype)
 
-        for dim_name in self.data.dtype.names:
+        for dim_name in self.array.dtype.names:
             try:
-                new_data[dim_name] = self.data[dim_name]
+                new_data[dim_name] = self.array[dim_name]
             except ValueError:
                 pass
-        self.data = new_data
+        self.array = new_data
         self.point_format_id = new_point_format
 
+    def raw_bytes(self):
+        return self.array.tobytes()
+
     def write_to(self, out):
-        raw_bytes = self.data.tobytes()
-        out.write(raw_bytes)
+        out.write(self.raw_bytes())
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):

@@ -50,14 +50,14 @@ def read_las_stream(data_stream):
 
         offset_to_chunk_table = struct.unpack('<q', data_stream.read(8))[0]
         size_of_point_data = offset_to_chunk_table - data_stream.tell()
-        np_point_data = pointdata.NumpyPointData.from_compressed_stream(
+        points = pointdata.NumpyPointData.from_compressed_stream(
             data_stream.read(size_of_point_data),
             header.point_data_format_id,
             header.number_of_point_records,
             laszip_vlr
         )
     else:
-        np_point_data = pointdata.NumpyPointData.from_stream(
+        points = pointdata.NumpyPointData.from_stream(
             data_stream,
             header.point_data_format_id,
             header.number_of_point_records,
@@ -65,9 +65,9 @@ def read_las_stream(data_stream):
         )
 
     if header.version_major >= 1 and header.version_minor >= 4:
-        return las14.LasData(header, vlrs, np_point_data)
+        return las14.LasData(header, vlrs, points)
 
-    return las12.LasData(header, vlrs, np_point_data)
+    return las12.LasData(header, vlrs, points)
 
 
 

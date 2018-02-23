@@ -188,6 +188,7 @@ def test_nothing_changes(open_simple):
     las.write_to(out)
     buf = out.getvalue()
 
+    out_las = pylas.open(buf)
     # assert buf == true_buffer
     assert True
 
@@ -209,8 +210,8 @@ def test_decompression_is_same_as_uncompressed():
     u_las = pylas.open('simple.las')
     c_las = pylas.open('simple.laz')
 
-    u_point_buffer = u_las.np_point_data.data.tobytes()
-    c_points_buffer = c_las.np_point_data.data.tobytes()
+    u_point_buffer = u_las.points.raw_bytes()
+    c_points_buffer = c_las.points.raw_bytes()
 
     assert u_point_buffer == c_points_buffer
 
