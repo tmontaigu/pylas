@@ -73,6 +73,19 @@ ADDITIONAL_LAS_1_4_FIELDS = (
 )
 
 
+def size_of(header_fields):
+    return sum(type_lengths[field.type] * field.num for field in header_fields)
+
+
+LAS_1_1_HEADER_SIZE = size_of(LAS_1_1_HEADER_FIELDS)
+LAS_HEADERS_SIZE = {
+    '1.1': LAS_1_1_HEADER_SIZE,
+    '1.2': LAS_1_1_HEADER_SIZE,
+    '1.3': LAS_1_1_HEADER_SIZE + size_of(ADDITIONAL_LAS_1_3_FIELDS),
+    '1.4': LAS_1_1_HEADER_SIZE + size_of(ADDITIONAL_LAS_1_3_FIELDS) + size_of(ADDITIONAL_LAS_1_4_FIELDS)
+}
+
+
 # TODO: better defaults
 class RawHeader:
     def __init__(self):
