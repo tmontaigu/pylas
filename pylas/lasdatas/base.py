@@ -1,3 +1,7 @@
+from ..header import rawheader
+from .. import vlr
+from .. import pointdata
+
 def scale_dimension(array_dim, scale, offset):
     return (array_dim * scale) + offset
 
