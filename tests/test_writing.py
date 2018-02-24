@@ -1,7 +1,10 @@
-import pytest
-import pylas
-import numpy as np
 import io
+
+import numpy as np
+import pytest
+
+import pylas
+
 
 @pytest.fixture()
 def file():
@@ -17,7 +20,7 @@ def test_extraction(file):
     assert new.points_data.point_format_id == 3
 
     assert len(new.points) == sum(file.classification == 2)
-    assert np.all(new.classification == 2)
+    assert np.alltrue(new.classification == 2)
 
     out = io.BytesIO()
 
@@ -25,6 +28,4 @@ def test_extraction(file):
     out.seek(0)
 
     file = pylas.open(out)
-    assert all(file.classification == 2)
-
-
+    assert np.alltrue(file.classification == 2)

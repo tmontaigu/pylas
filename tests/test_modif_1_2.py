@@ -85,3 +85,36 @@ def test_withheld_changes(tmpdir, las):
     las = pylas.open(out)
 
     assert np.allclose(withheld, las.withheld)
+
+
+def dim_does_not_exists(las, dim_name):
+    try:
+        _ = getattr(las, dim_name)
+    except ValueError:
+        return True
+    return False
+
+
+def test_change_format(las):
+    assert las.points_data.point_format_id == 3
+    assert las.header.point_data_format_id == 3
+
+    las.to_point_format(2)
+    assert las.points_data.point_format_id == 2
+    assert las.header.point_data_format_id == 2
+    assert dim_does_not_exists(las, 'gps_time')
+
+    las.to_point_format(1)
+    assert las.points_data.point_format_id == 1
+    assert las.header.point_data_format_id == 1
+    assert dim_does_not_exists(las, 'red')
+    assert dim_does_not_exists(las, 'green')
+    assert dim_does_not_exists(las, 'blue')
+
+    las.to_point_format(0)
+    assert las.points_data.point_format_id == 0
+    assert las.header.point_data_format_id == 0
+    assert dim_does_not_exists(las, 'red')
+    assert dim_does_not_exists(las, 'green')
+    assert dim_does_not_exists(las, 'blue')
+    assert dim_does_not_exists(las, 'gps_time')
