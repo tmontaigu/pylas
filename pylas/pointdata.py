@@ -49,7 +49,6 @@ class NumpyPointData:
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
         points_dtype = get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
-
         point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
         data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
         return cls(data, point_format_id)

@@ -96,7 +96,7 @@ class LasData(LasBase):
             self.header.number_of_vlr = len(self.vlrs)
 
             compressed_points = compress_buffer(
-                np.frombuffer(self.points_data.data, np.uint8),
+                np.frombuffer(self.points_data.array, np.uint8),
                 lazvrl.schema,
                 self.header.offset_to_point_data,
             )

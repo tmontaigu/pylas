@@ -38,7 +38,7 @@ def read_las_stream(data_stream):
     else:
         extra_dims = None
 
-    # version 1.4 -> EVLRs
+    # version >= 1.3 -> EVLRs
 
     data_stream.seek(header.offset_to_point_data)
     if is_point_format_compressed(header.point_data_format_id):
@@ -68,6 +68,21 @@ def read_las_stream(data_stream):
         return las14.LasData(header, vlrs, points)
 
     return las12.LasData(header, vlrs, points)
+
+
+#TODO creation with existing header, vlrs, evlrs, points
+def create_las(file_vesion='1.2', point_format=0):
+    #TODO check file version & point format compatibilty
+
+    #For now we ca only create 1.2 files until
+    # we have a proper way to create headers
+    if not file_vesion == '1.2':
+        raise NotImplementedError('Can only create 1.2 files for the moments')
+
+    header = rawheader.RawHeader()
+    header.point_data_format_id = point_format
+    return las12.LasData(header=header)
+
 
 
 

@@ -64,6 +64,7 @@ class LasBase(object):
                 super().__setattr__(key, value)
 
     def update_header(self):
+        self.header.point_data_format_id = self.points_data.point_format_id
         self.header.number_of_point_records = len(self.points_data)
         self.header.number_of_points_records_ = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
