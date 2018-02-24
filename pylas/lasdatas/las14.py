@@ -49,3 +49,8 @@ class LasData(LasBase):
     @edge_of_flight_line.setter
     def edge_of_flight_line(self, value):
         pointdims.pack_into(self.points_data['bifields'], value, pointdims.EDGE_OF_FLIGHT_LINE_MASK_1_4, inplace=True)
+
+    def write_to(self, out_stream, do_compress=False):
+        if do_compress:
+            raise NotImplementedError('LazPerf cannot compress 1.4 file for the moment')
+        super().write_to(out_stream, do_compress=False)

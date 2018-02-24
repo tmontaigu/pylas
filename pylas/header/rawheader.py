@@ -69,7 +69,7 @@ ADDITIONAL_LAS_1_4_FIELDS = (
     HeaderField('start_of_first_evlr', 'uint64', 1),
     HeaderField('number_of_evlr', 'uint32', 1),
     HeaderField('number_of_points_records', 'uint64', 1),
-    HeaderField('number_of_points_by_return', 'uint64', 15),
+    HeaderField('number_of_points_by_return_', 'uint64', 15),
 )
 
 
@@ -126,11 +126,11 @@ class RawHeader:
         # Added in las 1.4
         self.start_of_first_evlr = None
         self.number_of_evlr = None
-        # This 2 members won't be read nor written
+        # This 1 member won't be read nor written
         # because in the HEADER_FIELDS definitions
-        # they have the same name in 1.2 header & 1.4 additional header
+        # it has the same name in 1.2 header & 1.4 additional header
         self.number_of_points_record_ = None
-        self.number_of_points_by_return_ = None
+        self.number_of_points_by_return_ = (0,) * 15
 
     def write_to(self, out_stream):
         out_stream = BinaryWriter(out_stream)
