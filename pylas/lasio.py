@@ -43,6 +43,8 @@ class BinaryReader:
         length = type_lengths[data_type] * num
         fmt_str = '{}{}{}'.format(self.endian, num, type_name_to_struct[data_type])
         b = self.stream.read(length)
+        if b == b'':
+            raise IOError("End of stream reached")
 
         # unpack returns a tuple even if the format string
         # has only one element

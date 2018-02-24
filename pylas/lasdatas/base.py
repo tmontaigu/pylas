@@ -82,6 +82,7 @@ class LasBase(object):
         self.header.y_min = self.Y.min()
         self.header.z_min = self.Z.min()
 
+    # TODO: check file version compatibility
     def to_point_format(self, new_point_format):
         if new_point_format == self.header.point_data_format_id:
             return
