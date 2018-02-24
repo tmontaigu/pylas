@@ -30,8 +30,7 @@ def repack(arrays, masks):
 
 def pack_into(array, array_in, mask, inplace=False):
     lsb = least_significant_bit(mask)
-    msb = (mask >> lsb).bit_length()
-    max_value = (2 ** msb) - 1
+    max_value = int(mask >> lsb)
     if array_in.max() > max_value:
         raise OverflowError("value ({}) is greater than allowed (max: {})".format(
             array.max(), max_value

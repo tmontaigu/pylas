@@ -76,12 +76,6 @@ class VLR:
         if self.record_length < 0:
             raise ValueError('record length must be >= 0')
 
-    def is_laszip_vlr(self):
-        return self.user_id == 'laszip encoded' and self.record_id == 22204
-
-    def is_extra_bytes_vlr(self):
-        return self.user_id == ExtraBytesVlr.official_user_id() and self.record_id == ExtraBytesVlr.official_record_id()
-
     def into_raw(self):
         raw_vlr = RawVLR()
         raw_vlr.user_id = self.user_id.encode('utf8')
@@ -218,7 +212,7 @@ class VLRList:
 
     def get_extra_bytes_vlr(self):
         for vlr in self.vlrs:
-            if vlr.is_extra_bytes_vlr():
+            if isinstance(vlr, ExtraBytesVlr):
                 return vlr
         else:
             return None
@@ -238,7 +232,7 @@ class VLRList:
 
     def _laszip_vlr_idx(self):
         for i, vlr in enumerate(self.vlrs):
-            if vlr.is_laszip_vlr():
+            if isinstance(vlr, LasZipVlr):
                 return i
         else:
             return None
