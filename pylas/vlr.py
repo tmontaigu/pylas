@@ -125,7 +125,7 @@ class LasZipVlr(VLR):
 
     @staticmethod
     def official_record_id():
-        return 2204
+        return 22204
 
     @classmethod
     def from_raw(cls, raw_vlr):
