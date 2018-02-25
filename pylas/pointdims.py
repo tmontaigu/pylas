@@ -67,6 +67,14 @@ dimensions = {
     'red': ('red', 'u2'),
     'green': ('green', 'u2'),
     'blue': ('blue', 'u2'),
+
+    # Las 1.4
+    'bit_fields_1.4': ('bit_fields_1.4', 'u1'),
+    'classification_flags': ('classification_flags', 'u1'),
+    'scan_angle': ('scan_angle_rank', 'i2'),
+    'classification': ('classification', 'u1'),
+    'nir': ('nir', 'u2')
+
 }
 
 point_format_0 = (
@@ -102,69 +110,18 @@ WITHHELD_MASK = 0b10000000
 
 point_formats_dtype_base = {fmt_id: point_format_to_dtype(point_fmt, dimensions)
                             for fmt_id, point_fmt in point_formats_dimensions.items()}
-SubField = namedtuple('SubField', ('name', 'mask', 'type'))
-sub_fields_dtype_base = {
-    'bit_fields': [
-        SubField('return_number', RETURN_NUMBER_MASK, 'u1'),
-        SubField('number_of_returns', NUMBER_OF_RETURNS_MASK, 'u1'),
-        SubField('scan_direction_flag', SCAN_DIRECTION_FLAG_MASK, 'bool'),
-        SubField('edge_of_flight_line', EDGE_OF_FLIGHT_LINE_MASK, 'bool'),
-    ],
-    'raw_classification': [
-        SubField('classification', CLASSIFICATION_MASK, 'u1'),
-        SubField('synthetic', SYNTHETIC_MASK, 'bool'),
-        SubField('key_point', KEY_POINT_MASK, 'bool'),
-        SubField('withheld', WITHHELD_MASK, 'bool'),
-    ]
-}
-
-unpacked_point_fmt__dtype_base = {}
-for fmt_id, point_fmt in point_formats_dimensions.items():
-    dim_names = point_formats_dimensions[fmt_id]
-    dtype = []
-    for dim_name in dim_names:
-        if dim_name in sub_fields_dtype_base:
-            sub_fields_dtype = [(f.name, f.type) for f in sub_fields_dtype_base[dim_name]]
-            dtype.extend(sub_fields_dtype)
-        else:
-            dtype.append(dimensions[dim_name])
-
-    unpacked_point_fmt__dtype_base[fmt_id] = np.dtype(dtype)
 
 # Definition of the points dimensions and formats
 # for the point format 6 to 10
 # LAS version [1.4]
 # Changes are : gps_time mandatory, classification takes full byte,
 # some fields take more bytes, some fields re-ordering
-
-# TODO for now it is a separate dict
-# maybe it could be merged with the dimensions dict above
-# using the fact that the name for the key can be different thant the name for the dtype
-
-dimensions_1_4 = {
-    'X': ('X', 'i4'),
-    'Y': ('Y', 'i4'),
-    'Z': ('Z', 'i4'),
-    'intensity': ('intensity', 'u2'),
-    'bit_fields': ('bit_fields', 'u1'),
-    'classification_flags': ('classification_flags', 'u1'),
-    'classification': ('classification', 'u1'),
-    'user_data': ('user_data', 'u1'),
-    'scan_angle': ('scan_angle_rank', 'i2'),
-    'point_source_id': ('point_source_id', 'u2'),
-    'gps_time': ('gps_time', 'f8'),
-    'red': ('red', 'u2'),
-    'green': ('green', 'u2'),
-    'blue': ('blue', 'u2'),
-    'nir': ('nir', 'u2')
-}
-
 point_formats_6 = (
     'X',
     'Y',
     'Z',
     'intensity',
-    'bit_fields',
+    'bit_fields_1.4',
     'classification_flags',
     'classification',
     'user_data',
@@ -189,12 +146,46 @@ SCANNER_CHANNEL_MASK = 0b00110000
 SCAN_DIRECTION_FLAG_MASK_1_4 = 0b01000000
 EDGE_OF_FLIGHT_LINE_MASK_1_4 = 0b10000000
 
-point_formats_dtype_1_4 = {fmt_id: point_format_to_dtype(point_fmt, dimensions_1_4)
+point_formats_dtype_1_4 = {fmt_id: point_format_to_dtype(point_fmt, dimensions)
                            for fmt_id, point_fmt in point_formats_dimensions_1_4.items()}
 
 all_point_formats = {**point_formats_dtype_base, **point_formats_dtype_1_4}
 
+SubField = namedtuple('SubField', ('name', 'mask', 'type'))
+sub_fields_dtype_base = {
+    'bit_fields': [
+        SubField('return_number', RETURN_NUMBER_MASK, 'u1'),
+        SubField('number_of_returns', NUMBER_OF_RETURNS_MASK, 'u1'),
+        SubField('scan_direction_flag', SCAN_DIRECTION_FLAG_MASK, 'bool'),
+        SubField('edge_of_flight_line', EDGE_OF_FLIGHT_LINE_MASK, 'bool'),
+    ],
+    'raw_classification': [
+        SubField('classification', CLASSIFICATION_MASK, 'u1'),
+        SubField('synthetic', SYNTHETIC_MASK, 'bool'),
+        SubField('key_point', KEY_POINT_MASK, 'bool'),
+        SubField('withheld', WITHHELD_MASK, 'bool'),
+    ],
+    'bit_fields_1.4': [
+        SubField('return_number', RETURN_NUMBER_MASK_1_4, 'u1'),
+        SubField('number_of_returns', NUMBER_OF_RETURNS_MASK_1_4, 'u1')
+    ]
+}
 
+all_point_formats_dimensions = {**point_formats_dimensions, **point_formats_dimensions_1_4}
+
+import itertools
+unpacked_point_fmt__dtype_base = {}
+for fmt_id, point_fmt in itertools.chain(point_formats_dimensions.items(), point_formats_dimensions_1_4.items()):
+    dim_names = all_point_formats_dimensions[fmt_id]
+    dtype = []
+    for dim_name in dim_names:
+        if dim_name in sub_fields_dtype_base:
+            sub_fields_dtype = [(f.name, f.type) for f in sub_fields_dtype_base[dim_name]]
+            dtype.extend(sub_fields_dtype)
+        else:
+            dtype.append(dimensions[dim_name])
+
+    unpacked_point_fmt__dtype_base[fmt_id] = np.dtype(dtype)
 def dtype_append(dtype, extra_dims_tuples):
     descr = dtype.descr
     descr.extend(extra_dims_tuples)
