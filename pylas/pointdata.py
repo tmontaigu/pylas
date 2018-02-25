@@ -1,7 +1,9 @@
 import numpy as np
 
 from .compression import decompress_buffer
-from .pointdims import get_dtype_of_format_id, np_dtype_to_point_format
+from .pointdims import get_dtype_of_format_id, np_dtype_to_point_format, unpacked_point_fmt__dtype_base, \
+    sub_fields_dtype_base
+from . import pointdims
 
 
 class NumpyPointData:
@@ -43,23 +45,55 @@ class NumpyPointData:
     def raw_bytes(self):
         return self.array.tobytes()
 
+    def repack_sub_fields(self):
+        repacked_array = np.zeros_like(self.array, get_dtype_of_format_id(self.point_format_id))
+
+        for dim_name in repacked_array.dtype.names:
+            if dim_name in sub_fields_dtype_base:
+                for sub_field in sub_fields_dtype_base[dim_name]:
+                    repacked_array[dim_name] = pointdims.pack_into(
+                        repacked_array[dim_name], self.array[sub_field.name], sub_field.mask)
+            else:
+                repacked_array[dim_name] = self.array[dim_name]
+        return repacked_array
+
     def write_to(self, out):
-        out.write(self.raw_bytes())
+        out.write(self.repack_sub_fields().tobytes())
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
         points_dtype = get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
         point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
         data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
-        return cls(data, point_format_id)
+
+        dtype = unpacked_point_fmt__dtype_base[point_format_id]
+        point_record = np.zeros_like(data, dtype)
+
+        unpack_sub_fields(data, point_record)
+
+        return cls(point_record, point_format_id)
 
     @classmethod
     def from_compressed_stream(cls, compressed_stream, point_format_id, count, laszip_vlr):
         uncompressed = decompress_buffer(compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
-        return cls(uncompressed, point_format_id)
+
+        dtype = unpacked_point_fmt__dtype_base[point_format_id]
+        point_record = np.zeros_like(uncompressed, dtype)
+        unpack_sub_fields(uncompressed, point_record)
+
+        return cls(point_record, point_format_id)
 
     @classmethod
     def empty(cls, point_format_id):
         data = np.zeros(0, dtype=get_dtype_of_format_id(point_format_id))
         return cls(data, point_format_id)
+
+
+def unpack_sub_fields(data, point_record):
+    for dim_name in data.dtype.names:
+        if dim_name in sub_fields_dtype_base:
+            for sub_field in sub_fields_dtype_base[dim_name]:
+                point_record[sub_field.name] = pointdims.unpack(data[dim_name], sub_field.mask)
+        else:
+            point_record[dim_name] = data[dim_name]

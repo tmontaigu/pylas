@@ -1,6 +1,7 @@
 import numpy as np
 
 from . import errors
+from collections import namedtuple
 
 
 # TODO Get rid of the duplication in de dimensions dict
@@ -33,7 +34,7 @@ def pack_into(array, array_in, mask, inplace=False):
     max_value = int(mask >> lsb)
     if array_in.max() > max_value:
         raise OverflowError("value ({}) is greater than allowed (max: {})".format(
-            array.max(), max_value
+            array_in.max(), max_value
         ))
     if inplace:
         array[:] = (array | mask) & ((array_in << lsb) & mask).astype(array.dtype)
@@ -101,6 +102,34 @@ WITHHELD_MASK = 0b10000000
 
 point_formats_dtype_base = {fmt_id: point_format_to_dtype(point_fmt, dimensions)
                             for fmt_id, point_fmt in point_formats_dimensions.items()}
+SubField = namedtuple('SubField', ('name', 'mask', 'type'))
+sub_fields_dtype_base = {
+    'bit_fields': [
+        SubField('return_number', RETURN_NUMBER_MASK, 'u1'),
+        SubField('number_of_returns', NUMBER_OF_RETURNS_MASK, 'u1'),
+        SubField('scan_direction_flag', SCAN_DIRECTION_FLAG_MASK, 'bool'),
+        SubField('edge_of_flight_line', EDGE_OF_FLIGHT_LINE_MASK, 'bool'),
+    ],
+    'raw_classification': [
+        SubField('classification', CLASSIFICATION_MASK, 'u1'),
+        SubField('synthetic', SYNTHETIC_MASK, 'bool'),
+        SubField('key_point', KEY_POINT_MASK, 'bool'),
+        SubField('withheld', WITHHELD_MASK, 'bool'),
+    ]
+}
+
+unpacked_point_fmt__dtype_base = {}
+for fmt_id, point_fmt in point_formats_dimensions.items():
+    dim_names = point_formats_dimensions[fmt_id]
+    dtype = []
+    for dim_name in dim_names:
+        if dim_name in sub_fields_dtype_base:
+            sub_fields_dtype = [(f.name, f.type) for f in sub_fields_dtype_base[dim_name]]
+            dtype.extend(sub_fields_dtype)
+        else:
+            dtype.append(dimensions[dim_name])
+
+    unpacked_point_fmt__dtype_base[fmt_id] = np.dtype(dtype)
 
 # Definition of the points dimensions and formats
 # for the point format 6 to 10
