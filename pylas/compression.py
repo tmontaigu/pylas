@@ -1,7 +1,7 @@
 import numpy as np
 
 from .errors import LazPerfNotFound
-from .pointdims import get_dtype_of_format_id, point_formats_dimensions
+from .pointdims import get_dtype_of_format_id, POINT_FORMAT_DIMENSIONS
 
 HAS_LAZPERF = False
 
@@ -73,10 +73,10 @@ def create_laz_vlr(point_format_id):
     raise_if_no_lazperf()
     record_schema = lazperf.RecordSchema()
 
-    if 'gps_time' in point_formats_dimensions[point_format_id]:
+    if 'gps_time' in POINT_FORMAT_DIMENSIONS[point_format_id]:
         record_schema.add_gps_time()
 
-    if 'red' in point_formats_dimensions[point_format_id]:
+    if 'red' in POINT_FORMAT_DIMENSIONS[point_format_id]:
         record_schema.add_rgb()
 
     return lazperf.LazVLR(record_schema)

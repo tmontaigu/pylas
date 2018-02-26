@@ -2,8 +2,7 @@ import numpy as np
 
 from . import pointdims
 from .compression import decompress_buffer
-from .pointdims import get_dtype_of_format_id, np_dtype_to_point_format, unpacked_point_fmt__dtype_base, \
-    sub_fields_dtype_base
+from .pointdims import get_dtype_of_format_id, np_dtype_to_point_format, UNPACKED_POINT_FORMATS_DTYPES, SUB_FIELDS
 
 
 class NumpyPointData:
@@ -30,7 +29,7 @@ class NumpyPointData:
         return get_dtype_of_format_id(self.point_format_id).itemsize
 
     def to_point_format(self, new_point_format):
-        new_dtype = unpacked_point_fmt__dtype_base[new_point_format]
+        new_dtype = UNPACKED_POINT_FORMATS_DTYPES[new_point_format]
 
         new_data = np.zeros_like(self.array, dtype=new_dtype)
 
@@ -49,11 +48,15 @@ class NumpyPointData:
         repacked_array = np.zeros_like(self.array, get_dtype_of_format_id(self.point_format_id))
 
         for dim_name in repacked_array.dtype.names:
-            if dim_name in sub_fields_dtype_base:
-                for sub_field in sub_fields_dtype_base[dim_name]:
+            if dim_name in SUB_FIELDS:
+                for sub_field in SUB_FIELDS[dim_name]:
                     try:
-                        pointdims.pack_into(repacked_array[dim_name], self.array[sub_field.name], sub_field.mask,
-                                        inplace=True)
+                        pointdims.pack_into(
+                            repacked_array[dim_name],
+                            self.array[sub_field.name],
+                            sub_field.mask,
+                            inplace=True
+                        )
                     except OverflowError as e:
                         raise OverflowError("Error repacking {} into {}: {}".format(sub_field.name, dim_name, e))
             else:
@@ -69,7 +72,7 @@ class NumpyPointData:
         point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
         data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
 
-        dtype = unpacked_point_fmt__dtype_base[point_format_id]
+        dtype = UNPACKED_POINT_FORMATS_DTYPES[point_format_id]
         point_record = np.zeros_like(data, dtype)
 
         unpack_sub_fields(data, point_record)
@@ -81,7 +84,7 @@ class NumpyPointData:
         uncompressed = decompress_buffer(compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
 
-        dtype = unpacked_point_fmt__dtype_base[point_format_id]
+        dtype = UNPACKED_POINT_FORMATS_DTYPES[point_format_id]
         point_record = np.zeros_like(uncompressed, dtype)
         unpack_sub_fields(uncompressed, point_record)
 
@@ -89,14 +92,14 @@ class NumpyPointData:
 
     @classmethod
     def empty(cls, point_format_id):
-        data = np.zeros(0, dtype= unpacked_point_fmt__dtype_base[point_format_id])
+        data = np.zeros(0, dtype= UNPACKED_POINT_FORMATS_DTYPES[point_format_id])
         return cls(data, point_format_id)
 
 
 def unpack_sub_fields(data, point_record):
     for dim_name in data.dtype.names:
-        if dim_name in sub_fields_dtype_base:
-            for sub_field in sub_fields_dtype_base[dim_name]:
+        if dim_name in SUB_FIELDS:
+            for sub_field in SUB_FIELDS[dim_name]:
                 point_record[sub_field.name] = pointdims.unpack(data[dim_name], sub_field.mask)
         else:
             point_record[dim_name] = data[dim_name]
