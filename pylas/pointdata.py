@@ -1,9 +1,9 @@
 import numpy as np
 
+from . import pointdims
 from .compression import decompress_buffer
 from .pointdims import get_dtype_of_format_id, np_dtype_to_point_format, unpacked_point_fmt__dtype_base, \
     sub_fields_dtype_base
-from . import pointdims
 
 
 class NumpyPointData:
@@ -51,8 +51,11 @@ class NumpyPointData:
         for dim_name in repacked_array.dtype.names:
             if dim_name in sub_fields_dtype_base:
                 for sub_field in sub_fields_dtype_base[dim_name]:
-                    repacked_array[dim_name] = pointdims.pack_into(
-                        repacked_array[dim_name], self.array[sub_field.name], sub_field.mask)
+                    print(dim_name, repacked_array[dim_name], sub_field.name, sub_field.mask,
+                          self.array[sub_field.name])
+                    pointdims.pack_into(repacked_array[dim_name], self.array[sub_field.name], sub_field.mask,
+                                        inplace=True)
+                    print(dim_name, repacked_array[dim_name])
             else:
                 repacked_array[dim_name] = self.array[dim_name]
         return repacked_array

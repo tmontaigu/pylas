@@ -1,7 +1,8 @@
+from collections import namedtuple
+
 import numpy as np
 
 from . import errors
-from collections import namedtuple
 
 
 # TODO Get rid of the duplication in de dimensions dict
@@ -37,9 +38,9 @@ def pack_into(array, array_in, mask, inplace=False):
             array_in.max(), max_value
         ))
     if inplace:
-        array[:] = (array | mask) & ((array_in << lsb) & mask).astype(array.dtype)
+        array[:] = array | ((array_in << lsb) & mask).astype(array.dtype)
     else:
-        return (array | mask) & ((array_in << lsb) & mask).astype(array.dtype)
+        return array | ((array_in << lsb) & mask).astype(array.dtype)
 
 
 def least_significant_bit(val):
@@ -142,6 +143,11 @@ NUMBER_OF_RETURNS_MASK_1_4 = 0b11110000
 
 # sub fields of classification flags
 CLASSIFICATION_FLAGS_MASK = 0b00001111
+
+SYNTHETIC_MASK_1_4 = 0b00000001
+KEY_POINT_MASK_1_4 = 0b00000010
+WITHHELD_MASK_1_4 = 0b00000100
+OVERLAP_MASK_1_4 = 0b00001000
 SCANNER_CHANNEL_MASK = 0b00110000
 SCAN_DIRECTION_FLAG_MASK_1_4 = 0b01000000
 EDGE_OF_FLIGHT_LINE_MASK_1_4 = 0b10000000
@@ -168,7 +174,17 @@ sub_fields_dtype_base = {
     'bit_fields_1.4': [
         SubField('return_number', RETURN_NUMBER_MASK_1_4, 'u1'),
         SubField('number_of_returns', NUMBER_OF_RETURNS_MASK_1_4, 'u1')
-    ]
+    ],
+    'classification_flags': [
+        SubField('synthetic', SYNTHETIC_MASK_1_4, 'bool'),
+        SubField('key_point', KEY_POINT_MASK_1_4, 'bool'),
+        SubField('withheld', WITHHELD_MASK_1_4, 'bool'),
+        SubField('overlap', OVERLAP_MASK_1_4, 'bool'),
+        SubField('scanner_channel', SCANNER_CHANNEL_MASK, 'u1'),
+        SubField('scan_direction_flag', SCAN_DIRECTION_FLAG_MASK_1_4, 'bool'),
+        SubField('edge_of_flight_line', EDGE_OF_FLIGHT_LINE_MASK_1_4, 'bool')
+
+    ],
 }
 
 all_point_formats_dimensions = {**point_formats_dimensions, **point_formats_dimensions_1_4}
