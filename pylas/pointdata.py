@@ -27,10 +27,10 @@ class NumpyPointData:
 
     @property
     def point_size(self):
-        return self.array.dtype.itemsize
+        return get_dtype_of_format_id(self.point_format_id).itemsize
 
     def to_point_format(self, new_point_format):
-        new_dtype = get_dtype_of_format_id(new_point_format)
+        new_dtype = unpacked_point_fmt__dtype_base[new_point_format]
 
         new_data = np.zeros_like(self.array, dtype=new_dtype)
 
@@ -51,11 +51,11 @@ class NumpyPointData:
         for dim_name in repacked_array.dtype.names:
             if dim_name in sub_fields_dtype_base:
                 for sub_field in sub_fields_dtype_base[dim_name]:
-                    print(dim_name, repacked_array[dim_name], sub_field.name, sub_field.mask,
-                          self.array[sub_field.name])
-                    pointdims.pack_into(repacked_array[dim_name], self.array[sub_field.name], sub_field.mask,
+                    try:
+                        pointdims.pack_into(repacked_array[dim_name], self.array[sub_field.name], sub_field.mask,
                                         inplace=True)
-                    print(dim_name, repacked_array[dim_name])
+                    except OverflowError as e:
+                        raise OverflowError("Error repacking {} into {}: {}".format(sub_field.name, dim_name, e))
             else:
                 repacked_array[dim_name] = self.array[dim_name]
         return repacked_array
@@ -89,7 +89,7 @@ class NumpyPointData:
 
     @classmethod
     def empty(cls, point_format_id):
-        data = np.zeros(0, dtype=get_dtype_of_format_id(point_format_id))
+        data = np.zeros(0, dtype= unpacked_point_fmt__dtype_base[point_format_id])
         return cls(data, point_format_id)
 
 
