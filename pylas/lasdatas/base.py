@@ -1,6 +1,7 @@
 from .. import pointdata
 from .. import vlr
 import numpy as np
+from .. import errors
 from ..compression import (uncompressed_id_to_compressed,
                            compress_buffer,
                            create_laz_vlr)
@@ -17,13 +18,13 @@ class LasBase(object):
         self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
         self.__dict__['vlrs'] = vlrs if vlrs is not None else vlr.VLRList()
         if points is not None:
-            if isinstance(points, pointdata.NumpyPointData):
+            if isinstance(points, pointdata.PointRecord):
                 self.__dict__['points_data'] = points
             else:
-                self.__dict__['points_data'] = pointdata.NumpyPointData(points)
+                self.__dict__['points_data'] = pointdata.UnpackedPointRecord(points)
                 self.header.point_data_format_id = self.points_data.point_format_id
         else:
-            self.__dict__['points_data'] = pointdata.NumpyPointData.empty(self.header.point_data_format_id)
+            self.__dict__['points_data'] = pointdata.UnpackedPointRecord.empty(self.header.point_data_format_id)
 
     @property
     def x(self):
@@ -43,7 +44,7 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        self.points_data = pointdata.NumpyPointData(value)
+        self.points_data = pointdata.UnpackedPointRecord(value)
 
     def __getitem__(self, item):
         return self.points_data[item]
@@ -55,18 +56,12 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        # try to set directly the dimension in the numpy array
-        # if it does not exists, search for an existing property-setter
+        # Try to forward the call the the point record
+        # if fail just do as normal
         try:
             self.points_data[key] = value
-        except ValueError as e:
-            prop = getattr(self.__class__, key, None)
-            if prop is not None and isinstance(prop, property):
-                if prop.fset is None:
-                    raise AttributeError("Cannot set {}".format(key))
-                prop.fset(self, value)
-            else:
-                super().__setattr__(key, value)
+        except ValueError:
+            super().__setattr__(key, value)
 
     def update_header(self):
         self.header.point_data_format_id = self.points_data.point_format_id

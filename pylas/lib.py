@@ -7,6 +7,7 @@ from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
 from .header import rawheader
 
+USE_UNPACKED = True
 
 def open_las(source):
     if isinstance(source, bytes):
@@ -28,6 +29,9 @@ def read_las_buffer(buffer):
 
 
 def read_las_stream(data_stream):
+
+    point_record = pointdata.UnpackedPointRecord if USE_UNPACKED else pointdata.PackedPointRecord
+
     header = rawheader.RawHeader.read_from(data_stream)
     assert data_stream.tell() == header.header_size
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
@@ -50,14 +54,14 @@ def read_las_stream(data_stream):
 
         offset_to_chunk_table = struct.unpack('<q', data_stream.read(8))[0]
         size_of_point_data = offset_to_chunk_table - data_stream.tell()
-        points = pointdata.NumpyPointData.from_compressed_stream(
+        points = point_record.from_compressed_buffer(
             data_stream.read(size_of_point_data),
             header.point_data_format_id,
             header.number_of_point_records,
             laszip_vlr
         )
     else:
-        points = pointdata.NumpyPointData.from_stream(
+        points = point_record.from_stream(
             data_stream,
             header.point_data_format_id,
             header.number_of_point_records,
