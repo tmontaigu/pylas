@@ -36,8 +36,10 @@ def pack_into(array, array_in, mask, inplace=False):
             array_in.max(), max_value
         ))
     if inplace:
+        array[:] = array & ~mask
         array[:] = array | ((array_in << lsb) & mask).astype(array.dtype)
     else:
+        array = array & ~mask
         return array | ((array_in << lsb) & mask).astype(array.dtype)
 
 
@@ -268,8 +270,7 @@ def get_sub_fields_of_fmt_id(point_format_id):
 
 def np_dtype_to_point_format(dtype, unpacked=False):
     all_dtypes = ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
-    for format_id in all_dtypes:
-        fmt_dtype = get_dtype_of_format_id(format_id)
+    for format_id, fmt_dtype in all_dtypes.items():
         if fmt_dtype == dtype:
             return format_id
     else:

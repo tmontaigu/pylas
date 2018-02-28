@@ -43,7 +43,7 @@ class PointRecord(ABC):
 class UnpackedPointRecord(PointRecord):
     def __init__(self, data, point_fmt_id=None):
         self.array = data
-        self.point_format_id = pointdims.np_dtype_to_point_format(data.dtype) if point_fmt_id is None else point_fmt_id
+        self.point_format_id = pointdims.np_dtype_to_point_format(data.dtype, unpacked=True) if point_fmt_id is None else point_fmt_id
 
     # TODO fix when there are extra dims
     @property
