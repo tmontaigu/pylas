@@ -1,13 +1,14 @@
 import io
 import struct
 
-from .lasdatas import las12, las14
 from . import pointdata, vlr
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
 from .header import rawheader
+from .lasdatas import las12, las14
 
 USE_UNPACKED = True
+
 
 def open_las(source):
     if isinstance(source, bytes):
@@ -29,7 +30,6 @@ def read_las_buffer(buffer):
 
 
 def read_las_stream(data_stream):
-
     point_record = pointdata.UnpackedPointRecord if USE_UNPACKED else pointdata.PackedPointRecord
 
     header = rawheader.RawHeader.read_from(data_stream)
@@ -74,11 +74,11 @@ def read_las_stream(data_stream):
     return las12.LasData(header, vlrs, points)
 
 
-#TODO creation with existing header, vlrs, evlrs, points
+# TODO creation with existing header, vlrs, evlrs, points
 def create_las(file_vesion='1.2', point_format=0):
-    #TODO check file version & point format compatibilty
+    # TODO check file version & point format compatibilty
 
-    #For now we ca only create 1.2 files until
+    # For now we ca only create 1.2 files until
     # we have a proper way to create headers
     if not file_vesion == '1.2':
         raise NotImplementedError('Can only create 1.2 files for the moments')
@@ -86,9 +86,3 @@ def create_las(file_vesion='1.2', point_format=0):
     header = rawheader.RawHeader()
     header.point_data_format_id = point_format
     return las12.LasData(header=header)
-
-
-
-
-
-

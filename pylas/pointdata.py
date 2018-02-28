@@ -1,8 +1,9 @@
-import numpy as np
 from abc import ABC, abstractclassmethod, abstractmethod
 
-from .compression import decompress_buffer
+import numpy as np
+
 from . import pointdims
+from .compression import decompress_buffer
 
 
 class PointRecord(ABC):
@@ -109,7 +110,7 @@ class UnpackedPointRecord(PointRecord):
 
     @classmethod
     def empty(cls, point_format_id):
-        data = np.zeros(0, dtype= pointdims.get_dtype_of_format_id(point_format_id, unpacked=True))
+        data = np.zeros(0, dtype=pointdims.get_dtype_of_format_id(point_format_id, unpacked=True))
         return cls(data, point_format_id)
 
 
@@ -127,11 +128,28 @@ class PackedPointRecord(PointRecord):
     def actual_point_size(self):
         return self.point_size
 
+    # Todo: as sub fields are appended, the order is wrong
+    @property
+    def dimension_names(self):
+        return pointdims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
+
     def raw_bytes(self):
         return self.array.tobytes()
 
     def write_to(self, out):
         out.write(self.raw_bytes())
+
+    def to_point_format(self, new_point_format):
+        new_record = np.zeros_like(self.array, dtype=pointdims.get_dtype_of_format_id(new_point_format, unpacked=True))
+
+        for dim_name in self.dimension_names:
+            try:
+                new_record[dim_name] = self[dim_name]
+            except ValueError:
+                pass
+        self.array = new_record
+        self.sub_fields_dict = pointdims.get_sub_fields_of_fmt_id(new_point_format)
+        self.point_format_id = new_point_format
 
     def __getitem__(self, item):
         try:
