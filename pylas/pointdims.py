@@ -266,8 +266,9 @@ def get_sub_fields_of_fmt_id(point_format_id):
     return sub_fields_dict
 
 
-def np_dtype_to_point_format(dtype):
-    for format_id in ALL_POINT_FORMATS_DTYPE:
+def np_dtype_to_point_format(dtype, unpacked=False):
+    all_dtypes = ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
+    for format_id in all_dtypes:
         fmt_dtype = get_dtype_of_format_id(format_id)
         if fmt_dtype == dtype:
             return format_id

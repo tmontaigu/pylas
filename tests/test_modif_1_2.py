@@ -10,10 +10,15 @@ def las(request):
 
 
 def test_classification_overflows(las):
-    c = las.classification
-    c[0] = 54
-    with pytest.raises(OverflowError):
-        las.classification = c
+    if not pylas.lib.USE_UNPACKED:
+        c = las.classification
+        c[0] = 54
+        with pytest.raises(OverflowError):
+            las.classification = c
+    else:
+        las.classification[0] = 54
+        with pytest.raises(OverflowError):
+            las.points_data.repack_sub_fields()
 
 
 def test_classification_change(tmpdir, las):
