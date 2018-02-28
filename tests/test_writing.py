@@ -10,6 +10,7 @@ import pylas
 def file():
     return pylas.open('simple.las')
 
+
 def test_extraction(file):
     new = pylas.create_las(point_format=0)
 
