@@ -13,18 +13,6 @@ def unpack(source_array, mask):
     lsb = least_significant_bit(mask)
     return (source_array & mask) >> lsb
 
-
-def repack(arrays, masks):
-    packed = np.zeros_like(arrays[0])
-    for array, mask in zip(arrays, masks):
-        lsb = least_significant_bit(mask)
-        msb = (mask >> lsb).bit_length()
-        max_value = (2 ** msb) - 1
-        if array.max() > max_value:
-            raise ValueError("value ({}) is greater than allowed (max: {})".format(
-                array.max(), max_value
-            ))
-        packed = packed | ((array << lsb) & mask)
     return packed
 
 

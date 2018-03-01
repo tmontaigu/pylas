@@ -128,7 +128,6 @@ class PackedPointRecord(PointRecord):
     def actual_point_size(self):
         return self.point_size
 
-    # Todo: as sub fields are appended, the order is wrong
     @property
     def dimension_names(self):
         return pointdims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
@@ -159,6 +158,11 @@ class PackedPointRecord(PointRecord):
             return self.array[item]
 
     def __setitem__(self, key, value):
+        if len(value) > len(self.array):
+            self.array = np.append(
+                self.array,
+                np.zeros(len(value) - len(self.array), dtype=self.array.dtype)
+            )
         try:
             composed_dim, sub_field = self.sub_fields_dict[key]
             pointdims.pack_into(
