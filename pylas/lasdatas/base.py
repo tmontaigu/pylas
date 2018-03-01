@@ -1,6 +1,7 @@
+import numpy as np
+
 from .. import pointdata
 from .. import vlr
-import numpy as np
 from ..compression import (uncompressed_id_to_compressed,
                            compress_buffer,
                            create_laz_vlr)
@@ -114,7 +115,10 @@ class LasBase(object):
             self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
 
             self.header.write_to(out_stream)
+            print('after header', out_stream.tell())
             self.vlrs.write_to(out_stream)
+            print('after vlr', out_stream.tell())
+            print(self.header.offset_to_point_data)
             self.points_data.write_to(out_stream)
 
     def write_to_file(self, filename):

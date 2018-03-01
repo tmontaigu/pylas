@@ -74,8 +74,7 @@ class VLR:
         self.description = description
 
         self.record_data = bytes(data)
-        self.record_length = len(self.record_data)
-        if self.record_length < 0:
+        if len(self.record_data) < 0:
             raise ValueError('record length must be >= 0')
 
     def into_raw(self):
@@ -99,7 +98,7 @@ class VLR:
         return vlr
 
     def __len__(self):
-        return VLR_HEADER_SIZE + self.record_length
+        return VLR_HEADER_SIZE + len(self.record_data)
 
     def __repr__(self):
         return "VLR(user_id: '{}', record_id: '{}', data len: '{}')".format(
@@ -126,9 +125,15 @@ class ClassificationLookup(ctypes.LittleEndianStructure):
 
 
 class ClassificationLookupVlr(VLR):
-    def __init__(self, data):
+    def __init__(self, data=b''):
         super().__init__("LASF_Spec", 0, "", data)
         self.lookups = []
+
+    def add_lookup(self, class_number, description):
+        if len(self.lookups) < 256:
+            self.lookups.append(ClassificationLookup(class_number, description))
+        else:
+            raise ValueError('Cannot add more lookups')
 
     # fixme spec says rec_len = 16 * 256
     # we are only going to check is len(data) % 16
