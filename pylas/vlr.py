@@ -1,5 +1,7 @@
+import ctypes
 from collections import namedtuple
 
+from .extradims import get_type_for_extra_dim
 from .lasio import BinaryReader, BinaryWriter, type_lengths
 
 NULL_BYTE = b'\x00'
@@ -72,8 +74,7 @@ class VLR:
         self.description = description
 
         self.record_data = bytes(data)
-        self.record_length = len(self.record_data)
-        if self.record_length < 0:
+        if len(self.record_data) < 0:
             raise ValueError('record length must be >= 0')
 
     def into_raw(self):
@@ -97,11 +98,55 @@ class VLR:
         return vlr
 
     def __len__(self):
-        return VLR_HEADER_SIZE + self.record_length
+        return VLR_HEADER_SIZE + len(self.record_data)
 
     def __repr__(self):
         return "VLR(user_id: '{}', record_id: '{}', data len: '{}')".format(
-            self.user_id, self.record_id, self.record_length)
+            self.user_id, self.record_id, len(self.record_data))
+
+
+class ClassificationLookup(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ('class_number', ctypes.c_uint8),
+        ('description', ctypes.c_char * 15)
+    ]
+
+    def __init__(self, class_number, description):
+        if isinstance(description, str):
+            super().__init__(class_number, description.encode())
+        else:
+            super().__init__(class_number, description)
+
+    def raw_bytes(self):
+        return bytes(self)
+
+    def __repr__(self):
+        return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
+
+
+class ClassificationLookupVlr(VLR):
+    def __init__(self, data=b''):
+        super().__init__("LASF_Spec", 0, "", data)
+        self.lookups = []
+
+    def add_lookup(self, class_number, description):
+        if len(self.lookups) < 256:
+            self.lookups.append(ClassificationLookup(class_number, description))
+        else:
+            raise ValueError('Cannot add more lookups')
+
+    # fixme spec says rec_len = 16 * 256
+    # we are only going to check is len(data) % 16
+    def parse_data(self):
+        for i in range(len(self.record_data) // ctypes.sizeof(ClassificationLookup)):
+            self.lookups.append(ClassificationLookup.from_buffer(self.record_data[16 * i: 16 * (i + 1)]))
+
+    def into_raw(self):
+        self.record_data = b''.join(lookup.raw_bytes() for lookup in self.lookups)
+        return super().into_raw()
+
+    def __len__(self):
+        return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookup)
 
 
 class LasZipVlr(VLR):
@@ -126,13 +171,9 @@ class LasZipVlr(VLR):
         return cls(raw_vlr.record_data)
 
 
-import ctypes
-
 # extra_bytes_fields = 'reserved data_type options name unused no_data min max scale offset description'
 # ExtraBytes = namedtuple('ExtraBytes', extra_bytes_fields)
 # ExtraBytes._make(struct.unpack(2))
-
-from .extradims import get_type_for_extra_dim
 
 
 class ExtraBytes(ctypes.LittleEndianStructure):

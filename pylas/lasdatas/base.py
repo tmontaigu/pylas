@@ -1,6 +1,7 @@
+import numpy as np
+
 from .. import pointdata
 from .. import vlr
-import numpy as np
 from ..compression import (uncompressed_id_to_compressed,
                            compress_buffer,
                            create_laz_vlr)
