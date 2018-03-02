@@ -3,6 +3,8 @@ import pytest
 
 import pylas
 
+do_compression = [False, True]
+
 
 @pytest.fixture(params=['simple.las', 'simple.laz'])
 def las(request):
@@ -21,7 +23,8 @@ def test_classification_overflows(las):
             las.points_data.repack_sub_fields()
 
 
-def test_classification_change(tmpdir, las):
+@pytest.mark.parametrize("do_compress", do_compression)
+def test_classification_change(tmpdir, las, do_compress):
     c = las.classification
     c[:] = 10
 
@@ -29,7 +32,7 @@ def test_classification_change(tmpdir, las):
     assert np.allclose(c, las.classification)
 
     out = tmpdir.join('tmp.las').open('wb')
-    las.write_to(out)
+    las.write_to(out, do_compress=do_compress)
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
@@ -38,7 +41,8 @@ def test_classification_change(tmpdir, las):
     assert np.allclose(c, las.classification)
 
 
-def test_synthetic_change(tmpdir, las):
+@pytest.mark.parametrize("do_compress", do_compression)
+def test_synthetic_change(tmpdir, las, do_compress):
     s = las.synthetic
     s[:] = False
     s[17] = True
@@ -47,7 +51,7 @@ def test_synthetic_change(tmpdir, las):
     assert np.allclose(s, las.synthetic)
 
     out = tmpdir.join('tmp.las').open('wb')
-    las.write_to(out)
+    las.write_to(out, do_compress=do_compress)
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
@@ -56,7 +60,8 @@ def test_synthetic_change(tmpdir, las):
     assert np.allclose(s, las.synthetic)
 
 
-def test_key_point_change(tmpdir, las):
+@pytest.mark.parametrize("do_compress", do_compression)
+def test_key_point_change(tmpdir, las, do_compress):
     kp = las.key_point
     kp[:] = False
     kp[25] = True
@@ -65,7 +70,7 @@ def test_key_point_change(tmpdir, las):
     assert np.allclose(kp, las.key_point)
 
     out = tmpdir.join('tmp.las').open('wb')
-    las.write_to(out)
+    las.write_to(out, do_compress=do_compress)
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
@@ -74,7 +79,8 @@ def test_key_point_change(tmpdir, las):
     assert np.allclose(kp, las.key_point)
 
 
-def test_withheld_changes(tmpdir, las):
+@pytest.mark.parametrize("do_compress", do_compression)
+def test_withheld_changes(tmpdir, las, do_compress):
     withheld = las.withheld
     withheld[:] = False
     withheld[180] = True
@@ -83,7 +89,7 @@ def test_withheld_changes(tmpdir, las):
     assert np.allclose(withheld, las.withheld)
 
     out = tmpdir.join('tmp.las').open('wb')
-    las.write_to(out)
+    las.write_to(out, do_compress)
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
