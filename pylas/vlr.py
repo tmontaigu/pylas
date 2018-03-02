@@ -145,6 +145,9 @@ class ClassificationLookupVlr(VLR):
         self.record_data = b''.join(lookup.raw_bytes() for lookup in self.lookups)
         return super().into_raw()
 
+    def __len__(self):
+        return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookup)
+
 
 class LasZipVlr(VLR):
     def __init__(self, data):

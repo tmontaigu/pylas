@@ -115,10 +115,7 @@ class LasBase(object):
             self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
 
             self.header.write_to(out_stream)
-            print('after header', out_stream.tell())
             self.vlrs.write_to(out_stream)
-            print('after vlr', out_stream.tell())
-            print(self.header.offset_to_point_data)
             self.points_data.write_to(out_stream)
 
     def write_to_file(self, filename):
