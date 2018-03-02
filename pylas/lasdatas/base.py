@@ -122,8 +122,8 @@ class LasBase(object):
         with open(filename, mode='wb') as out:
             self.write_to(out, do_compress=do_compress)
 
-    def write(self, destination):
+    def write(self, destination, do_compress=False):
         if isinstance(destination, str):
             self.write_to_file(destination)
         else:
-            self.write_to(destination)
+            self.write_to(destination, do_compress=do_compress)

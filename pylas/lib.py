@@ -74,13 +74,23 @@ def read_las_stream(data_stream):
     return las12.LasData(header=header, vlrs=vlrs, points=points)
 
 
+def convert(source, destination, *, point_format_id=None):
+    source_las = open_las(source)
+
+    if point_format_id is None:
+        return
+
+    source_las.points_data.to_point_format(point_format_id)
+    source_las.write(destination)
+
+
 # TODO creation with existing header, vlrs, evlrs, points
-def create_las(file_vesion='1.2', point_format=0):
+def create_las(file_version='1.2', point_format=0):
     # TODO check file version & point format compatibilty
 
     # For now we ca only create 1.2 files until
     # we have a proper way to create headers
-    if not file_vesion == '1.2':
+    if not file_version == '1.2':
         raise NotImplementedError('Can only create 1.2 files for the moments')
 
     header = rawheader.RawHeader()
