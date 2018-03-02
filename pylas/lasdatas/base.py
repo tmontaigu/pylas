@@ -69,13 +69,13 @@ class LasBase(object):
         self.header.number_of_points_records_ = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
 
-        self.header.x_max = self.X.max()
-        self.header.y_max = self.Y.max()
-        self.header.z_max = self.Z.max()
+        self.header.x_max = self.x.max()
+        self.header.y_max = self.y.max()
+        self.header.z_max = self.z.max()
 
-        self.header.x_min = self.X.min()
-        self.header.y_min = self.Y.min()
-        self.header.z_min = self.Z.min()
+        self.header.x_min = self.x.min()
+        self.header.y_min = self.y.min()
+        self.header.z_min = self.z.min()
 
     # TODO: check file version compatibility
     def to_point_format(self, new_point_format):
