@@ -7,7 +7,7 @@ import pytest
 import pylas
 
 
-@pytest.fixture(params=['simple.las', 'simple.laz'])
+@pytest.fixture(params=['simple.las', 'simple.laz'], scope='session')
 def read_simple(request):
     return pylas.open(request.param)
 

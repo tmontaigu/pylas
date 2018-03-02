@@ -7,26 +7,9 @@ HAS_LAZPERF = False
 
 try:
     import lazperf
-
     HAS_LAZPERF = True
 except ModuleNotFoundError:
     HAS_LAZPERF = False
-
-schema = [
-    {u'type': u'signed', u'name': u'X', u'size': 4},
-    {u'type': u'signed', u'name': u'Y', u'size': 4},
-    {u'type': u'signed', u'name': u'Z', u'size': 4},
-    {u'type': u'unsigned', u'name': u'Intensity', u'size': 2},
-    {u'type': u'unsigned', u'name': u'BitFields', u'size': 1},
-    {u'type': u'unsigned', u'name': u'Classification', u'size': 1},
-    {u'type': u'signed', u'name': u'ScanAngleRank', u'size': 1},
-    {u'type': u'unsigned', u'name': u'UserData', u'size': 1},
-    {u'type': u'unsigned', u'name': u'PointSourceId', u'size': 2},
-    {u'type': u'floating', u'name': u'GpsTime', u'size': 8},
-    {u'type': u'unsigned', u'name': u'Red', u'size': 2},
-    {u'type': u'unsigned', u'name': u'Green', u'size': 2},
-    {u'type': u'unsigned', u'name': u'Blue', u'size': 2},
-]
 
 
 def raise_if_no_lazperf():

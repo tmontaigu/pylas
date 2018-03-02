@@ -13,8 +13,7 @@ def scale_dimension(array_dim, scale, offset):
 
 
 class LasBase(object):
-
-    def __init__(self, header=None, vlrs=None, points=None):
+    def __init__(self, *, header=None, vlrs=None, points=None):
         self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
         self.__dict__['vlrs'] = vlrs if vlrs is not None else vlr.VLRList()
         if points is not None:
@@ -60,7 +59,7 @@ class LasBase(object):
         # if fail just do as normal
         try:
             self.points_data[key] = value
-        except ValueError:
+        except (ValueError, IndexError, TypeError):
             super().__setattr__(key, value)
 
     def update_header(self):

@@ -69,9 +69,9 @@ def read_las_stream(data_stream):
         )
 
     if header.version_major >= 1 and header.version_minor >= 4:
-        return las14.LasData(header, vlrs, points)
+        return las14.LasData(header=header, vlrs=vlrs, points=points)
 
-    return las12.LasData(header, vlrs, points)
+    return las12.LasData(header=header, vlrs=vlrs, points=points)
 
 
 # TODO creation with existing header, vlrs, evlrs, points

@@ -171,10 +171,6 @@ class LasZipVlr(VLR):
         return cls(raw_vlr.record_data)
 
 
-# extra_bytes_fields = 'reserved data_type options name unused no_data min max scale offset description'
-# ExtraBytes = namedtuple('ExtraBytes', extra_bytes_fields)
-# ExtraBytes._make(struct.unpack(2))
-
 
 class ExtraBytes(ctypes.LittleEndianStructure):
     _fields_ = [
