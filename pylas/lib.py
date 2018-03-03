@@ -7,7 +7,7 @@ from .compression import (is_point_format_compressed,
 from .header import rawheader
 from .lasdatas import las12, las14
 
-USE_UNPACKED = True
+USE_UNPACKED = False
 
 
 def open_las(source):

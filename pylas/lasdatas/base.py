@@ -20,10 +20,10 @@ class LasBase(object):
             if isinstance(points, pointdata.PointRecord):
                 self.__dict__['points_data'] = points
             else:
-                self.__dict__['points_data'] = pointdata.UnpackedPointRecord(points)
+                self.__dict__['points_data'] = pointdata.PackedPointRecord(points)
                 self.header.point_data_format_id = self.points_data.point_format_id
         else:
-            self.__dict__['points_data'] = pointdata.UnpackedPointRecord.empty(self.header.point_data_format_id)
+            self.__dict__['points_data'] = pointdata.PackedPointRecord.empty(self.header.point_data_format_id)
 
     @property
     def x(self):
@@ -43,7 +43,7 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        self.points_data = pointdata.UnpackedPointRecord(value)
+        self.points_data = pointdata.PackedPointRecord(value)
 
     def __getitem__(self, item):
         return self.points_data[item]
@@ -96,7 +96,7 @@ class LasBase(object):
             self.header.number_of_vlr = len(self.vlrs)
 
             compressed_points = compress_buffer(
-                np.frombuffer(self.points_data.repack_sub_fields().tobytes(), np.uint8),
+                np.frombuffer(self.points_data.array, np.uint8),
                 lazvrl.schema,
                 self.header.offset_to_point_data,
             )

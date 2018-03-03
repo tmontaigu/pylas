@@ -115,10 +115,11 @@ class UnpackedPointRecord(PointRecord):
 
 
 class PackedPointRecord(PointRecord):
-    def __init__(self, data, point_format_id):
+    def __init__(self, data, point_format_id=None):
         self.array = data
-        self.point_format_id = point_format_id
-        self.sub_fields_dict = pointdims.get_sub_fields_of_fmt_id(point_format_id)
+        self.point_format_id = pointdims.np_dtype_to_point_format(
+            data.dtype) if point_format_id is None else point_format_id
+        self.sub_fields_dict = pointdims.get_sub_fields_of_fmt_id(self.point_format_id)
 
     @property
     def point_size(self):
@@ -139,7 +140,7 @@ class PackedPointRecord(PointRecord):
         out.write(self.raw_bytes())
 
     def to_point_format(self, new_point_format):
-        new_record = np.zeros_like(self.array, dtype=pointdims.get_dtype_of_format_id(new_point_format, unpacked=True))
+        new_record = np.zeros_like(self.array, dtype=pointdims.get_dtype_of_format_id(new_point_format))
 
         for dim_name in self.dimension_names:
             try:
