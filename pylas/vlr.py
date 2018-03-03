@@ -1,4 +1,5 @@
 import ctypes
+from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from .extradims import get_type_for_extra_dim
@@ -105,6 +106,16 @@ class VLR:
             self.user_id, self.record_id, len(self.record_data))
 
 
+class KnownVLR(ABC):
+    @staticmethod
+    @abstractmethod
+    def official_user_id(): pass
+
+    @staticmethod
+    @abstractmethod
+    def official_record_id(): pass
+
+
 class ClassificationLookup(ctypes.LittleEndianStructure):
     _fields_ = [
         ('class_number', ctypes.c_uint8),
@@ -124,9 +135,9 @@ class ClassificationLookup(ctypes.LittleEndianStructure):
         return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
 
 
-class ClassificationLookupVlr(VLR):
+class ClassificationLookupVlr(VLR, KnownVLR):
     def __init__(self, data=b''):
-        super().__init__("LASF_Spec", 0, "", data)
+        super().__init__(self.official_user_id(), self.official_record_id(), "", data)
         self.lookups = []
 
     def add_lookup(self, class_number, description):
@@ -138,6 +149,8 @@ class ClassificationLookupVlr(VLR):
     # fixme spec says rec_len = 16 * 256
     # we are only going to check is len(data) % 16
     def parse_data(self):
+        if len(self.record_data) % 16 != 0:
+            raise ValueError("Length of ClassificationLookup VLR's record_data must be a multiple of 16")
         for i in range(len(self.record_data) // ctypes.sizeof(ClassificationLookup)):
             self.lookups.append(ClassificationLookup.from_buffer(self.record_data[16 * i: 16 * (i + 1)]))
 
@@ -148,8 +161,16 @@ class ClassificationLookupVlr(VLR):
     def __len__(self):
         return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookup)
 
+    @staticmethod
+    def official_user_id():
+        return "LASF_Spec"
 
-class LasZipVlr(VLR):
+    @staticmethod
+    def official_record_id():
+        return 0
+
+
+class LasZipVlr(VLR, KnownVLR):
     def __init__(self, data):
         super().__init__(
             LasZipVlr.official_user_id(),
@@ -169,7 +190,6 @@ class LasZipVlr(VLR):
     @classmethod
     def from_raw(cls, raw_vlr):
         return cls(raw_vlr.record_data)
-
 
 
 class ExtraBytes(ctypes.LittleEndianStructure):
@@ -196,7 +216,7 @@ class ExtraBytes(ctypes.LittleEndianStructure):
         return self.format_name(), get_type_for_extra_dim(self.data_type)
 
 
-class ExtraBytesVlr(VLR):
+class ExtraBytesVlr(VLR, KnownVLR):
     def __init__(self, data):
         if (len(data) % 192) != 0:
             raise ValueError("Data length of ExtraBytes vlr must be a multiple of 192")
@@ -232,10 +252,9 @@ class ExtraBytesVlr(VLR):
 # TODO in a better way
 def vlr_factory(raw_vlr):
     user_id = raw_vlr.user_id.rstrip(NULL_BYTE).decode()
-    if user_id == ExtraBytesVlr.official_user_id() and raw_vlr.record_id == ExtraBytesVlr.official_record_id():
-        return ExtraBytesVlr.from_raw(raw_vlr)
-    elif user_id == LasZipVlr.official_user_id() and raw_vlr.record_id == LasZipVlr.official_record_id():
-        return LasZipVlr.from_raw(raw_vlr)
+    for known_vlr in KnownVLR.__subclasses__():
+        if known_vlr.official_user_id() == user_id and known_vlr.official_record_id() == raw_vlr.record_id:
+            return known_vlr.from_raw(raw_vlr)
     else:
         return VLR.from_raw(raw_vlr)
 
