@@ -28,3 +28,14 @@ def test_xyz():
     assert np.alltrue(las.Z == -152)
 
 
+
+def test_wrong_version():
+    for i in range(6, 8):
+        with pytest.raises(ValueError):
+            _ = pylas.create_las(point_format=i, file_version='1.2')
+
+def test_good_version_is_used():
+    for i in range(6, 8):
+        las = pylas.create_las(point_format=i)
+        assert las.header.version_major == 1
+        assert las.header.version_minor == 4

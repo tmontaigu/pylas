@@ -98,7 +98,7 @@ class RawHeader:
         self.guid_data_4 = b'\x00' * type_lengths['char'] * 8
         self.version_major = 1
         self.version_minor = 2
-        self.system_identifier = b'\x00' * type_lengths['char'] * 32
+        self._system_identifier = b'\x00' * type_lengths['char'] * 32
         self.generating_software = b'\x00' * type_lengths['char'] * 32
         self.creation_day_of_year = 0
         self.creation_year = 0
@@ -131,6 +131,17 @@ class RawHeader:
         # it has the same name in 1.2 header & 1.4 additional header
         self.number_of_points_record_ = None
         self.number_of_points_by_return_ = (0,) * 15
+
+    @property
+    def system_identifier(self):
+        return self._system_identifier
+
+    @system_identifier.setter
+    def system_identifier(self, value):
+        if len(value) > 32:
+            raise ValueError
+        self._system_identifier = value + (32 - len(value)) * b'\x00'
+
 
     def write_to(self, out_stream):
         out_stream = BinaryWriter(out_stream)
