@@ -92,15 +92,19 @@ def convert(source, destination=None, *, point_format_id=None):
     source_las.points_data.to_point_format(point_format_id)
     points = source_las.points_data
 
+    try:
+        evlrs = source_las.evlrs
+    except ValueError:
+        evlrs = []
+
     if destination is not None:
         source_las.write(destination)
     else:
         if file_version >= '1.4':
-            return las14.LasData(header=header, vlrs=source_las.vlrs, points=points)
+            return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
         return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
 
-# TODO creation with existing header, vlrs, evlrs, points
 def create_las(point_format=0, file_version=None):
     if file_version is not None and point_format not in pointdims.VERSION_TO_POINT_FMT[file_version]:
         raise ValueError('Point format {} is not compatible with file version {}'.format(

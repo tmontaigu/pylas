@@ -11,6 +11,8 @@ from ..headers import rawheader
 def scale_dimension(array_dim, scale, offset):
     return (array_dim * scale) + offset
 
+def unscale_dimension(array_dim, scale, offset):
+    return (array_dim - offset) / scale
 
 class LasBase(object):
     def __init__(self, *, header=None, vlrs=None, points=None):
@@ -36,6 +38,18 @@ class LasBase(object):
     @property
     def z(self):
         return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
+
+    @x.setter
+    def x(self, value):
+        self.X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
+
+    @y.setter
+    def y(self, value):
+        self.Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
+
+    @z.setter
+    def z(self, value):
+        self.Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
 
     @property
     def points(self):
