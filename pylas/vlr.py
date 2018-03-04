@@ -248,7 +248,6 @@ class ExtraBytesVlr(VLR, KnownVLR):
         return cls(raw_vlr.record_data)
 
 
-# TODO in a better way
 def vlr_factory(raw_vlr):
     user_id = raw_vlr.user_id.rstrip(NULL_BYTE).decode()
     for known_vlr in KnownVLR.__subclasses__():

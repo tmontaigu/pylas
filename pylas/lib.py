@@ -6,6 +6,7 @@ from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
 from .headers import rawheader, lasheader
 from .lasdatas import las12, las14
+from . import pointdims
 
 USE_UNPACKED = False
 
@@ -85,8 +86,20 @@ def convert(source, destination, *, point_format_id=None):
 
 
 # TODO creation with existing header, vlrs, evlrs, points
-def create_las(file_version='1.2', point_format=0):
-    # TODO check file version & point format compatibilty
+def create_las(point_format=0, file_version=None):
+    if file_version is not None and point_format not in pointdims.VERSION_TO_POINT_FMT[file_version]:
+        raise ValueError('Point format {} is not compatible with file version {}'.format(
+            point_format, file_version
+        ))
+    else:
+        file_version = pointdims.min_file_version_for_point_format(point_format)
 
-    header = lasheader.Header(version=file_version, point_format=point_format)
-    return las12.LasData(header=header.into_raw())
+    header = rawheader.RawHeader()
+    header.version_major = int(file_version[0])
+    header.version_minor = int(file_version[2])
+    header.point_data_format_id = point_format
+
+    if file_version >= '1.4':
+        header.header_size = rawheader.LAS_HEADERS_SIZE['1.4']
+        return las14.LasData(header=header)
+    return las12.LasData(header=header)

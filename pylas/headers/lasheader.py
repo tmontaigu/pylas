@@ -39,12 +39,14 @@ class Header:
         raw.number_of_point_records = self.point_count
         raw.number_of_vlr = self.vlr_count
         raw.version_major = int(self.version[0])
-        raw.version_major = int(self.version[2])
+        raw.version_minor = int(self.version[2])
         raw.point_data_record_length = self.point_size
         raw.header_size = rawheader.LAS_HEADERS_SIZE[self.version]
+        raw.generating_software = self.generating_software.encode() + (32 - len(self.generating_software)) * b'\x00'
         if self.creation_date is not None:
             raw.creation_day_of_year = to_day_of_year(self.creation_date)
             raw.creation_year = self.creation_date.year
+
         raw.x_max = self.maxs[0]
         raw.y_max = self.maxs[1]
         raw.z_max = self.maxs[2]
