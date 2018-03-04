@@ -1,10 +1,13 @@
 import pytest
 import pylas
+import os
+
+test1_4_las = os.path.dirname(__file__) + '/' + 'test1_4.las'
 
 
 @pytest.fixture()
 def file():
-    return pylas.open('test1_4.las')
+    return pylas.open(test1_4_las)
 
 
 def test_unscaled_x(file):

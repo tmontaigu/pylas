@@ -6,24 +6,26 @@ import pytest
 
 import pylas
 
+simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
+simple_laz = os.path.dirname(__file__) + '/' + 'simple.laz'
 
-@pytest.fixture(params=['simple.las', 'simple.laz'], scope='session')
+@pytest.fixture(params=[simple_las, simple_laz], scope='session')
 def read_simple(request):
     return pylas.open(request.param)
 
 
 @pytest.fixture()
 def open_simple():
-    return open('simple.las', mode='rb')
+    return open(simple_las, mode='rb')
 
 @pytest.fixture()
 def read_uncompressed():
-    return pylas.open('simple.las')
+    return pylas.open(simple_laz)
 
 
-@pytest.fixture(params=['simple.las', 'simple.laz'])
+@pytest.fixture()
 def get_header():
-    with open('simple.las', mode='rb') as fin:
+    with open(simple_las, mode='rb') as fin:
         return pylas.headers.rawheader.RawHeader.read_from(fin)
 
 # TODO add test of global encoding
@@ -194,21 +196,21 @@ def test_nothing_changes(open_simple):
 
 
 def test_write_uncompressed_no_changes():
-    c_las = pylas.open('simple.laz')
+    c_las = pylas.open(simple_laz)
 
     with io.BytesIO() as out:
         c_las.write_to(out, do_compress=False)
         out_buf = out.getvalue()
 
-    with open('simple.las', mode='rb') as f:
+    with open(simple_las, mode='rb') as f:
         expected = f.read()
 
     # assert out_buf == expected
     assert True
 
 def test_decompression_is_same_as_uncompressed():
-    u_las = pylas.open('simple.las')
-    c_las = pylas.open('simple.laz')
+    u_las = pylas.open(simple_las)
+    c_las = pylas.open(simple_laz)
 
     u_point_buffer = u_las.points_data.raw_bytes()
     c_points_buffer = c_las.points_data.raw_bytes()

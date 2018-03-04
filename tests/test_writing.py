@@ -2,13 +2,14 @@ import io
 
 import numpy as np
 import pytest
+import os
 
 import pylas
 
-
+simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
 @pytest.fixture()
 def file():
-    return pylas.open('simple.las')
+    return pylas.open(simple_las)
 
 
 def test_extraction(file):
