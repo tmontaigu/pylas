@@ -101,10 +101,6 @@ class LasBase(object):
                 self.header.offset_to_point_data,
             )
 
-            print('len of vlrs', self.vlrs.total_size_in_bytes())
-            print('offset', self.header.offset_to_point_data)
-            print('num vlr', self.header.number_of_vlr)
-
             self.header.write_to(out_stream)
             self.vlrs.write_to(out_stream)
             assert out_stream.tell() == self.header.offset_to_point_data

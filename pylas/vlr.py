@@ -1,5 +1,5 @@
 import ctypes
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractclassmethod
 from collections import namedtuple
 
 from .extradims import get_type_for_extra_dim
@@ -33,6 +33,8 @@ class RawVLR:
 
     @user_id.setter
     def user_id(self, value):
+        if len(value) > 16:
+            raise ValueError('user_id max length is 16 char max, input is {}'.format(len(value)))
         self._user_id = value + (16 - len(value)) * NULL_BYTE
 
     @property
@@ -69,14 +71,11 @@ class RawVLR:
 
 
 class VLR:
-    def __init__(self, user_id, record_id, description, data):
+    def __init__(self, user_id, record_id, description, data=b''):
         self.user_id = user_id
         self.record_id = record_id
         self.description = description
-
         self.record_data = bytes(data)
-        if len(self.record_data) < 0:
-            raise ValueError('record length must be >= 0')
 
     def into_raw(self):
         raw_vlr = RawVLR()
@@ -115,6 +114,8 @@ class KnownVLR(ABC):
     @abstractmethod
     def official_record_id(): pass
 
+    @abstractclassmethod
+    def from_raw(cls, raw): pass
 
 class ClassificationLookup(ctypes.LittleEndianStructure):
     _fields_ = [
@@ -137,7 +138,7 @@ class ClassificationLookup(ctypes.LittleEndianStructure):
 
 class ClassificationLookupVlr(VLR, KnownVLR):
     def __init__(self, data=b''):
-        super().__init__(self.official_user_id(), self.official_record_id(), "", data)
+        super().__init__(self.official_user_id(), self.official_record_id(), description='', data=data)
         self.lookups = []
 
     def add_lookup(self, class_number, description):
@@ -146,8 +147,6 @@ class ClassificationLookupVlr(VLR, KnownVLR):
         else:
             raise ValueError('Cannot add more lookups')
 
-    # fixme spec says rec_len = 16 * 256
-    # we are only going to check is len(data) % 16
     def parse_data(self):
         if len(self.record_data) % 16 != 0:
             raise ValueError("Length of ClassificationLookup VLR's record_data must be a multiple of 16")
