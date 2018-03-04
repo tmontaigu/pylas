@@ -5,7 +5,7 @@ from . import pointdata, vlr
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
 from .headers import rawheader, lasheader
-from .lasdatas import las12, las14
+from .lasdatas import las12, las14, base
 from . import pointdims
 
 USE_UNPACKED = False
@@ -75,14 +75,29 @@ def read_las_stream(data_stream):
     return las12.LasData(header=header, vlrs=vlrs, points=points)
 
 
-def convert(source, destination, *, point_format_id=None):
-    source_las = open_las(source)
+def convert(source, destination=None, *, point_format_id=None):
+    source_las = open_las(source) if not isinstance(source, base.LasBase) else source
 
     if point_format_id is None:
         return
 
+    file_version = pointdims.min_file_version_for_point_format(point_format_id)
+
+    header = source_las.header
+    header.version_major = int(file_version[0])
+    header.version_minor = int(file_version[2])
+    header.point_data_format_id = point_format_id
+    header.header_size = rawheader.LAS_HEADERS_SIZE[file_version]
+
     source_las.points_data.to_point_format(point_format_id)
-    source_las.write(destination)
+    points = source_las.points_data
+
+    if destination is not None:
+        source_las.write(destination)
+    else:
+        if file_version >= '1.4':
+            return las14.LasData(header=header, vlrs=source_las.vlrs, points=points)
+        return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
 
 # TODO creation with existing header, vlrs, evlrs, points
@@ -98,8 +113,8 @@ def create_las(point_format=0, file_version=None):
     header.version_major = int(file_version[0])
     header.version_minor = int(file_version[2])
     header.point_data_format_id = point_format
+    header.header_size = rawheader.LAS_HEADERS_SIZE[file_version]
 
     if file_version >= '1.4':
-        header.header_size = rawheader.LAS_HEADERS_SIZE['1.4']
         return las14.LasData(header=header)
     return las12.LasData(header=header)

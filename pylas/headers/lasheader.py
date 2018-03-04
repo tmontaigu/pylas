@@ -69,6 +69,7 @@ class Header:
         header.maxs = (raw_header.x_max, raw_header.y_max, raw_header.z_max)
         header.generating_software = raw_header.generating_software.rstrip(b'\x00').decode()
         header.creation_date = convert_raw_header_date(raw_header.creation_year, raw_header.creation_day_of_year)
+
         header.is_compressed = compression.is_point_format_compressed(raw_header.point_data_format_id)
         if header.is_compressed:
             header.point_format = compression.compressed_id_to_uncompressed(raw_header.point_data_format_id)
