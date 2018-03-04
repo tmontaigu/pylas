@@ -5,7 +5,7 @@ from .. import vlr
 from ..compression import (uncompressed_id_to_compressed,
                            compress_buffer,
                            create_laz_vlr)
-from ..header import rawheader
+from ..headers import rawheader
 
 
 def scale_dimension(array_dim, scale, offset):

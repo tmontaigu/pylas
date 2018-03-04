@@ -20,7 +20,7 @@ class Header:
     def __init__(self, version='1.2', point_format=0):
         self.point_count = 0
         self.point_size = pointdims.size_of_point_format(point_format)
-        self.scales = (.01, .01, .01)
+        self.scales = (.001, .001, .001)
         self.offsets = (0, 0, 0)
         self.mins = (0, 0, 0)
         self.maxs = (0, 0, 0)
@@ -38,7 +38,7 @@ class Header:
         raw = rawheader.RawHeader()
         raw.number_of_point_records = self.point_count
         raw.number_of_vlr = self.vlr_count
-        raw.version_major = int(self.version[0])  # FIXME
+        raw.version_major = int(self.version[0])
         raw.version_major = int(self.version[2])
         raw.point_data_record_length = self.point_size
         raw.header_size = rawheader.LAS_HEADERS_SIZE[self.version]
@@ -54,6 +54,7 @@ class Header:
         raw.x_offset = self.offsets[0]
         raw.y_offset = self.offsets[1]
         raw.z_offset = self.offsets[2]
+        return raw
 
 
 

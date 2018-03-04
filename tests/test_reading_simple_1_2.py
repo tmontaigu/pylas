@@ -24,7 +24,7 @@ def read_uncompressed():
 @pytest.fixture(params=['simple.las', 'simple.laz'])
 def get_header():
     with open('simple.las', mode='rb') as fin:
-        return pylas.header.rawheader.RawHeader.read_from(fin)
+        return pylas.headers.rawheader.RawHeader.read_from(fin)
 
 # TODO add test of global encoding
 def test_raw_header(get_header):
