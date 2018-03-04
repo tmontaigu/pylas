@@ -10,3 +10,16 @@ EVLR_HEADER_FIELDS = (
     EvlrHeaderField('record_length_after_header', 'uint64', 1),
     EvlrHeaderField('description', 'str', 32),
 )
+
+class RawEVLR:
+    def __init__(self):
+        self.reserved = 0
+        self.user_id = b'\x00' * 16
+        self.record_id = 0
+        self.record_length_after_header = 0
+        self.description = b'\x00' * 32
+        self.record_data = b''
+
+class EVLR:
+    def __init__(self):
+        pass

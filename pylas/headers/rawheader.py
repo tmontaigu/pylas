@@ -68,7 +68,7 @@ ADDITIONAL_LAS_1_3_FIELDS = (
 ADDITIONAL_LAS_1_4_FIELDS = (
     HeaderField('start_of_first_evlr', 'uint64', 1),
     HeaderField('number_of_evlr', 'uint32', 1),
-    HeaderField('number_of_points_records', 'uint64', 1),
+    HeaderField('number_of_point_records', 'uint64', 1),
     HeaderField('number_of_points_by_return_', 'uint64', 15),
 )
 
@@ -103,7 +103,7 @@ class RawHeader:
         self.creation_day_of_year = 0
         self.creation_year = 0
         self.header_size = 227
-        self.offset_to_point_data = 0
+        self.offset_to_point_data = 227
         self.number_of_vlr = 0
         self.point_data_format_id = 0
         self.point_data_record_length = 0

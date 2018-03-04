@@ -20,7 +20,7 @@ class Header:
     def __init__(self, version='1.2', point_format=0):
         self.point_count = 0
         self.point_size = pointdims.size_of_point_format(point_format)
-        self.scales = (.01, .01, .01)
+        self.scales = (.001, .001, .001)
         self.offsets = (0, 0, 0)
         self.mins = (0, 0, 0)
         self.maxs = (0, 0, 0)
@@ -38,13 +38,15 @@ class Header:
         raw = rawheader.RawHeader()
         raw.number_of_point_records = self.point_count
         raw.number_of_vlr = self.vlr_count
-        raw.version_major = int(self.version[0])  # FIXME
-        raw.version_major = int(self.version[2])
+        raw.version_major = int(self.version[0])
+        raw.version_minor = int(self.version[2])
         raw.point_data_record_length = self.point_size
         raw.header_size = rawheader.LAS_HEADERS_SIZE[self.version]
+        raw.generating_software = self.generating_software.encode() + (32 - len(self.generating_software)) * b'\x00'
         if self.creation_date is not None:
             raw.creation_day_of_year = to_day_of_year(self.creation_date)
             raw.creation_year = self.creation_date.year
+
         raw.x_max = self.maxs[0]
         raw.y_max = self.maxs[1]
         raw.z_max = self.maxs[2]
@@ -54,6 +56,7 @@ class Header:
         raw.x_offset = self.offsets[0]
         raw.y_offset = self.offsets[1]
         raw.z_offset = self.offsets[2]
+        return raw
 
 
 
@@ -66,6 +69,7 @@ class Header:
         header.maxs = (raw_header.x_max, raw_header.y_max, raw_header.z_max)
         header.generating_software = raw_header.generating_software.rstrip(b'\x00').decode()
         header.creation_date = convert_raw_header_date(raw_header.creation_year, raw_header.creation_day_of_year)
+
         header.is_compressed = compression.is_point_format_compressed(raw_header.point_data_format_id)
         if header.is_compressed:
             header.point_format = compression.compressed_id_to_uncompressed(raw_header.point_data_format_id)

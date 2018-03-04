@@ -192,6 +192,12 @@ COMPOSED_FIELDS = {
     8: COMPOSED_FIELDS_6,
 }
 
+VERSION_TO_POINT_FMT = {
+    '1.2': (0, 1, 2, 3),
+    '1.3': (0, 1, 2, 3, 4, 5),
+    '1.4': (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+}
+
 POINT_FORMATS_DTYPE = build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS)
 
 ALL_POINT_FORMATS_DIMENSIONS = {**POINT_FORMAT_DIMENSIONS}
@@ -266,3 +272,11 @@ def np_dtype_to_point_format(dtype, unpacked=False):
             'Data type of array is not compatible with any point format (array dtype: {})'.format(
                 dtype
             ))
+
+
+def min_file_version_for_point_format(point_format_id):
+    for version, point_formats in VERSION_TO_POINT_FMT.items():
+        if point_format_id in point_formats:
+            return version
+    else:
+        raise errors.PointFormatNotSupported(point_format_id)
