@@ -275,7 +275,7 @@ def np_dtype_to_point_format(dtype, unpacked=False):
 
 
 def min_file_version_for_point_format(point_format_id):
-    for version, point_formats in VERSION_TO_POINT_FMT.items():
+    for version, point_formats in sorted(VERSION_TO_POINT_FMT.items()):
         if point_format_id in point_formats:
             return version
     else:
