@@ -5,41 +5,90 @@ import numpy as np
 from . import errors
 
 
-def point_format_to_dtype(point_format, dimensions):
-    return np.dtype([dimensions[dim_name] for dim_name in point_format])
-
-
-def unpack(source_array, mask):
-    lsb = least_significant_bit(mask)
-    return (source_array & mask) >> lsb
-
-    return packed
-
-
-def pack_into(array, array_in, mask, inplace=False):
-    lsb = least_significant_bit(mask)
-    max_value = int(mask >> lsb)
-    if array_in.max() > max_value:
-        raise OverflowError("value ({}) is greater than allowed (max: {})".format(
-            array_in.max(), max_value
-        ))
-    if inplace:
-        array[:] = array & ~mask
-        array[:] = array | ((array_in << lsb) & mask).astype(array.dtype)
-    else:
-        array = array & ~mask
-        return array | ((array_in << lsb) & mask).astype(array.dtype)
-
-
 def least_significant_bit(val):
+    """ Return the least significant bit
+    """
     return (val & -val).bit_length() - 1
 
 
+def unpack(source_array, mask):
+    """ Unpack sub field using its mask
+    
+    Parameters:
+    ----------
+    source_array : numpy.ndarray
+        The source array
+    mask : mask (ie: 0b00001111)
+        Mask of the sub field to be extracted from the source array
+    Returns
+    -------
+    numpy.ndarray
+        The sub field array
+    """
+    lsb = least_significant_bit(mask)
+    return (source_array & mask) >> lsb
+
+
+def pack_into(array, sub_field_array, mask, inplace=False):
+    """ Packs a sub field's array into another array using a mask
+    
+    Parameters:
+    ----------
+    array : numpy.ndarray 
+        The array in which the sub field array will be packed into
+    array_in : numpy.ndarray
+        sub field array to pack
+    mask : mask (ie: 0b00001111)
+        Mask of the sub field
+    inplace : {bool}, optional
+        If true a new array is returned. (the default is False, which modifies the array in place)
+    
+    Raises
+    ------
+    OverflowError
+        If the values contained in the sub field array are greater than its mask's number of bits
+        allows
+    """
+    lsb = least_significant_bit(mask)
+    max_value = int(mask >> lsb)
+    if sub_field_array.max() > max_value:
+        raise OverflowError("value ({}) is greater than allowed (max: {})".format(
+            sub_field_array.max(), max_value
+        ))
+    if inplace:
+        array[:] = array & ~mask
+        array[:] = array | ((sub_field_array << lsb) & mask).astype(array.dtype)
+    else:
+        array = array & ~mask
+        return array | ((sub_field_array << lsb) & mask).astype(array.dtype)
+
+
+def point_format_to_dtype(point_format, dimensions):
+    """ build the numpy.dtype for a point format
+    
+    Parameters:
+    ----------
+    point_format : tuple of str
+        The dimensions names of the point format
+    dimensions : dict
+        The dictionnary of dimensions
+    Returns
+    -------
+    numpy.dtype
+        The dtype for the input point format
+    """
+    return np.dtype([dimensions[dim_name] for dim_name in point_format])
+
+
 def size_of_point_format(point_format_id):
+    """ Returns the size in bytes of a point format
+    """
     return get_dtype_of_format_id(point_format_id).itemsize
 
 
 def dtype_append(dtype, extra_dims_tuples):
+    """ Append a dimensions to an existing dtype
+    """
     descr = dtype.descr
     descr.extend(extra_dims_tuples)
     return np.dtype(descr)
@@ -263,6 +312,28 @@ def get_sub_fields_of_fmt_id(point_format_id):
 
 
 def np_dtype_to_point_format(dtype, unpacked=False):
+    """ Tries to find a matching point format id for the input numpy dtype
+    To match, the input dtype has to be 100% equal to a point format dtype
+    so all names & dimensions types must match
+
+    Parameters:
+    ----------
+    dtype : numpy.dtype
+        The input dtype
+    unpacked : {bool}, optional
+        [description] (the default is False, which [default_description])
+    
+    Raises
+    ------
+    errors.IncompatibleDataFormat
+        If No compatible point format was found
+    
+    Returns
+    -------
+    int
+        The compatible point format found
+    """
+
     all_dtypes = ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
     for format_id, fmt_dtype in all_dtypes.items():
         if fmt_dtype == dtype:
