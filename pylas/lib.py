@@ -97,12 +97,15 @@ def convert(source, destination=None, *, point_format_id=None):
     except ValueError:
         evlrs = []
 
-    if destination is not None:
-        source_las.write(destination)
+    if file_version >= '1.4':
+        out_las = las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
     else:
-        if file_version >= '1.4':
-            return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
-        return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+        out_las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+
+    if destination is not None:
+        out_las.write(destination)
+    else:
+        return out_las
 
 
 def create_las(point_format=0, file_version=None):
