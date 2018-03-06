@@ -1,24 +1,33 @@
 from collections import namedtuple
+import ctypes
 
-EVLR_HEADER_SIZE = 60
-EvlrHeaderField = namedtuple("EvlrHeaderField", ('name', 'type', 'num'))
+class EVLRHeader(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ('_reserved', ctypes.c_uint16),
+        ('user_id', ctypes.c_char * 16),
+        ('record_id', ctypes.c_uint16),
+        ('record_length_after_header', ctypes.c_uint64),
+        ('description', ctypes.c_char * 32)
+    ]
+EVLR_HEADER_SIZE = ctypes.sizeof(EVLRHeader)
 
-EVLR_HEADER_FIELDS = (
-    EvlrHeaderField('reserved', 'uint16', 1),
-    EvlrHeaderField('user_id', 'str', 16),
-    EvlrHeaderField('record_id', 'uint16', 1),
-    EvlrHeaderField('record_length_after_header', 'uint64', 1),
-    EvlrHeaderField('description', 'str', 32),
-)
 
 class RawEVLR:
     def __init__(self):
-        self.reserved = 0
-        self.user_id = b'\x00' * 16
-        self.record_id = 0
-        self.record_length_after_header = 0
-        self.description = b'\x00' * 32
+        self.header = EVLRHeader()
         self.record_data = b''
+    
+    @classmethod
+    def read_from(cls, data_stream):
+        raw_evlr = cls()
+        raw_evlr.header = EVLRHeader.from_buffer(data_stream.read(EVLR_HEADER_SIZE))
+        raw_evlr.record_data = data_stream.read(raw_evlr.header.record_length_after_header)
+        return raw_evlr
+    
+    def write_to(self, out):
+        out.write(bytes(self.header))
+        out.write(self.record_data)
+        
 
 class EVLR:
     def __init__(self):
