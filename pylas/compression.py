@@ -1,7 +1,7 @@
 import numpy as np
 
 from .errors import LazPerfNotFound
-from .pointdims import get_dtype_of_format_id, POINT_FORMAT_DIMENSIONS
+from .point.dims import get_dtype_of_format_id, POINT_FORMAT_DIMENSIONS
 
 HAS_LAZPERF = False
 

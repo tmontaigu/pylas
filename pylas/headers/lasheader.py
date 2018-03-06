@@ -2,7 +2,7 @@ import datetime
 
 from . import rawheader
 from .. import compression
-from .. import pointdims
+from pylas.point import dims
 
 
 def convert_raw_header_date(year, day_of_year):
@@ -19,7 +19,7 @@ def to_day_of_year(date):
 class Header:
     def __init__(self, version='1.2', point_format=0):
         self.point_count = 0
-        self.point_size = pointdims.size_of_point_format(point_format)
+        self.point_size = dims.size_of_point_format(point_format)
         self.scales = (.001, .001, .001)
         self.offsets = (0, 0, 0)
         self.mins = (0, 0, 0)

@@ -1,12 +1,12 @@
 import io
 import struct
 
-from . import pointdata, vlr
+from . import vlr
+from pylas.point import record, dims
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
-from .headers import rawheader, lasheader
+from .headers import rawheader
 from .lasdatas import las12, las14, base
-from . import pointdims
 
 USE_UNPACKED = False
 
@@ -31,7 +31,7 @@ def read_las_buffer(buffer):
 
 
 def read_las_stream(data_stream):
-    point_record = pointdata.UnpackedPointRecord if USE_UNPACKED else pointdata.PackedPointRecord
+    point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
 
     header = rawheader.RawHeader.read_from(data_stream)
     assert data_stream.tell() == header.header_size
@@ -81,7 +81,7 @@ def convert(source, destination=None, *, point_format_id=None):
     if point_format_id is None:
         return
 
-    file_version = pointdims.min_file_version_for_point_format(point_format_id)
+    file_version = dims.min_file_version_for_point_format(point_format_id)
 
     header = source_las.header
     header.version_major = int(file_version[0])
@@ -109,12 +109,12 @@ def convert(source, destination=None, *, point_format_id=None):
 
 
 def create_las(point_format=0, file_version=None):
-    if file_version is not None and point_format not in pointdims.VERSION_TO_POINT_FMT[file_version]:
+    if file_version is not None and point_format not in dims.VERSION_TO_POINT_FMT[file_version]:
         raise ValueError('Point format {} is not compatible with file version {}'.format(
             point_format, file_version
         ))
     else:
-        file_version = pointdims.min_file_version_for_point_format(point_format)
+        file_version = dims.min_file_version_for_point_format(point_format)
 
     header = rawheader.RawHeader()
     header.version_major = int(file_version[0])

@@ -2,8 +2,8 @@ from abc import ABC, abstractclassmethod, abstractmethod
 
 import numpy as np
 
-from . import pointdims
-from .compression import decompress_buffer
+from pylas.point import dims
+from pylas.compression import decompress_buffer
 
 
 class PointRecord(ABC):
@@ -43,12 +43,12 @@ class PointRecord(ABC):
 class UnpackedPointRecord(PointRecord):
     def __init__(self, data, point_fmt_id=None):
         self.array = data
-        self.point_format_id = pointdims.np_dtype_to_point_format(data.dtype, unpacked=True) if point_fmt_id is None else point_fmt_id
+        self.point_format_id = dims.np_dtype_to_point_format(data.dtype, unpacked=True) if point_fmt_id is None else point_fmt_id
 
     # TODO fix when there are extra dims
     @property
     def point_size(self):
-        return pointdims.get_dtype_of_format_id(self.point_format_id).itemsize
+        return dims.get_dtype_of_format_id(self.point_format_id).itemsize
 
     @property
     def actual_point_size(self):
@@ -58,7 +58,7 @@ class UnpackedPointRecord(PointRecord):
         return self.array.tobytes()
 
     def repack_sub_fields(self):
-        return pointdims.repack_sub_fields(self.array, self.point_format_id)
+        return dims.repack_sub_fields(self.array, self.point_format_id)
 
     def write_to(self, out):
         out.write(self.repack_sub_fields().tobytes())
@@ -78,7 +78,7 @@ class UnpackedPointRecord(PointRecord):
         return self.array.shape[0]
 
     def to_point_format(self, new_point_format):
-        new_dtype = pointdims.get_dtype_of_format_id(new_point_format, unpacked=True)
+        new_dtype = dims.get_dtype_of_format_id(new_point_format, unpacked=True)
         new_data = np.zeros_like(self.array, dtype=new_dtype)
 
         for dim_name in self.array.dtype.names:
@@ -91,11 +91,11 @@ class UnpackedPointRecord(PointRecord):
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
-        points_dtype = pointdims.get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
+        points_dtype = dims.get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
         point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
         data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
 
-        point_record = pointdims.unpack_sub_fields(data, point_format_id, extra_dims=extra_dims)
+        point_record = dims.unpack_sub_fields(data, point_format_id, extra_dims=extra_dims)
 
         return cls(point_record, point_format_id)
 
@@ -104,22 +104,22 @@ class UnpackedPointRecord(PointRecord):
         uncompressed = decompress_buffer(compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
 
-        point_record = pointdims.unpack_sub_fields(uncompressed, point_format_id)
+        point_record = dims.unpack_sub_fields(uncompressed, point_format_id)
 
         return cls(point_record, point_format_id)
 
     @classmethod
     def empty(cls, point_format_id):
-        data = np.zeros(0, dtype=pointdims.get_dtype_of_format_id(point_format_id, unpacked=True))
+        data = np.zeros(0, dtype=dims.get_dtype_of_format_id(point_format_id, unpacked=True))
         return cls(data, point_format_id)
 
 
 class PackedPointRecord(PointRecord):
     def __init__(self, data, point_format_id=None):
         self.array = data
-        self.point_format_id = pointdims.np_dtype_to_point_format(
+        self.point_format_id = dims.np_dtype_to_point_format(
             data.dtype) if point_format_id is None else point_format_id
-        self.sub_fields_dict = pointdims.get_sub_fields_of_fmt_id(self.point_format_id)
+        self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(self.point_format_id)
 
     @property
     def point_size(self):
@@ -131,7 +131,7 @@ class PackedPointRecord(PointRecord):
 
     @property
     def dimension_names(self):
-        return pointdims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
+        return dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
 
     def raw_bytes(self):
         return self.array.tobytes()
@@ -140,7 +140,7 @@ class PackedPointRecord(PointRecord):
         out.write(self.raw_bytes())
 
     def to_point_format(self, new_point_format):
-        new_record = np.zeros_like(self.array, dtype=pointdims.get_dtype_of_format_id(new_point_format))
+        new_record = np.zeros_like(self.array, dtype=dims.get_dtype_of_format_id(new_point_format))
 
         for dim_name in self.dimension_names:
             try:
@@ -148,13 +148,13 @@ class PackedPointRecord(PointRecord):
             except ValueError:
                 pass
         self.array = new_record
-        self.sub_fields_dict = pointdims.get_sub_fields_of_fmt_id(new_point_format)
+        self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(new_point_format)
         self.point_format_id = new_point_format
 
     def __getitem__(self, item):
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
-            return pointdims.unpack(self.array[composed_dim], sub_field.mask)
+            return dims.unpack(self.array[composed_dim], sub_field.mask)
         except KeyError:
             return self.array[item]
 
@@ -166,7 +166,7 @@ class PackedPointRecord(PointRecord):
             )
         try:
             composed_dim, sub_field = self.sub_fields_dict[key]
-            pointdims.pack_into(
+            dims.pack_into(
                 self.array[composed_dim],
                 value,
                 sub_field.mask,
@@ -180,7 +180,7 @@ class PackedPointRecord(PointRecord):
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
-        points_dtype = pointdims.get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
+        points_dtype = dims.get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
         point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
         data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
 
@@ -193,5 +193,5 @@ class PackedPointRecord(PointRecord):
 
     @classmethod
     def empty(cls, point_format_id):
-        data = np.zeros(0, dtype=pointdims.get_dtype_of_format_id(point_format_id))
+        data = np.zeros(0, dtype=dims.get_dtype_of_format_id(point_format_id))
         return cls(data, point_format_id)

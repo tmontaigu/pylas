@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod, abstractclassmethod
 from collections import namedtuple
 
 from .extradims import get_type_for_extra_dim
-from .lasio import BinaryReader, BinaryWriter, type_lengths
 
 NULL_BYTE = b'\x00'
 
@@ -34,7 +33,6 @@ class RawVLR:
 
     @classmethod
     def read_from(cls, data_stream):
-        bin_reader = BinaryReader(data_stream)
         raw_vlr = cls()
         header = VLRHeader()
         data_stream.readinto(header)

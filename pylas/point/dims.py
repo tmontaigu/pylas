@@ -2,7 +2,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from . import errors
+from pylas import errors
 
 
 def least_significant_bit(val):

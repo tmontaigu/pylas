@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import pointdata
+from pylas.point import record
 from .. import vlr
 from ..compression import (uncompressed_id_to_compressed,
                            compress_buffer,
@@ -19,13 +19,13 @@ class LasBase(object):
         self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
         self.__dict__['vlrs'] = vlrs if vlrs is not None else vlr.VLRList()
         if points is not None:
-            if isinstance(points, pointdata.PointRecord):
+            if isinstance(points, record.PointRecord):
                 self.__dict__['points_data'] = points
             else:
-                self.__dict__['points_data'] = pointdata.PackedPointRecord(points)
+                self.__dict__['points_data'] = record.PackedPointRecord(points)
                 self.header.point_data_format_id = self.points_data.point_format_id
         else:
-            self.__dict__['points_data'] = pointdata.PackedPointRecord.empty(self.header.point_data_format_id)
+            self.__dict__['points_data'] = record.PackedPointRecord.empty(self.header.point_data_format_id)
 
     @property
     def x(self):
@@ -57,7 +57,7 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        self.points_data = pointdata.PackedPointRecord(value)
+        self.points_data = record.PackedPointRecord(value)
 
     def __getitem__(self, item):
         return self.points_data[item]
