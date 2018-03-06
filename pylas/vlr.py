@@ -112,10 +112,11 @@ class KnownVLR(ABC):
 
     @staticmethod
     @abstractmethod
-    def official_record_id(): pass
+    def official_record_ids(): pass
 
     @abstractclassmethod
     def from_raw(cls, raw): pass
+
 
 class ClassificationLookup(ctypes.LittleEndianStructure):
     _fields_ = [
@@ -138,7 +139,7 @@ class ClassificationLookup(ctypes.LittleEndianStructure):
 
 class ClassificationLookupVlr(VLR, KnownVLR):
     def __init__(self, data=b''):
-        super().__init__(self.official_user_id(), self.official_record_id(), description='', data=data)
+        super().__init__(self.official_user_id(), self.official_record_ids()[0], description='', data=data)
         self.lookups = []
 
     def add_lookup(self, class_number, description):
@@ -165,15 +166,15 @@ class ClassificationLookupVlr(VLR, KnownVLR):
         return "LASF_Spec"
 
     @staticmethod
-    def official_record_id():
-        return 0
+    def official_record_ids():
+        return 0,
 
 
 class LasZipVlr(VLR, KnownVLR):
     def __init__(self, data):
         super().__init__(
             LasZipVlr.official_user_id(),
-            LasZipVlr.official_record_id(),
+            LasZipVlr.official_record_ids()[0],
             'http://laszip.org',
             data
         )
@@ -183,8 +184,8 @@ class LasZipVlr(VLR, KnownVLR):
         return 'laszip encoded'
 
     @staticmethod
-    def official_record_id():
-        return 22204
+    def official_record_ids():
+        return 22204,
 
     @classmethod
     def from_raw(cls, raw_vlr):
@@ -240,8 +241,8 @@ class ExtraBytesVlr(VLR, KnownVLR):
         return 'LASF_Spec'
 
     @staticmethod
-    def official_record_id():
-        return 4
+    def official_record_ids():
+        return 4,
 
     @classmethod
     def from_raw(cls, raw_vlr):
@@ -251,7 +252,7 @@ class ExtraBytesVlr(VLR, KnownVLR):
 def vlr_factory(raw_vlr):
     user_id = raw_vlr.user_id.rstrip(NULL_BYTE).decode()
     for known_vlr in KnownVLR.__subclasses__():
-        if known_vlr.official_user_id() == user_id and known_vlr.official_record_id() == raw_vlr.record_id:
+        if known_vlr.official_user_id() == user_id and raw_vlr.record_id in known_vlr.official_record_ids():
             return known_vlr.from_raw(raw_vlr)
     else:
         return VLR.from_raw(raw_vlr)
