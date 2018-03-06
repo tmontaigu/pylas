@@ -86,7 +86,7 @@ LAS_HEADERS_SIZE = {
 }
 
 
-# TODO: better defaults
+# TODO: Should ctypes also be used for Las headers ?
 class RawHeader:
     def __init__(self):
         self.file_signature = LAS_FILE_SIGNATURE
@@ -102,8 +102,8 @@ class RawHeader:
         self.generating_software = b'\x00' * type_lengths['char'] * 32
         self.creation_day_of_year = 0
         self.creation_year = 0
-        self.header_size = 227
-        self.offset_to_point_data = 227
+        self.header_size = LAS_HEADERS_SIZE['{}.{}'.format(self.version_major, self.version_minor)]
+        self.offset_to_point_data = self.header_size
         self.number_of_vlr = 0
         self.point_data_format_id = 0
         self.point_data_record_length = 0
@@ -141,6 +141,13 @@ class RawHeader:
         if len(value) > 32:
             raise ValueError
         self._system_identifier = value + (32 - len(value)) * b'\x00'
+
+    def set_version(self, new_version):
+        try:
+            self.header_size = LAS_HEADERS_SIZE[new_version]
+        except KeyError:
+            raise ValueError('{} is not a valid las header version')
+        self.version_major, self.version_minor = map(int, new_version.split('.'))
 
 
     def write_to(self, out_stream):

@@ -85,10 +85,8 @@ def convert(source, destination=None, *, point_format_id=None):
     file_version = dims.min_file_version_for_point_format(point_format_id)
 
     header = source_las.header
-    header.version_major = int(file_version[0])
-    header.version_minor = int(file_version[2])
+    header.set_version(file_version)
     header.point_data_format_id = point_format_id
-    header.header_size = rawheader.LAS_HEADERS_SIZE[file_version]
 
     source_las.points_data.to_point_format(point_format_id)
     points = source_las.points_data
@@ -118,10 +116,8 @@ def create_las(point_format=0, file_version=None):
         file_version = dims.min_file_version_for_point_format(point_format)
 
     header = rawheader.RawHeader()
-    header.version_major = int(file_version[0])
-    header.version_minor = int(file_version[2])
+    header.set_version(file_version)
     header.point_data_format_id = point_format
-    header.header_size = rawheader.LAS_HEADERS_SIZE[file_version]
 
     if file_version >= '1.4':
         return las14.LasData(header=header)
