@@ -7,66 +7,39 @@ from .lasio import BinaryReader, BinaryWriter, type_lengths
 
 NULL_BYTE = b'\x00'
 
-VLRField = namedtuple('VLRField', ('name', 'type', 'num'))
-VLR_HEADER_FIELDS = (
-    VLRField('_reserved', 'uint16', 1),
-    VLRField('user_id', 'str', 16),
-    VLRField('record_id', 'uint16', 1),
-    VLRField('record_length_after_header', 'uint16', 1),
-    VLRField('description', 'str', 32),
-)
-VLR_HEADER_SIZE = sum((type_lengths[field.type] * field.num) for field in VLR_HEADER_FIELDS)
 
+class VLRHeader(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ('_reserved', ctypes.c_uint16),
+        ('user_id', ctypes.c_char * 16),
+        ('record_id', ctypes.c_uint16),
+        ('record_length_after_header', ctypes.c_uint16),
+        ('description', ctypes.c_char * 32)
+    ]
+VLR_HEADER_SIZE = ctypes.sizeof(VLRHeader)
 
 class RawVLR:
     def __init__(self):
-        self._reserved = 0
-        self._user_id = 16 * NULL_BYTE
-        self.record_id = None
-        self.record_length_after_header = 0
-        self._description = 32 * NULL_BYTE
+        self.header = VLRHeader()
         self.record_data = b''
 
-    @property
-    def user_id(self):
-        return self._user_id
-
-    @user_id.setter
-    def user_id(self, value):
-        if len(value) > 16:
-            raise ValueError('user_id max length is 16 char max, input is {}'.format(len(value)))
-        self._user_id = value + (16 - len(value)) * NULL_BYTE
-
-    @property
-    def description(self):
-        return self._description
-
-    @description.setter
-    def description(self, value):
-        self._description = value + (32 - len(value)) * NULL_BYTE
-
     def write_to(self, out):
-        out_stream = BinaryWriter(out)
-        for field in VLR_HEADER_FIELDS:
-            value = getattr(self, field.name)
-            out_stream.write(value, field.type, num=field.num)
-        out_stream.write_raw(self.record_data)
+        out.write(bytes(self.header))
+        out.write(self.record_data)
 
     def __repr__(self):
         return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
-            self._user_id, self.record_id, self.record_length_after_header
+            self.header.user_id, self.header.record_id, self.header.record_length_after_header
         )
 
     @classmethod
     def read_from(cls, data_stream):
         bin_reader = BinaryReader(data_stream)
         raw_vlr = cls()
-        for field in VLR_HEADER_FIELDS:
-            value = bin_reader.read(field.type, num=field.num)
-            setattr(raw_vlr, field.name, value)
-
-        # TODO: Warn if empty payload ?
-        raw_vlr.record_data = bin_reader.read('str', num=raw_vlr.record_length_after_header)
+        header = VLRHeader()
+        data_stream.readinto(header)
+        raw_vlr.header = header
+        raw_vlr.record_data = data_stream.read(header.record_length_after_header)
         return raw_vlr
 
 
@@ -79,10 +52,10 @@ class VLR:
 
     def into_raw(self):
         raw_vlr = RawVLR()
-        raw_vlr.user_id = self.user_id.encode('utf8')
-        raw_vlr.description = self.description.encode('utf8')
-        raw_vlr.record_id = self.record_id
-        raw_vlr.record_length_after_header = len(self.record_data)
+        raw_vlr.header.user_id = self.user_id.encode('utf8')
+        raw_vlr.header.description = self.description.encode('utf8')
+        raw_vlr.header.record_id = self.record_id
+        raw_vlr.header.record_length_after_header = len(self.record_data)
         raw_vlr.record_data = self.record_data
 
         return raw_vlr
@@ -90,9 +63,9 @@ class VLR:
     @classmethod
     def from_raw(cls, raw_vlr):
         vlr = cls(
-            raw_vlr.user_id.rstrip(NULL_BYTE).decode(),
-            raw_vlr.record_id,
-            raw_vlr.description.rstrip(NULL_BYTE).decode(),
+            raw_vlr.header.user_id.rstrip(NULL_BYTE).decode(),
+            raw_vlr.header.record_id,
+            raw_vlr.header.description.rstrip(NULL_BYTE).decode(),
             raw_vlr.record_data
         )
         return vlr
@@ -130,9 +103,6 @@ class ClassificationLookup(ctypes.LittleEndianStructure):
         else:
             super().__init__(class_number, description)
 
-    def raw_bytes(self):
-        return bytes(self)
-
     def __repr__(self):
         return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
 
@@ -155,7 +125,7 @@ class ClassificationLookupVlr(VLR, KnownVLR):
             self.lookups.append(ClassificationLookup.from_buffer(self.record_data[16 * i: 16 * (i + 1)]))
 
     def into_raw(self):
-        self.record_data = b''.join(lookup.raw_bytes() for lookup in self.lookups)
+        self.record_data = b''.join(bytes(lookup) for lookup in self.lookups)
         return super().into_raw()
 
     def __len__(self):
@@ -250,9 +220,9 @@ class ExtraBytesVlr(VLR, KnownVLR):
 
 
 def vlr_factory(raw_vlr):
-    user_id = raw_vlr.user_id.rstrip(NULL_BYTE).decode()
+    user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
     for known_vlr in KnownVLR.__subclasses__():
-        if known_vlr.official_user_id() == user_id and raw_vlr.record_id in known_vlr.official_record_ids():
+        if known_vlr.official_user_id() == user_id and raw_vlr.header.record_id in known_vlr.official_record_ids():
             return known_vlr.from_raw(raw_vlr)
     else:
         return VLR.from_raw(raw_vlr)
