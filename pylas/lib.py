@@ -1,7 +1,7 @@
 import io
 import struct
 
-from . import vlr
+from . import vlr, evlr
 from pylas.point import record, dims
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
@@ -67,10 +67,11 @@ def read_las_stream(data_stream):
             extra_dims
         )
 
-    # version >= 1.3 -> EVLRs
 
-    if header.version_major >= 1 and header.version_minor >= 4:
-        return las14.LasData(header=header, vlrs=vlrs, points=points)
+    # TODO las 1.3 should maybe, have its own class
+    if header.version_major >= 1 and header.version_minor >= 3:
+        evlrs = [evlr.RawEVLR.read_from(data_stream) for _ in range(header.number_of_evlr)]
+        return las14.LasData(header=header, vlrs=vlrs, points=points, evlrs=evlrs)
 
     return las12.LasData(header=header, vlrs=vlrs, points=points)
 

@@ -15,3 +15,5 @@ class LasData(LasBase):
         self.header.start_of_first_evlr = 0
         self.header.number_of_evlr = len(self.evlrs)
         super().write_to(out_stream, do_compress=False)
+        for evlr in self.evlrs:
+            evlr.write_to(out_stream)
