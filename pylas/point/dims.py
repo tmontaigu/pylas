@@ -351,3 +351,6 @@ def min_file_version_for_point_format(point_format_id):
             return version
     else:
         raise errors.PointFormatNotSupported(point_format_id)
+
+def supported_point_formats():
+    return set(POINT_FORMAT_DIMENSIONS.keys())
