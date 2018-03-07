@@ -30,20 +30,21 @@ def read_las_buffer(buffer):
         return read_las_stream(stream)
 
 
+# TODO: Sould probably raise instead of asserting, or at least warn
 def read_las_stream(data_stream):
     point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
 
     header = rawheader.RawHeader.read_from(data_stream)
     assert data_stream.tell() == header.header_size
+
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
-    extra_bytes_vlr = vlrs.get_extra_bytes_vlr()
-    if extra_bytes_vlr is not None:
-        extra_dims = extra_bytes_vlr.type_of_extra_dims()
-    else:
+    try:
+        extra_dims = vlrs.get_extra_bytes_vlr().type_of_extra_dims()
+    except AttributeError:
         extra_dims = None
 
-    data_stream.seek(header.offset_to_point_data)
+    assert data_stream.tell() == header.offset_to_point_data
     if is_point_format_compressed(header.point_data_format_id):
         laszip_vlr = vlrs.extract_laszip_vlr()
         if laszip_vlr is None:
