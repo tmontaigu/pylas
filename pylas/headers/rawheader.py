@@ -1,5 +1,6 @@
 import ctypes
 from collections import namedtuple
+import struct
 
 from pylas.lasio import BinaryReader, type_lengths, BinaryWriter
 
@@ -143,7 +144,7 @@ class RawHeader:
         self._system_identifier = value + (32 - len(value)) * b'\x00'
 
     # TODO a property seems like a nice thing to do here
-    def version(self)
+    def version(self):
         return "{}.{}".format(self.version_major, self.version_minor)
 
     def set_version(self, new_version):
@@ -159,17 +160,18 @@ class RawHeader:
 
         for field in LAS_1_1_HEADER_FIELDS:
             val = getattr(self, field.name)
-            out_stream.write(val, field.type, num=field.num)
+            out_stream.write_field(field, val)
 
         if self.version_major >= 1 and self.version_minor >= 3:
             for field in ADDITIONAL_LAS_1_3_FIELDS:
                 val = getattr(self, field.name)
-                out_stream.write(val, field.type, num=field.num)
+                out_stream.write_field(field, val)
 
         if self.version_major >= 1 and self.version_minor >= 4:
             for field in ADDITIONAL_LAS_1_4_FIELDS:
                 val = getattr(self, field.name)
-                out_stream.write(val, field.type, num=field.num)
+                out_stream.write_field(field, val)
+
 
     # FIXME: Maybe we shouldn't continue to read if the file signature is
     # not LASF ans raise an exception

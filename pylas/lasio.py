@@ -61,6 +61,14 @@ class BinaryWriter:
         self.stream = stream
         self.endian = '<' if endianness == 'little' else '>'
 
+    def write_field(self, field, values):
+        try:
+            self.write(values, field.type, field.num)
+        except struct.error as e:
+            raise ValueError("Error writing {} with value '{}': {}".format(
+                field, values, e
+            ))
+        
     def write(self, values, data_type, num=1):
         fmt_str = '{}{}{}'.format(self.endian, num, type_name_to_struct[data_type])
 
