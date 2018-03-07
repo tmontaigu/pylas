@@ -2,7 +2,7 @@ import io
 import struct
 
 from . import vlr, evlr
-from pylas.point import record, dims
+from .point import record, dims
 from .compression import (is_point_format_compressed,
                           compressed_id_to_uncompressed)
 from .headers import rawheader
@@ -69,7 +69,7 @@ def read_las_stream(data_stream):
 
 
     # TODO las 1.3 should maybe, have its own class
-    if header.version_major >= 1 and header.version_minor >= 3:
+    if header.version_major >= 1 and header.version_minor >= 4:
         evlrs = [evlr.RawEVLR.read_from(data_stream) for _ in range(header.number_of_evlr)]
         return las14.LasData(header=header, vlrs=vlrs, points=points, evlrs=evlrs)
 
@@ -81,7 +81,6 @@ def convert(source, destination=None, *, point_format_id=None):
 
     point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
     file_version = dims.min_file_version_for_point_format(point_format_id)
-
 
     header = source_las.header
     header.set_version(file_version)

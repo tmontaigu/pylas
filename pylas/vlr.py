@@ -23,6 +23,7 @@ class RawVLR:
         self.record_data = b''
 
     def write_to(self, out):
+        self.header.record_length_after_header = len(self.record_data)
         out.write(bytes(self.header))
         out.write(self.record_data)
 
