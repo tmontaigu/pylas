@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='pylas',
@@ -7,6 +7,6 @@ setup(
     url='https://github.com/tmontaigu/pylas',
     author='Thomas Montaigu',
     # license='MIT',
-    packages=['pylas'],
+    packages=find_packages(exclude=('tests',)),
     zip_safe=False
 )

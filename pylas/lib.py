@@ -79,10 +79,9 @@ def read_las_stream(data_stream):
 def convert(source, destination=None, *, point_format_id=None):
     source_las = open_las(source) if not isinstance(source, base.LasBase) else source
 
-    if point_format_id is None:
-        return
-
+    point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
     file_version = dims.min_file_version_for_point_format(point_format_id)
+
 
     header = source_las.header
     header.set_version(file_version)
