@@ -18,22 +18,42 @@ class VLRHeader(ctypes.LittleEndianStructure):
 VLR_HEADER_SIZE = ctypes.sizeof(VLRHeader)
 
 class RawVLR:
+    """ As close as possible to the underlying data
+    No parsing of the record_data is made
+    """
+
     def __init__(self):
         self.header = VLRHeader()
         self.record_data = b''
 
     def write_to(self, out):
+        """ Write the raw header content to the out stream
+        
+        Parameters:
+        ----------
+        out : {file object}
+            The output stream
+        """
+
         self.header.record_length_after_header = len(self.record_data)
         out.write(bytes(self.header))
         out.write(self.record_data)
 
-    def __repr__(self):
-        return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
-            self.header.user_id, self.header.record_id, self.header.record_length_after_header
-        )
-
     @classmethod
     def read_from(cls, data_stream):
+        """ Instanciate a RawVLR by reading the content from the
+        data stream
+        
+        Parameters:
+        ----------
+        data_stream : {file object}
+            The input stream
+        Returns
+        -------
+        RawVLR
+            The RawVLR read
+        """
+
         raw_vlr = cls()
         header = VLRHeader()
         data_stream.readinto(header)
@@ -41,6 +61,10 @@ class RawVLR:
         raw_vlr.record_data = data_stream.read(header.record_length_after_header)
         return raw_vlr
 
+    def __repr__(self):
+        return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
+            self.header.user_id, self.header.record_id, self.header.record_length_after_header
+        )
 
 class VLR:
     def __init__(self, user_id, record_id, description, data=b''):
