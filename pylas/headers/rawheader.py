@@ -143,11 +143,12 @@ class RawHeader:
             raise ValueError
         self._system_identifier = value + (32 - len(value)) * b'\x00'
 
-    # TODO a property seems like a nice thing to do here
+    @property
     def version(self):
         return "{}.{}".format(self.version_major, self.version_minor)
 
-    def set_version(self, new_version):
+    @version.setter
+    def version(self, new_version):
         try:
             self.header_size = LAS_HEADERS_SIZE[new_version]
         except KeyError:
