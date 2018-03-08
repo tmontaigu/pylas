@@ -1,5 +1,6 @@
 import io
 import struct
+import warnings
 
 from . import vlr, evlr
 from .point import record, dims
@@ -15,7 +16,7 @@ def open_las(source):
     """" Entry point for reading las data in pylas
     It takes care of forwarding the call to the right function depending on
     the objects type
-    
+
     Parameters:
     ----------
     source : {str | file_object | bytes | bytearray}
@@ -35,7 +36,7 @@ def open_las(source):
 
 def read_las_file(filename):
     """ Opens a file on disk and reads it
-    
+
     Parameters:
     ----------
     filename : {str}
@@ -50,7 +51,7 @@ def read_las_file(filename):
 
 def read_las_buffer(buffer):
     """ Wraps a buffer in a file object to be able to read it
-    
+
     Parameters:
     ----------
     buffer : {bytes | bytarray}
@@ -66,20 +67,23 @@ def read_las_buffer(buffer):
 # TODO: Sould probably raise instead of asserting, or at least warn
 def read_las_stream(data_stream):
     """ Reads a stream (file object like)
-    
+
     Parameters:
     ----------
     data_stream : {file object}
-    
+
     Returns
     -------
     LasData
     """
-
     point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
-
     header = rawheader.RawHeader.read_from(data_stream)
-    assert data_stream.tell() == header.header_size
+
+    offset_diff = header.header_size - data_stream.tell()
+    if offset_diff != 0:
+        err_str = 'There are {} user defined bytes between end of Header and start of VLR'.format(offset_diff)
+        warnings.warn(err_str)
+        data_stream.seek(offset_diff, io.SEEK_CUR)
 
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
@@ -88,7 +92,12 @@ def read_las_stream(data_stream):
     except AttributeError:
         extra_dims = None
 
-    assert data_stream.tell() == header.offset_to_point_data
+    offset_diff = header.offset_to_point_data - data_stream.tell()
+    if offset_diff != 0:
+        err_str = 'There are {} user defined bytes between end of VLRs and start of point records'.format(offset_diff)
+        warnings.warn(err_str)
+        data_stream.seek(offset_diff, io.SEEK_CUR)
+
     if is_point_format_compressed(header.point_data_format_id):
         laszip_vlr = vlrs.extract_laszip_vlr()
         if laszip_vlr is None:
@@ -125,7 +134,7 @@ def convert(source, destination=None, *, point_format_id=None):
     """ Converts a Las from one point format to another
     Automatically upgrades the file version if source file version is not compatible with
     the new point_format_id
-    
+
     # decompress
     pylas.convert('autzen.laz', 'autzen.las')
 
@@ -147,7 +156,7 @@ def convert(source, destination=None, *, point_format_id=None):
     point_format_id : {int}, optional
         The new point format id (the default is None, which won't change the source format id,
         this can be useful if you only want to compress/decompress)
-    
+
     Returns
     -------
     LasData if a destination is provided, else returns None
@@ -162,7 +171,7 @@ def convert(source, destination=None, *, point_format_id=None):
         file_version = source.header.version
 
     header = source_las.header
-    header.set_version(file_version)
+    header.version = file_version
     header.point_data_format_id = point_format_id
 
     source_las.points_data.to_point_format(point_format_id)
@@ -193,7 +202,7 @@ def create_las(point_format=0, file_version=None):
         file_version = dims.min_file_version_for_point_format(point_format)
 
     header = rawheader.RawHeader()
-    header.set_version(file_version)
+    header.version = str(file_version)
     header.point_data_format_id = point_format
 
     if file_version >= '1.4':
