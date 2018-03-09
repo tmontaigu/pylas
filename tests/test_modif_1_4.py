@@ -38,3 +38,23 @@ def test_intensity(las, out):
 
     res = pylas.open(out)
     assert np.alltrue(las.intensity == res.intensity)
+
+def test_rw_all_set_one(las):
+    for dim_name in las.points_data.dimensions_names:
+        field = las[dim_name]
+        field[:] = 1
+        las[dim_name] = field
+
+    for dim_name in las.points_data.dimensions_names:
+        assert np.alltrue(las[dim_name] == 1)
+
+
+    out = io.BytesIO()
+
+    las.write(out)
+    out.seek(0)
+
+    las2 = pylas.open(out)
+
+    for dim_name in las.points_data.dimensions_names:
+        assert np.alltrue(las[dim_name] == las2[dim_name])
