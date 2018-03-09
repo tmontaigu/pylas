@@ -354,3 +354,24 @@ def min_file_version_for_point_format(point_format_id):
 
 def supported_point_formats():
     return set(POINT_FORMAT_DIMENSIONS.keys())
+
+#TODO lost precision (ie 8bit fied to -> 5 bit field)
+# but it's a bit harder
+def lost_dimensions(point_fmt_in, point_fmt_out):
+    try:
+        unpck_dims_in = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_in]
+    except KeyError:
+        raise errors.PointFormatNotSupported(point_fmt_in)
+
+    try:
+        unpck_dims_out = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_out]
+    except KeyError:
+        raise errors.PointFormatNotSupported(point_fmt_out)
+
+    out_dims = unpck_dims_out.fields
+    completely_lost = []
+    for dim_name in unpck_dims_in.names:
+        if dim_name not in out_dims:
+            completely_lost.append(dim_name)
+    return completely_lost
+        
