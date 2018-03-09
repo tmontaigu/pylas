@@ -9,6 +9,7 @@ do_compression = [False, True]
 simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
 simple_laz = os.path.dirname(__file__) + '/' + 'simple.laz'
 
+
 @pytest.fixture(params=[simple_las, simple_laz])
 def las(request):
     return pylas.open(request.param)
@@ -99,59 +100,3 @@ def test_withheld_changes(tmpdir, las, do_compress):
     las = pylas.open(out)
 
     assert np.allclose(withheld, las.withheld)
-
-
-def dim_does_not_exists(las, dim_name):
-    try:
-        _ = getattr(las, dim_name)
-    except ValueError:
-        return True
-    return False
-
-
-def test_change_format(las):
-    assert las.points_data.point_format_id == 3
-    assert las.header.point_data_format_id == 3
-
-    las.to_point_format(2)
-    assert las.points_data.point_format_id == 2
-    assert las.header.point_data_format_id == 2
-    assert dim_does_not_exists(las, 'gps_time')
-
-    las.to_point_format(1)
-    assert las.points_data.point_format_id == 1
-    assert las.header.point_data_format_id == 1
-    assert dim_does_not_exists(las, 'red')
-    assert dim_does_not_exists(las, 'green')
-    assert dim_does_not_exists(las, 'blue')
-
-    las.to_point_format(0)
-    assert las.points_data.point_format_id == 0
-    assert las.header.point_data_format_id == 0
-    assert dim_does_not_exists(las, 'red')
-    assert dim_does_not_exists(las, 'green')
-    assert dim_does_not_exists(las, 'blue')
-    assert dim_does_not_exists(las, 'gps_time')
-
-
-# TODO this test is copy pasted in test_modif_1_4.py
-# should be factorized
-def test_rw_all_set_one(las):
-    for dim_name in las.points_data.dimensions_names:
-        field = las[dim_name]
-        field[:] = 1
-        las[dim_name] = field
-
-    for dim_name in las.points_data.dimensions_names:
-        assert np.alltrue(las[dim_name] == 1)
-
-
-    out = io.BytesIO()
-
-    las.write(out)
-    out.seek(0)
-
-    las2 = pylas.open(out)
-
-    for dim_name in las.points_data.dimensions_names:
-        assert np.alltrue(las[dim_name] == las2[dim_name])

@@ -11,7 +11,8 @@ def test_header_sizes():
 
 
 def test_lost_dims():
-    assert set(pylas.lost_dimensions(3, 0)) == {'red', 'green', 'blue', 'gps_time'}
+    assert set(pylas.lost_dimensions(3, 0)) == {
+        'red', 'green', 'blue', 'gps_time'}
     assert set(pylas.lost_dimensions(2, 0)) == {'red', 'green', 'blue'}
     assert set(pylas.lost_dimensions(1, 0)) == {'gps_time'}
 

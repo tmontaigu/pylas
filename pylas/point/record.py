@@ -130,7 +130,7 @@ class PackedPointRecord(PointRecord):
         return self.point_size
 
     @property
-    def dimension_names(self):
+    def dimensions_names(self):
         return dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
 
     def raw_bytes(self):
@@ -142,7 +142,7 @@ class PackedPointRecord(PointRecord):
     def to_point_format(self, new_point_format):
         new_record = np.zeros_like(self.array, dtype=dims.get_dtype_of_format_id(new_point_format))
 
-        for dim_name in self.dimension_names:
+        for dim_name in self.dimensions_names:
             try:
                 new_record[dim_name] = self[dim_name]
             except ValueError:
@@ -154,7 +154,7 @@ class PackedPointRecord(PointRecord):
     def __getitem__(self, item):
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
-            return dims.unpack(self.array[composed_dim], sub_field.mask)
+            return dims.unpack(self.array[composed_dim], sub_field.mask, dtype=sub_field.type)
         except KeyError:
             return self.array[item]
 

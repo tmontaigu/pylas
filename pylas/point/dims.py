@@ -11,7 +11,7 @@ def least_significant_bit(val):
     return (val & -val).bit_length() - 1
 
 
-def unpack(source_array, mask):
+def unpack(source_array, mask, dtype=np.uint8):
     """ Unpack sub field using its mask
     
     Parameters:
@@ -26,7 +26,7 @@ def unpack(source_array, mask):
         The sub field array
     """
     lsb = least_significant_bit(mask)
-    return (source_array & mask) >> lsb
+    return ((source_array & mask) >> lsb).astype(dtype)
 
 
 def pack_into(array, sub_field_array, mask, inplace=False):
