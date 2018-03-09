@@ -13,7 +13,7 @@ def least_significant_bit(val):
 
 def unpack(source_array, mask, dtype=np.uint8):
     """ Unpack sub field using its mask
-    
+
     Parameters:
     ----------
     source_array : numpy.ndarray
@@ -31,7 +31,7 @@ def unpack(source_array, mask, dtype=np.uint8):
 
 def pack_into(array, sub_field_array, mask, inplace=False):
     """ Packs a sub field's array into another array using a mask
-    
+
     Parameters:
     ----------
     array : numpy.ndarray 
@@ -42,7 +42,7 @@ def pack_into(array, sub_field_array, mask, inplace=False):
         Mask of the sub field
     inplace : {bool}, optional
         If true a new array is returned. (the default is False, which modifies the array in place)
-    
+
     Raises
     ------
     OverflowError
@@ -57,7 +57,8 @@ def pack_into(array, sub_field_array, mask, inplace=False):
         ))
     if inplace:
         array[:] = array & ~mask
-        array[:] = array | ((sub_field_array << lsb) & mask).astype(array.dtype)
+        array[:] = array | ((sub_field_array << lsb) &
+                            mask).astype(array.dtype)
     else:
         array = array & ~mask
         return array | ((sub_field_array << lsb) & mask).astype(array.dtype)
@@ -65,7 +66,7 @@ def pack_into(array, sub_field_array, mask, inplace=False):
 
 def point_format_to_dtype(point_format, dimensions):
     """ build the numpy.dtype for a point format
-    
+
     Parameters:
     ----------
     point_format : tuple of str
@@ -129,12 +130,20 @@ DIMENSIONS = {
     'green': ('green', 'u2'),
     'blue': ('blue', 'u2'),
 
+    # Waveform related dimensions
+    'wavepacket_index': ('wavepacket_index', 'u1'),
+    'wavepacket_offset': ('wavepacket_offset', 'u8'),
+    'wavepacket_size': ('wavepacket_size', 'u4'),
+    'return_point_wave_location': ('return_point_wave_location', 'u4'),
+    'x_t': ('x_t', 'f4'),
+    'y_t': ('y_t', 'f4'),
+    'z_t': ('z_t', 'f4'),
+
     # Las 1.4
     'classification_flags': ('classification_flags', 'u1'),
     'scan_angle': ('scan_angle_rank', 'i2'),
     'classification': ('classification', 'u1'),
     'nir': ('nir', 'u2')
-
 }
 
 POINT_FORMAT_0 = (
@@ -163,14 +172,34 @@ POINT_FORMAT_6 = (
     'gps_time'
 )
 
+WAVEFORM_FIELDS_NAMES = (
+    'wavepacket_index',
+    'wavepacket_offset',
+    'wavepacket_size',
+    'return_point_wave_location',
+    'x_t',
+    'y_t',
+    'z_t'
+)
+
+COLOR_FIELDS_NAMES = (
+    'red',
+    'green',
+    'blue',
+)
+
 POINT_FORMAT_DIMENSIONS = {
     0: POINT_FORMAT_0,
     1: POINT_FORMAT_0 + ('gps_time',),
-    2: POINT_FORMAT_0 + ('red', 'green', 'blue',),
-    3: POINT_FORMAT_0 + ('gps_time', 'red', 'green', 'blue'),
+    2: POINT_FORMAT_0 + COLOR_FIELDS_NAMES,
+    3: POINT_FORMAT_0 + ('gps_time',) + COLOR_FIELDS_NAMES,
+    4: POINT_FORMAT_0 + ('gps_time',) + WAVEFORM_FIELDS_NAMES,
+    5: POINT_FORMAT_0 + ('gps_time',) + COLOR_FIELDS_NAMES + WAVEFORM_FIELDS_NAMES,
     6: POINT_FORMAT_6,
-    7: POINT_FORMAT_6 + ('red', 'green', 'blue'),
-    8: POINT_FORMAT_6 + ('red', 'green', 'blue', 'nir'),
+    7: POINT_FORMAT_6 + COLOR_FIELDS_NAMES,
+    8: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ('nir',),
+    9: POINT_FORMAT_6 + WAVEFORM_FIELDS_NAMES,
+    10: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ('nir',) + WAVEFORM_FIELDS_NAMES,
 }
 
 # sub fields of the 'bit_fields' dimension
@@ -236,9 +265,13 @@ COMPOSED_FIELDS = {
     1: COMPOSED_FIELDS_0,
     2: COMPOSED_FIELDS_0,
     3: COMPOSED_FIELDS_0,
+    4: COMPOSED_FIELDS_0,
+    5: COMPOSED_FIELDS_0,
     6: COMPOSED_FIELDS_6,
     7: COMPOSED_FIELDS_6,
     8: COMPOSED_FIELDS_6,
+    9: COMPOSED_FIELDS_6,
+    10: COMPOSED_FIELDS_6
 }
 
 VERSION_TO_POINT_FMT = {
@@ -247,7 +280,8 @@ VERSION_TO_POINT_FMT = {
     '1.4': (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 }
 
-POINT_FORMATS_DTYPE = build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS)
+POINT_FORMATS_DTYPE = build_point_formats_dtypes(
+    POINT_FORMAT_DIMENSIONS, DIMENSIONS)
 
 ALL_POINT_FORMATS_DIMENSIONS = {**POINT_FORMAT_DIMENSIONS}
 ALL_POINT_FORMATS_DTYPE = {**POINT_FORMATS_DTYPE}
@@ -257,21 +291,24 @@ UNPACKED_POINT_FORMATS_DTYPES = build_unpacked_point_formats_dtypes(
 
 
 def unpack_sub_fields(data, point_format_id, extra_dims=None):
-    dtype = get_dtype_of_format_id(point_format_id, extra_dims=extra_dims, unpacked=True)
+    dtype = get_dtype_of_format_id(
+        point_format_id, extra_dims=extra_dims, unpacked=True)
     composed_dims = COMPOSED_FIELDS[point_format_id]
     point_record = np.zeros_like(data, dtype)
 
     for dim_name in data.dtype.names:
         if dim_name in composed_dims:
             for sub_field in composed_dims[dim_name]:
-                point_record[sub_field.name] = unpack(data[dim_name], sub_field.mask)
+                point_record[sub_field.name] = unpack(
+                    data[dim_name], sub_field.mask)
         else:
             point_record[dim_name] = data[dim_name]
     return point_record
 
 
 def repack_sub_fields(data, point_format_id):
-    repacked_array = np.zeros_like(data, get_dtype_of_format_id(point_format_id))
+    repacked_array = np.zeros_like(
+        data, get_dtype_of_format_id(point_format_id))
     composed_dims = COMPOSED_FIELDS[point_format_id]
 
     for dim_name in repacked_array.dtype.names:
@@ -285,7 +322,8 @@ def repack_sub_fields(data, point_format_id):
                         inplace=True
                     )
                 except OverflowError as e:
-                    raise OverflowError("Error repacking {} into {}: {}".format(sub_field.name, dim_name, e))
+                    raise OverflowError("Error repacking {} into {}: {}".format(
+                        sub_field.name, dim_name, e))
         else:
             repacked_array[dim_name] = data[dim_name]
     return repacked_array
@@ -322,12 +360,12 @@ def np_dtype_to_point_format(dtype, unpacked=False):
         The input dtype
     unpacked : {bool}, optional
         [description] (the default is False, which [default_description])
-    
+
     Raises
     ------
     errors.IncompatibleDataFormat
         If No compatible point format was found
-    
+
     Returns
     -------
     int
@@ -352,10 +390,22 @@ def min_file_version_for_point_format(point_format_id):
     else:
         raise errors.PointFormatNotSupported(point_format_id)
 
+
 def supported_point_formats():
     return set(POINT_FORMAT_DIMENSIONS.keys())
 
-#TODO lost precision (ie 8bit fied to -> 5 bit field)
+
+def format_has_waveform_packet(point_format_id):
+    dim_names = set(ALL_POINT_FORMATS_DIMENSIONS[point_format_id])
+    for name in WAVEFORM_FIELDS_NAMES:
+        if name not in dim_names:
+            return False
+    else:
+        return True
+    
+
+
+# TODO lost precision (ie 8bit fied to -> 5 bit field)
 # but it's a bit harder
 def lost_dimensions(point_fmt_in, point_fmt_out):
     try:
@@ -374,4 +424,3 @@ def lost_dimensions(point_fmt_in, point_fmt_out):
         if dim_name not in out_dims:
             completely_lost.append(dim_name)
     return completely_lost
-        

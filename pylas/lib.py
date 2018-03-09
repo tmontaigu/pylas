@@ -149,8 +149,7 @@ def convert(source_las, *, point_format_id=None):
         The source data to be converted
 
     point_format_id : {int}, optional
-        The new point format id (the default is None, which won't change the source format id,
-        this can be useful if you only want to compress/decompress)
+        The new point format id (the default is None, which won't change the source format id)
 
     Returns
     -------
