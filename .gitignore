@@ -3,5 +3,7 @@
 **/*.pyc
 
 .idea
+.vscode
 tests/.cache
 tests/.pytest_cache
+pylas.egg-info
