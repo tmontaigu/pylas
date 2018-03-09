@@ -130,29 +130,24 @@ def read_las_stream(data_stream):
     return las12.LasData(header=header, vlrs=vlrs, points=points)
 
 
-def convert(source, destination=None, *, point_format_id=None):
+def convert(source_las, *, point_format_id=None):
     """ Converts a Las from one point format to another
     Automatically upgrades the file version if source file version is not compatible with
     the new point_format_id
 
-    # decompress
-    pylas.convert('autzen.laz', 'autzen.las')
-
     # convert to point format 0
-    pylas.convert('autzen.las', 'autzen_fmt_0.las', point_format_id=0)
+    las = pylas.open('autzen.las')
+    las = pylas.convert(las, point_format_id=0)
 
-    # opens, convert to point format 2 and returns the result
-    las = pylas.convert('autzen.las', point_format_id=2)
-
+    # convert to point format 6
     las = pylas.open('Stormwind.las')
     las = pylas.convert(las, point_format_id=6)
 
     Parameters:
     ----------
-    source : {same types as pylas.open or LasData}
+    source : {LasData}
         The source data to be converted
-    destination : {str | file object}, optional
-        Where to write the converted file to (the default is None, which will instead return a LasData)
+
     point_format_id : {int}, optional
         The new point format id (the default is None, which won't change the source format id,
         this can be useful if you only want to compress/decompress)
@@ -161,14 +156,12 @@ def convert(source, destination=None, *, point_format_id=None):
     -------
     LasData if a destination is provided, else returns None
     """
-
-    source_las = open_las(source) if not isinstance(source, base.LasBase) else source
-
     point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
-    # TODO looks bad, should be: if not is_point_format_compatible(point_fmt, file_vers) then ...
+
+    # Don't downgrade the file version
     file_version = dims.min_file_version_for_point_format(point_format_id)
-    if file_version < source.header.version:
-        file_version = source.header.version
+    if file_version < source_las.header.version:
+        file_version = source_las.header.version
 
     header = source_las.header
     header.version = file_version
@@ -183,14 +176,9 @@ def convert(source, destination=None, *, point_format_id=None):
         evlrs = []
 
     if file_version >= '1.4':
-        out_las = las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
-    else:
-        out_las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+        return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
+    return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
-    if destination is not None:
-        out_las.write(destination)
-    else:
-        return out_las
 
 
 def create_las(point_format=0, file_version=None):

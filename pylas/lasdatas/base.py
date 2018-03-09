@@ -127,15 +127,19 @@ class LasBase(object):
             self.vlrs.write_to(out_stream)
             self.points_data.write_to(out_stream)
 
-    def write_to_file(self, filename):
-        do_compress = filename.split('.')[-1] == 'laz'
+    def write_to_file(self, filename, do_compress=None):
+        is_ext_laz = filename.split('.')[-1] == 'laz'
+        if is_ext_laz and do_compress is None:
+            do_compress = True
         with open(filename, mode='wb') as out:
             self.write_to(out, do_compress=do_compress)
 
-    def write(self, destination, do_compress=False):
+    def write(self, destination, do_compress=None):
         if isinstance(destination, str):
             self.write_to_file(destination)
         else:
+            if do_compress is None:
+                do_compress = False
             self.write_to(destination, do_compress=do_compress)
 
     def __repr__(self):
