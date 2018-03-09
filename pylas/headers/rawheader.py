@@ -1,8 +1,10 @@
 import ctypes
-from collections import namedtuple
+import datetime
 import struct
+import uuid
+from collections import namedtuple
 
-from pylas.lasio import BinaryReader, type_lengths, BinaryWriter
+from pylas.lasio import BinaryReader, BinaryWriter, type_lengths
 
 FILE_MAJOR_OFFSET_BYTES = 24
 
@@ -103,7 +105,8 @@ class RawHeader:
         self.generating_software = b'\x00' * type_lengths['char'] * 32
         self.creation_day_of_year = 0
         self.creation_year = 0
-        self.header_size = LAS_HEADERS_SIZE['{}.{}'.format(self.version_major, self.version_minor)]
+        self.header_size = LAS_HEADERS_SIZE['{}.{}'.format(
+            self.version_major, self.version_minor)]
         self.offset_to_point_data = self.header_size
         self.number_of_vlr = 0
         self.point_data_format_id = 0
@@ -133,6 +136,8 @@ class RawHeader:
         self.number_of_points_record_ = None
         self.number_of_points_by_return_ = (0,) * 15
 
+        self.date = datetime.date.today()
+
     @property
     def system_identifier(self):
         return self._system_identifier
@@ -150,11 +155,23 @@ class RawHeader:
     @version.setter
     def version(self, new_version):
         try:
-            self.header_size = LAS_HEADERS_SIZE[new_version]
+            self.header_size = LAS_HEADERS_SIZE[str(new_version)]
         except KeyError:
             raise ValueError('{} is not a valid las header version')
-        self.version_major, self.version_minor = map(int, new_version.split('.'))
+        self.version_major, self.version_minor = map(
+            int, new_version.split('.'))
 
+    @property
+    def date(self):
+        try:
+            return datetime.date(self.creation_year, 1, 1) + datetime.timedelta(self.creation_day_of_year - 1)
+        except ValueError:
+            return None
+
+    @date.setter
+    def date(self, date):
+        self.creation_year = date.year
+        self.creation_day_of_year = date.timetuple().tm_yday
 
     def write_to(self, out_stream):
         out_stream = BinaryWriter(out_stream)
@@ -172,7 +189,6 @@ class RawHeader:
             for field in ADDITIONAL_LAS_1_4_FIELDS:
                 val = getattr(self, field.name)
                 out_stream.write_field(field, val)
-
 
     # FIXME: Maybe we shouldn't continue to read if the file signature is
     # not LASF ans raise an exception
