@@ -81,7 +81,8 @@ def read_las_stream(data_stream):
 
     offset_diff = header.header_size - data_stream.tell()
     if offset_diff != 0:
-        err_str = 'There are {} user defined bytes between end of Header and start of VLR'.format(offset_diff)
+        err_str = 'There are {} user defined bytes between end of Header and start of VLR'.format(
+            offset_diff)
         warnings.warn(err_str)
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
@@ -94,7 +95,8 @@ def read_las_stream(data_stream):
 
     offset_diff = header.offset_to_point_data - data_stream.tell()
     if offset_diff != 0:
-        err_str = 'There are {} user defined bytes between end of VLRs and start of point records'.format(offset_diff)
+        err_str = 'There are {} user defined bytes between end of VLRs and start of point records'.format(
+            offset_diff)
         warnings.warn(err_str)
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
@@ -121,10 +123,33 @@ def read_las_stream(data_stream):
             extra_dims
         )
 
+        # TODO Should be in a function
+        if dims.format_has_waveform_packet(header.point_data_format_id):
+            ge = rawheader.GlobalEncoding.from_buffer_copy(
+                header.reserved.to_bytes(2, byteorder='little'))
+            if ge.waveform_internal and not ge.waveform_external:
+                print('Skipping {} bytes'.format(
+                    data_stream.tell() - header.start_of_waveform_data_packet_record))
+                # This is srange, the spec says, waveform datapacket is in a EVLR but in the 2 samples I have its a VLR
+                # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
+                b = bytearray(data_stream.read(vlr.VLR_HEADER_SIZE))
+                waveform_header = vlr.VLRHeader.from_buffer(b)
+                waveform_record = data_stream.read()
+                print(waveform_header.user_id, waveform_header.record_id,
+                      waveform_header.record_length_after_header)
+                print("Read: {} MBytes of waveform_record".format(
+                    len(waveform_record) / 10**6))
+            elif not ge.waveform_internal and ge.waveform_external:
+                print(
+                    "Waveform data is in an external file, you'll have to load it yourself")
+            else:
+                raise ValueError(
+                    'Incoherent values for internal and external waveform flags')
 
     # TODO las 1.3 should maybe, have its own class
     if header.version_major >= 1 and header.version_minor >= 4:
-        evlrs = [evlr.RawEVLR.read_from(data_stream) for _ in range(header.number_of_evlr)]
+        evlrs = [evlr.RawEVLR.read_from(data_stream)
+                 for _ in range(header.number_of_evlr)]
         return las14.LasData(header=header, vlrs=vlrs, points=points, evlrs=evlrs)
 
     return las12.LasData(header=header, vlrs=vlrs, points=points)
@@ -177,7 +202,6 @@ def convert(source_las, *, point_format_id=None):
     if file_version >= '1.4':
         return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
     return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
-
 
 
 def create_las(point_format=0, file_version=None):

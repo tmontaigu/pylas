@@ -20,7 +20,7 @@ class RawEVLR:
     @classmethod
     def read_from(cls, data_stream):
         raw_evlr = cls()
-        raw_evlr.header = EVLRHeader.from_buffer(data_stream.read(EVLR_HEADER_SIZE))
+        raw_evlr.header = EVLRHeader.from_buffer(bytearray(data_stream.read(EVLR_HEADER_SIZE)))
         raw_evlr.record_data = data_stream.read(raw_evlr.header.record_length_after_header)
         return raw_evlr
     
@@ -28,6 +28,10 @@ class RawEVLR:
         out.write(bytes(self.header))
         out.write(self.record_data)
         
+    def __repr__(self):
+        return 'RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {}'.format(
+            self.header.user_id, self.header.record_id, self.header.record_length_after_header
+        )
 
 class EVLR:
     def __init__(self):
