@@ -167,7 +167,7 @@ def convert(source_las, *, point_format_id=None):
     header.version = file_version
     header.point_data_format_id = point_format_id
 
-    points = record.PackedPointRecord(source_las.points_data, point_format_id)
+    points = record.PackedPointRecord.from_point_record(source_las.points_data, point_format_id)
 
     try:
         evlrs = source_las.evlrss

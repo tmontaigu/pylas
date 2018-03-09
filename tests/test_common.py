@@ -19,6 +19,11 @@ def las(request):
     return pylas.open(request.param)
 
 
+@pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las])
+def all_las_but_1_4(request):
+    return pylas.open(request.param)
+
+
 def dim_does_not_exists(las, dim_name):
     try:
         _ = getattr(las, dim_name)
@@ -90,6 +95,23 @@ def test_change_format(las):
     assert dim_does_not_exists(las, 'green')
     assert dim_does_not_exists(las, 'blue')
     assert dim_does_not_exists(las, 'nir')
+
+# TODO: okay, so onversion from/to fmt <6 and > 6
+# cannot be tested like this becasue some fieds have more bits some there are some conversion 'issues'
+
+
+def test_conversion_copies_fields(all_las_but_1_4):
+    las = all_las_but_1_4
+    for i in (0, 1, 2, 3, 2, 1, 0):
+        old_record = las.points_data
+        las = pylas.convert(las, point_format_id=i)
+
+        for dim_name in old_record.dimensions_names:
+            try:
+                assert np.allclose(
+                    las.points_data[dim_name], old_record[dim_name])
+            except ValueError:
+                pass  # dim exists in old_record but not new
 
 
 def test_rw_all_set_one(las):
