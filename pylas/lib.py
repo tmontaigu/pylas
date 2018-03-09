@@ -167,11 +167,10 @@ def convert(source_las, *, point_format_id=None):
     header.version = file_version
     header.point_data_format_id = point_format_id
 
-    source_las.points_data.to_point_format(point_format_id)
-    points = source_las.points_data
+    points = record.PackedPointRecord(source_las.points_data, point_format_id)
 
     try:
-        evlrs = source_las.evlrs
+        evlrs = source_las.evlrss
     except ValueError:
         evlrs = []
 
