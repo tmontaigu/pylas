@@ -1,6 +1,6 @@
 import numpy as np
 
-from pylas.point import record
+from pylas.point import record, dims
 from .. import vlr
 from ..compression import (uncompressed_id_to_compressed,
                            compress_buffer,
@@ -71,11 +71,9 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        # Try to forward the call the the point record
-        # if fail just do as normal
-        try:
+        if key in dims.DIMENSIONS or key in self.points_data.sub_fields_dict:
             self.points_data[key] = value
-        except (ValueError, IndexError, TypeError):
+        else:
             super().__setattr__(key, value)
 
     def update_header(self):
