@@ -210,7 +210,7 @@ class ExtraBytes(ctypes.LittleEndianStructure):
 
 
 class ExtraBytesVlr(VLR, KnownVLR):
-    def __init__(self, data):
+    def __init__(self, data=b''):
         if (len(data) % 192) != 0:
             raise ValueError("Data length of ExtraBytes vlr must be a multiple of 192")
         super().__init__('LASF_Spec', 4, 'extra_bytes', data)

@@ -1,11 +1,27 @@
 from .base import LasBase
 from ..headers import rawheader
+from ..vlr import ExtraBytesVlr, ExtraBytes
+from .. import extradims
 
 
 class LasData(LasBase):
     def __init__(self, *, header=None, vlrs=None, points=None, evlrs=None):
         super().__init__(header=header, vlrs=vlrs, points=points)
         self.evlrs = [] if evlrs is None else evlrs
+
+    def add_extra_dim(self, dim_name, dim_type):
+        extra_bytes_vlr = self.vlrs.get_extra_bytes_vlr()
+        name = dim_name.replace(' ', '_')
+        type_id = extradims.get_id_for_extra_dim_type(dim_type)
+        extra_byte = ExtraBytes(data_type=type_id, name=name.encode())
+
+        if extra_bytes_vlr is None:
+            extra_bytes_vlr = ExtraBytesVlr()
+            self.vlrs.append(extra_bytes_vlr)
+
+        extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
+
+        self.points_data.add_extra_dims([(name, dim_type)])
 
     def write_to(self, out_stream, do_compress=False):
         if do_compress and self.points_data.point_format_id >= 6:

@@ -143,6 +143,16 @@ class PackedPointRecord(PointRecord):
     def dimensions_names(self):
         return dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
 
+    def add_extra_dims(self, type_tuples):
+        dype_with_extra_dims = dims.dtype_append(
+            self.array.dtype,
+            type_tuples
+        )
+        old_array = self.array
+        self.array = np.zeros_like(old_array, dtype=dype_with_extra_dims)
+        self.copy_fields_from(old_array)
+
+
     def raw_bytes(self):
         return self.array.tobytes()
 
