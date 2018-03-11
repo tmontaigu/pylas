@@ -192,9 +192,9 @@ class ExtraBytes(ctypes.LittleEndianStructure):
         ('options', ctypes.c_uint8),
         ('name', ctypes.c_char * 32),
         ('unused', ctypes.c_uint8 * 4),
-        ('no_data', ctypes.c_ubyte * 3),
-        ('min', ctypes.c_ubyte * 3),
-        ('max', ctypes.c_ubyte * 3),
+        ('no_data', ctypes.c_double * 3),
+        ('min', ctypes.c_double * 3),
+        ('max', ctypes.c_double * 3),
         ('scale', ctypes.c_double * 3),
         ('offset', ctypes.c_double * 3),
         ('description', ctypes.c_char * 32),
@@ -210,7 +210,7 @@ class ExtraBytes(ctypes.LittleEndianStructure):
 
 
 class ExtraBytesVlr(VLR, KnownVLR):
-    def __init__(self, data):
+    def __init__(self, data=b''):
         if (len(data) % 192) != 0:
             raise ValueError("Data length of ExtraBytes vlr must be a multiple of 192")
         super().__init__('LASF_Spec', 4, 'extra_bytes', data)
@@ -228,6 +228,13 @@ class ExtraBytesVlr(VLR, KnownVLR):
 
     def __repr__(self):
         return 'ExtraBytesVlr(extra bytes structs: {})'.format(len(self.extra_bytes_structs))
+
+    def into_raw(self):
+        self.record_data = b''.join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
+        return super().into_raw()
+
+    def __len__(self):
+        return VLR_HEADER_SIZE + len(self.extra_bytes_structs) * ctypes.sizeof(ExtraBytes)
 
     @staticmethod
     def official_user_id():
