@@ -1,13 +1,8 @@
-import io
-import os
-
 import numpy as np
 import pytest
 
 import pylas
-
-simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
-test1_4_las = os.path.dirname(__file__) + '/' + 'test1_4.las'
+from tests.test_common import write_then_read_again, simple_las, test1_4_las
 
 
 @pytest.fixture()
@@ -20,17 +15,10 @@ def file():
     return pylas.open(simple_las)
 
 
-def write_then_read_again(las):
-    out = io.BytesIO()
-    las.write(out)
-    out.seek(0)
-    return pylas.open(out)
-
-
 def test_incompatible_data_type():
     las = pylas.create_las()
-    dtype = np.dtype([('X', 'u4'), ('Y', 'u4'), ('Z', 'u4'),
-                      ('codification', 'u4'), ('intensity', 'i2')])
+    dtype = np.dtype(
+        [('X', 'u4'), ('Y', 'u4'), ('Z', 'u4'), ('codification', 'u4'), ('intensity', 'i2')])
     with pytest.raises(pylas.errors.IncompatibleDataFormat):
         las.points = np.zeros(120, dtype=dtype)
 
@@ -43,11 +31,8 @@ def test_xyz():
     las.Z = np.zeros(shape, dtype=np.int32)
     las.Z[:] = -152
 
-    out = io.BytesIO()
-    las.write(out)
-    out.seek(0)
+    las = write_then_read_again(las)
 
-    las = pylas.open(out)
     assert np.alltrue(las.X == 0)
     assert np.alltrue(las.Y == 1)
     assert np.alltrue(las.Z == -152)

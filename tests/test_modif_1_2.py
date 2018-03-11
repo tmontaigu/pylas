@@ -1,13 +1,8 @@
 import numpy as np
-import io
 import pytest
-import os
+
 import pylas
-
-do_compression = [False, True]
-
-simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
-simple_laz = os.path.dirname(__file__) + '/' + 'simple.laz'
+from tests.test_common import do_compression, simple_las, simple_laz
 
 
 @pytest.fixture(params=[simple_las, simple_laz])

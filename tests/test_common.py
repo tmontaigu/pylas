@@ -12,6 +12,14 @@ simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
 simple_laz = os.path.dirname(__file__) + '/' + 'simple.laz'
 vegetation1_3_las = os.path.dirname(__file__) + '/vegetation_1_3.las'
 test1_4_las = os.path.dirname(__file__) + '/' + 'test1_4.las'
+extra_bytes_las = os.path.dirname(__file__) + '/extrabytes.las'
+
+
+def write_then_read_again(las):
+    out = io.BytesIO()
+    las.write(out)
+    out.seek(0)
+    return pylas.open(out)
 
 
 @pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las])
@@ -123,12 +131,7 @@ def test_rw_all_set_one(las):
     for dim_name in las.points_data.dimensions_names:
         assert np.alltrue(las[dim_name] == 1)
 
-    out = io.BytesIO()
-
-    las.write(out)
-    out.seek(0)
-
-    las2 = pylas.open(out)
+    las2 = write_then_read_again(las)
 
     for dim_name in las.points_data.dimensions_names:
         assert np.alltrue(las[dim_name] == las2[dim_name])

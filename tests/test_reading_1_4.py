@@ -1,8 +1,7 @@
 import pytest
-import pylas
-import os
 
-test1_4_las = os.path.dirname(__file__) + '/' + 'test1_4.las'
+import pylas
+from tests.test_common import test1_4_las
 
 
 @pytest.fixture()

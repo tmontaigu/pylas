@@ -1,18 +1,20 @@
-import io
-import pytest
-import pylas
 import numpy as np
+import pytest
 
-from tests.test_common import test1_4_las
+import pylas
+from tests.test_common import test1_4_las, extra_bytes_las
 from tests.test_creation import write_then_read_again
+
 
 @pytest.fixture()
 def extrab_las():
-    return pylas.open('extrabytes.las')
+    return pylas.open(extra_bytes_las)
+
 
 @pytest.fixture()
 def las1_4():
     return pylas.open(test1_4_las)
+
 
 def test_extra_names(extrab_las):
     all_dims = set(extrab_las.points_data.array.dtype.names)

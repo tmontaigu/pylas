@@ -5,9 +5,8 @@ import numpy as np
 import pytest
 
 import pylas
+from tests.test_common import simple_las, simple_laz
 
-simple_las = os.path.dirname(__file__) + '/' + 'simple.las'
-simple_laz = os.path.dirname(__file__) + '/' + 'simple.laz'
 
 @pytest.fixture(params=[simple_las, simple_laz], scope='session')
 def read_simple(request):
@@ -17,6 +16,7 @@ def read_simple(request):
 @pytest.fixture()
 def open_simple():
     return open(simple_las, mode='rb')
+
 
 @pytest.fixture()
 def read_uncompressed():
@@ -180,33 +180,8 @@ def test_blue(read_simple):
     assert f.blue.min() == 56
 
 
-# Can't work anymore since min/maxs in header
-# are recalculated, redo test in better way
-
-def test_nothing_changes(open_simple):
-    true_buffer = open_simple.read()
-    las = pylas.open(true_buffer)
-    out = io.BytesIO()
-    las.write_to(out)
-    buf = out.getvalue()
-
-    out_las = pylas.open(buf)
-    # assert buf == true_buffer
-    assert True
 
 
-def test_write_uncompressed_no_changes():
-    c_las = pylas.open(simple_laz)
-
-    with io.BytesIO() as out:
-        c_las.write_to(out, do_compress=False)
-        out_buf = out.getvalue()
-
-    with open(simple_las, mode='rb') as f:
-        expected = f.read()
-
-    # assert out_buf == expected
-    assert True
 
 def test_read_write_read(read_simple):
     out = io.BytesIO()
@@ -223,6 +198,7 @@ def test_read_write_read_laz(read_simple):
 
     _ = pylas.open(out)
 
+
 def test_decompression_is_same_as_uncompressed():
     u_las = pylas.open(simple_las)
     c_las = pylas.open(simple_laz)
@@ -231,8 +207,3 @@ def test_decompression_is_same_as_uncompressed():
     c_points_buffer = c_las.points_data.raw_bytes()
 
     assert u_point_buffer == c_points_buffer
-
-
-
-
-

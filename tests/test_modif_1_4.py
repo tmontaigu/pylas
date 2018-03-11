@@ -1,11 +1,10 @@
 import io
-import os
 
 import numpy as np
-import pylas
 import pytest
 
-test1_4_las = os.path.dirname(__file__) + '/' + 'test1_4.las'
+import pylas
+from tests.test_common import test1_4_las
 
 
 @pytest.fixture(scope='session')
