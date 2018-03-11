@@ -1,10 +1,10 @@
 import numpy as np
 
 from pylas.point import record, dims
+
 from .. import vlr
-from ..compression import (uncompressed_id_to_compressed,
-                           compress_buffer,
-                           create_laz_vlr)
+from ..compression import (compress_buffer, create_laz_vlr,
+                           uncompressed_id_to_compressed)
 from ..headers import rawheader
 
 
@@ -18,7 +18,8 @@ def unscale_dimension(array_dim, scale, offset):
 
 class LasBase(object):
     def __init__(self, *, header=None, vlrs=None, points=None):
-        self.__dict__['header'] = header if header is not None else rawheader.RawHeader()
+        self.__dict__[
+            'header'] = header if header is not None else rawheader.RawHeader()
         self.__dict__['vlrs'] = vlrs if vlrs is not None else vlr.VLRList()
         if points is not None:
             if isinstance(points, record.PointRecord):
@@ -27,7 +28,8 @@ class LasBase(object):
                 self.__dict__['points_data'] = record.PackedPointRecord(points)
                 self.header.point_data_format_id = self.points_data.point_format_id
         else:
-            self.__dict__['points_data'] = record.PackedPointRecord.empty(self.header.point_data_format_id)
+            self.__dict__['points_data'] = record.PackedPointRecord.empty(
+                self.header.point_data_format_id)
 
     @property
     def x(self):
@@ -43,15 +45,18 @@ class LasBase(object):
 
     @x.setter
     def x(self, value):
-        self.X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
+        self.X = unscale_dimension(
+            value, self.header.x_scale, self.header.x_offset)
 
     @y.setter
     def y(self, value):
-        self.Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
+        self.Y = unscale_dimension(
+            value, self.header.y_scale, self.header.y_offset)
 
     @z.setter
     def z(self, value):
-        self.Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
+        self.Z = unscale_dimension(
+            value, self.header.z_scale, self.header.z_offset)
 
     @property
     def points(self):
@@ -90,14 +95,6 @@ class LasBase(object):
         self.header.y_min = self.y.min()
         self.header.z_min = self.z.min()
 
-    # TODO: check file version compatibility
-    def to_point_format(self, new_point_format):
-        if new_point_format == self.header.point_data_format_id:
-            return
-        self.points_data.to_point_format(new_point_format)
-        self.header.point_data_format_id = new_point_format
-        self.header.point_data_record_length = self.points_data.point_size
-
     def write_to(self, out_stream, do_compress=False):
         self.update_header()
 
@@ -105,8 +102,10 @@ class LasBase(object):
             lazvrl = create_laz_vlr(self.header.point_data_format_id)
             self.vlrs.append(vlr.LasZipVlr(lazvrl.data()))
 
-            self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
-            self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
+            self.header.offset_to_point_data = self.header.header_size + \
+                self.vlrs.total_size_in_bytes()
+            self.header.point_data_format_id = uncompressed_id_to_compressed(
+                self.header.point_data_format_id)
             self.header.number_of_vlr = len(self.vlrs)
 
             compressed_points = compress_buffer(
@@ -121,7 +120,8 @@ class LasBase(object):
             out_stream.write(compressed_points.tobytes())
         else:
             self.header.number_of_vlr = len(self.vlrs)
-            self.header.offset_to_point_data = self.header.header_size + self.vlrs.total_size_in_bytes()
+            self.header.offset_to_point_data = self.header.header_size + \
+                self.vlrs.total_size_in_bytes()
 
             self.header.write_to(out_stream)
             self.vlrs.write_to(out_stream)

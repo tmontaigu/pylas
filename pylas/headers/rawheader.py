@@ -1,10 +1,9 @@
 import ctypes
 import datetime
-import struct
-import uuid
 from collections import namedtuple
 
 from pylas.lasio import BinaryReader, BinaryWriter, type_lengths
+from ..point import dims
 
 FILE_MAJOR_OFFSET_BYTES = 24
 
@@ -88,6 +87,7 @@ LAS_HEADERS_SIZE = {
     '1.4': LAS_1_1_HEADER_SIZE + size_of(ADDITIONAL_LAS_1_3_FIELDS) + size_of(ADDITIONAL_LAS_1_4_FIELDS)
 }
 
+PROJECT_NAME  = b'pylas'
 
 # TODO: Should ctypes also be used for Las headers ?
 class RawHeader:
@@ -102,15 +102,14 @@ class RawHeader:
         self.version_major = 1
         self.version_minor = 2
         self._system_identifier = b'\x00' * type_lengths['char'] * 32
-        self.generating_software = b'\x00' * type_lengths['char'] * 32
+        self.generating_software = PROJECT_NAME + b'\x00' * (32 - len(PROJECT_NAME))
         self.creation_day_of_year = 0
         self.creation_year = 0
-        self.header_size = LAS_HEADERS_SIZE['{}.{}'.format(
-            self.version_major, self.version_minor)]
+        self.header_size = LAS_HEADERS_SIZE[self.version]
         self.offset_to_point_data = self.header_size
         self.number_of_vlr = 0
         self.point_data_format_id = 0
-        self.point_data_record_length = 0
+        self.point_data_record_length = dims.size_of_point_format(self.point_data_format_id)
         self.number_of_point_records = 0  # Legacy-ed in 1.4
         self.number_of_points_by_return = (0, 0, 0, 0, 0)  # Legacy-ed in 1.4
         self.x_scale = 0.01

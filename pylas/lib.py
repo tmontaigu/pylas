@@ -2,12 +2,12 @@ import io
 import struct
 import warnings
 
-from . import vlr, evlr
-from .point import record, dims
-from .compression import (is_point_format_compressed,
-                          compressed_id_to_uncompressed)
+from . import evlr, vlr
+from .compression import (compressed_id_to_uncompressed,
+                          is_point_format_compressed)
 from .headers import rawheader
-from .lasdatas import las12, las14, base
+from .lasdatas import base, las12, las14
+from .point import dims, record
 
 USE_UNPACKED = False
 
@@ -81,7 +81,8 @@ def read_las_stream(data_stream):
 
     offset_diff = header.header_size - data_stream.tell()
     if offset_diff != 0:
-        err_str = 'There are {} user defined bytes between end of Header and start of VLR'.format(offset_diff)
+        err_str = 'There are {} user defined bytes between end of Header and start of VLR'.format(
+            offset_diff)
         warnings.warn(err_str)
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
@@ -94,7 +95,8 @@ def read_las_stream(data_stream):
 
     offset_diff = header.offset_to_point_data - data_stream.tell()
     if offset_diff != 0:
-        err_str = 'There are {} user defined bytes between end of VLRs and start of point records'.format(offset_diff)
+        err_str = 'There are {} user defined bytes between end of VLRs and start of point records'.format(
+            offset_diff)
         warnings.warn(err_str)
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
@@ -121,10 +123,10 @@ def read_las_stream(data_stream):
             extra_dims
         )
 
-
     # TODO las 1.3 should maybe, have its own class
     if header.version_major >= 1 and header.version_minor >= 4:
-        evlrs = [evlr.RawEVLR.read_from(data_stream) for _ in range(header.number_of_evlr)]
+        evlrs = [evlr.RawEVLR.read_from(data_stream)
+                 for _ in range(header.number_of_evlr)]
         return las14.LasData(header=header, vlrs=vlrs, points=points, evlrs=evlrs)
 
     return las12.LasData(header=header, vlrs=vlrs, points=points)
@@ -167,7 +169,8 @@ def convert(source_las, *, point_format_id=None):
     header.version = file_version
     header.point_data_format_id = point_format_id
 
-    points = record.PackedPointRecord.from_point_record(source_las.points_data, point_format_id)
+    points = record.PackedPointRecord.from_point_record(
+        source_las.points_data, point_format_id)
 
     try:
         evlrs = source_las.evlrs
@@ -177,7 +180,6 @@ def convert(source_las, *, point_format_id=None):
     if file_version >= '1.4':
         return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
     return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
-
 
 
 def create_las(point_format=0, file_version=None):

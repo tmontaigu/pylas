@@ -1,7 +1,7 @@
 from . import errors
 
 extra_dims_base = (
-    '',  # 0 is 'undocumented extra bytes', not sure what to do with that
+    '',
     'u1',
     'i1',
     'u2',
