@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import pylas
-from tests.test_common import do_compression, simple_las, simple_laz
+from pylastests.test_common import do_compression, simple_las, simple_laz
 
 
 @pytest.fixture(params=[simple_las, simple_laz])

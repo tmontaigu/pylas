@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 
 import pylas
-from tests.test_common import test1_4_las
+from pylastests.test_common import test1_4_las
 
 
 @pytest.fixture(scope='session')

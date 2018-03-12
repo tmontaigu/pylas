@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import pylas
-from tests.test_common import write_then_read_again, simple_las, test1_4_las
+from pylastests.test_common import write_then_read_again, simple_las, test1_4_las
 
 
 @pytest.fixture()

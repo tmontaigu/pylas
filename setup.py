@@ -7,6 +7,6 @@ setup(
     url='https://github.com/tmontaigu/pylas',
     author='Thomas Montaigu',
     # license='MIT',
-    packages=find_packages(exclude=('tests',)),
+    packages=find_packages(exclude=('pylastests',)),
     zip_safe=False
 )
