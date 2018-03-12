@@ -97,8 +97,8 @@ class VLR:
         return VLR_HEADER_SIZE + len(self.record_data)
 
     def __repr__(self):
-        return "VLR(user_id: '{}', record_id: '{}', data len: '{}')".format(
-            self.user_id, self.record_id, len(self.record_data))
+        return "{}(user_id: '{}', record_id: '{}', data len: '{}')".format(
+            self.__class__.__name__, self.user_id, self.record_id, len(self.record_data))
 
 
 class KnownVLR(ABC):
@@ -240,6 +240,45 @@ class ExtraBytesVlr(VLR, KnownVLR):
     @classmethod
     def from_raw(cls, raw_vlr):
         return cls(raw_vlr.record_data)
+
+class WaveformPacketVlrRecord(ctypes.LittleEndianStructure):
+    _fields_ = [
+        ('bits_per_sample', ctypes.c_ubyte),
+        ('waveform_compression_type', ctypes.c_ubyte),
+        ('number_of_samples', ctypes.c_uint32),
+        ('temporal_sample_spacing', ctypes.c_uint32),
+        ('digitizer_gain', ctypes.c_double),
+        ('digitizer_offset', ctypes.c_double)
+    ]
+
+class WaveformPacketVlr(VLR, KnownVLR):
+    def __init__(self, record_id, data=b''):
+        super().__init__(
+            self.official_user_id(),
+            record_id=record_id,
+            description='',
+            data=data
+        )
+        self.parsed_record = None
+
+    @staticmethod
+    def official_record_ids():
+        return range(100, 356)
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Spec'
+
+    @classmethod
+    def from_raw(cls, raw_vlr):
+        vlr = cls(
+            raw_vlr.header.record_id,
+            data=raw_vlr.record_data
+        )
+        vlr.description = raw_vlr.header.description
+        vlr.parsed_record = WaveformPacketVlrRecord.from_buffer_copy(vlr.record_data)
+        return vlr
+
 
 
 def vlr_factory(raw_vlr):
