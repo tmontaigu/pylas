@@ -64,6 +64,9 @@ def read_las_buffer(buffer):
         return read_las_stream(stream)
 
 
+def _warn_diff_not_zero(diff, end_of, start_of):
+     warnings.warn("There are {} bytes between {} and {}".format(diff, end_of, start_of))
+
 # TODO: Sould probably raise instead of asserting, or at least warn
 def read_las_stream(data_stream):
     """ Reads a stream (file object like)
@@ -81,9 +84,7 @@ def read_las_stream(data_stream):
 
     offset_diff = header.header_size - data_stream.tell()
     if offset_diff != 0:
-        err_str = 'There are {} user defined bytes between end of Header and start of VLR'.format(
-            offset_diff)
-        warnings.warn(err_str)
+        _warn_diff_not_zero(offset_diff, 'end of Header', 'start of VLRs')
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
@@ -95,9 +96,7 @@ def read_las_stream(data_stream):
 
     offset_diff = header.offset_to_point_data - data_stream.tell()
     if offset_diff != 0:
-        err_str = 'There are {} user defined bytes between end of VLRs and start of point records'.format(
-            offset_diff)
-        warnings.warn(err_str)
+        _warn_diff_not_zero(offset_diff, 'end of VLRs', 'start of point records')
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
     if is_point_format_compressed(header.point_data_format_id):
@@ -128,8 +127,11 @@ def read_las_stream(data_stream):
             ge = rawheader.GlobalEncoding.from_buffer_copy(
                 header.reserved.to_bytes(2, byteorder='little'))
             if ge.waveform_internal and not ge.waveform_external:
-                print('Skipping {} bytes'.format(
-                    data_stream.tell() - header.start_of_waveform_data_packet_record))
+                offset_diff = data_stream.tell() - header.start_of_waveform_data_packet_record
+                if offset_diff != 0:
+                    _warn_diff_not_zero(offset_diff, 'end of point records', 'start of waveform data')
+                    data_stream.seek(offset_diff, io.SEEK_CUR)
+
                 # This is srange, the spec says, waveform datapacket is in a EVLR but in the 2 samples I have its a VLR
                 # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
                 b = bytearray(data_stream.read(vlr.VLR_HEADER_SIZE))
