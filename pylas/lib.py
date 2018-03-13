@@ -106,6 +106,11 @@ def read_las_stream(data_stream):
 
         offset_to_chunk_table = struct.unpack('<q', data_stream.read(8))[0]
         size_of_point_data = offset_to_chunk_table - data_stream.tell()
+        if offset_to_chunk_table <= 0:
+            warnings.warn("Strange offset to chunk table: {}, ignoring it..".format(
+                offset_to_chunk_table))
+            size_of_point_data = -1 # Read eveything
+
         points = point_record.from_compressed_buffer(
             data_stream.read(size_of_point_data),
             header.point_data_format_id,
@@ -225,3 +230,43 @@ def create_las(point_format=0, file_version=None):
     if file_version >= '1.4':
         return las14.LasData(header=header)
     return las12.LasData(header=header)
+
+import os
+def _pass_through_laszip(stream, action='decompress'):
+    import subprocess
+
+    laszip_names = ('laszip', 'laszip.exe', 'laszip-cli', 'laszip-cli.exe')
+
+    for binary in laszip_names:
+        in_path = [os.path.isfile(os.path.join(x, binary)) for x in os.environ["PATH"].split(os.pathsep)]
+        if any(in_path):
+            laszip_binary = binary
+            break
+    else:
+        raise FileNotFoundError('No laszip')
+    
+    if action == "decompress":
+        out_t = '-olas'
+    elif action == "compress":
+        out_t = '-olaz'
+    else:
+        raise ValueError('Invalid Action')
+
+
+    prc = subprocess.Popen(
+        [laszip_binary, "-stdin", out_t, "-stdout"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    data, stderr = prc.communicate(stream.read())
+    if prc.returncode != 0:
+        print("Unusual return code from %s: %d" % (laszip_binary, prc.returncode))
+        print(stderr.decode())
+    return data
+
+def laszip_compress(stream):
+    return _pass_through_laszip(stream, action='compress')
+
+def laszip_decompress(stream):
+    return _pass_through_laszip(stream, action='decompress')
