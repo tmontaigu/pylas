@@ -90,6 +90,12 @@ class KnownVLR(UnknownVLR):
 
     def parse_record_data(self, record_data): pass
 
+    @classmethod
+    def from_raw(cls, raw):
+        vlr = cls()
+        vlr.parse_record_data(raw.record_data)
+        return vlr
+
 class BaseVLR(UnknownVLR):
     def __init__(self, user_id, record_id, description=''):
         self.user_id = user_id
@@ -107,6 +113,7 @@ class BaseVLR(UnknownVLR):
 
     def __len__(self):
         return VLR_HEADER_SIZE
+
 
 class VLR(BaseVLR):
     def __init__(self, user_id, record_id, description=''):
@@ -191,12 +198,6 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
             self.lookups.append(ClassificationLookupStruct.from_buffer(
                 record_data[self._lookup_size * i: self._lookup_size * (i + 1)]))
 
-    @classmethod
-    def from_raw(cls, raw):
-        vlr = cls()
-        vlr.parse_record_data(raw.record_data)
-        return vlr
-
     @staticmethod
     def official_user_id():
         return "LASF_Spec"
@@ -259,7 +260,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
 class ExtraBytesVlr(BaseVLR, KnownVLR):
     def __init__(self):
-        super().__init__('LASF_Spec', 4, 'extra_bytes')
+        super().__init__('LASF_Spec', self.official_record_ids[0], 'extra_bytes')
         self.extra_bytes_structs = []
 
     def parse_record_data(self, data):
@@ -292,12 +293,6 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
     @staticmethod
     def official_record_ids():
         return 4,
-
-    @classmethod
-    def from_raw(cls, raw_vlr):
-        vlr = cls()
-        vlr.parse_record_data(raw_vlr.record_data)
-        return vlr
 
 class WaveformPacketStruct(ctypes.LittleEndianStructure):
     _pack_ = 1
