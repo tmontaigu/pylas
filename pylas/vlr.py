@@ -242,6 +242,7 @@ class ExtraBytesVlr(VLR, KnownVLR):
         return cls(raw_vlr.record_data)
 
 class WaveformPacketVlrRecord(ctypes.LittleEndianStructure):
+    _pack_ = 1
     _fields_ = [
         ('bits_per_sample', ctypes.c_ubyte),
         ('waveform_compression_type', ctypes.c_ubyte),
