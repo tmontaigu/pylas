@@ -260,7 +260,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
 class ExtraBytesVlr(BaseVLR, KnownVLR):
     def __init__(self):
-        super().__init__('LASF_Spec', self.official_record_ids[0], 'extra_bytes')
+        super().__init__('LASF_Spec', self.official_record_ids()[0], 'extra_bytes')
         self.extra_bytes_structs = []
 
     def parse_record_data(self, data):
@@ -337,7 +337,7 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
 
     @classmethod
     def from_raw(cls, raw_vlr):
-        vlr = cls(raw_vlr.header.record_id, description=raw_vlr.description.decode())
+        vlr = cls(raw_vlr.header.record_id, description=raw_vlr.header.description.decode())
         vlr.description = raw_vlr.header.description
         vlr.parsed_record = WaveformPacketStruct.from_buffer_copy(raw_vlr.record_data)
         return vlr
