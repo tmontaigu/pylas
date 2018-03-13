@@ -154,7 +154,7 @@ def read_las_stream(data_stream):
     return las12.LasData(header=header, vlrs=vlrs, points=points)
 
 
-def convert(source_las, *, point_format_id=None):
+def convert(source_las, *, point_format_id=None, file_version=None):
     """ Converts a Las from one point format to another
     Automatically upgrades the file version if source file version is not compatible with
     the new point_format_id
@@ -181,10 +181,17 @@ def convert(source_las, *, point_format_id=None):
     """
     point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
 
-    # Don't downgrade the file version
-    file_version = dims.min_file_version_for_point_format(point_format_id)
-    if file_version < source_las.header.version:
-        file_version = source_las.header.version
+    if file_version is None:
+        file_version = dims.min_file_version_for_point_format(point_format_id)
+        # Don't downgrade the file version
+        if file_version < source_las.header.version:
+            file_version = source_las.header.version
+    elif dims.is_point_fmt_compatible_with_version(point_format_id, file_version):
+        file_version = str(file_version)
+    else:
+        raise ValueError('Point format {} is not compatible with file version {}'.format(
+            point_format_id, file_version))
+
 
     header = source_las.header
     header.version = file_version

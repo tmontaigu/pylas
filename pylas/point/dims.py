@@ -424,3 +424,7 @@ def lost_dimensions(point_fmt_in, point_fmt_out):
         if dim_name not in out_dims:
             completely_lost.append(dim_name)
     return completely_lost
+
+
+def is_point_fmt_compatible_with_version(point_format_id, file_version):
+    return point_format_id in VERSION_TO_POINT_FMT[str(file_version)]
