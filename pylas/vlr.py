@@ -320,11 +320,25 @@ class VLRList:
     def get(self, vlr_type):
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
-    def extract_laszip_vlr(self):
-        laszip_vlr_idx = self._laszip_vlr_idx()
-        if laszip_vlr_idx is not None:
-            return self.vlrs.pop(laszip_vlr_idx)
-        return None
+    def extract(self, vlr_type):
+        kept_vlrs, extracted_vlrs = [], []
+        for vlr in self.vlrs:
+            if vlr.__class__.__name__ == vlr_type:
+                extracted_vlrs.append(vlr)
+            else:
+                kept_vlrs.append(vlr)
+        self.vlrs = kept_vlrs
+        return extracted_vlrs
+
+    def pop(self, index):
+        return self.vlrs.pop(index)
+
+    def index(self, vlr_type):
+        for i, v in enumerate(self.vlrs):
+            if v.__class__.__name__ == vlr_type:
+                return i
+        else:
+            raise ValueError('{} is not in the VLR list'.format(vlr_type))
 
     def write_to(self, out):
         for vlr in self.vlrs:
@@ -332,13 +346,6 @@ class VLRList:
 
     def total_size_in_bytes(self):
         return sum(len(vlr) for vlr in self.vlrs)
-
-    def _laszip_vlr_idx(self):
-        for i, vlr in enumerate(self.vlrs):
-            if isinstance(vlr, LasZipVlr):
-                return i
-        else:
-            return None
 
     def __iter__(self):
         yield from iter(self.vlrs)

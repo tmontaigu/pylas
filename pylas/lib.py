@@ -100,9 +100,7 @@ def read_las_stream(data_stream):
         data_stream.seek(offset_diff, io.SEEK_CUR)
 
     if is_point_format_compressed(header.point_data_format_id):
-        laszip_vlr = vlrs.extract_laszip_vlr()
-        if laszip_vlr is None:
-            raise ValueError('Could not find Laszip VLR')
+        laszip_vlr = vlrs.pop(vlrs.index('LasZipVlr'))
         header.point_data_format_id = compressed_id_to_uncompressed(
             header.point_data_format_id)
 
