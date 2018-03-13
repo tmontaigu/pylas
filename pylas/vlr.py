@@ -67,7 +67,7 @@ class RawVLR:
         )
 
 class VLR:
-    def __init__(self, user_id, record_id, description, data=b''):
+    def __init__(self, user_id, record_id, description='', data=b''):
         self.user_id = user_id
         self.record_id = record_id
         self.description = description
@@ -185,7 +185,8 @@ class LasZipVlr(VLR, KnownVLR):
         return cls(raw_vlr.record_data)
 
 
-class ExtraBytes(ctypes.LittleEndianStructure):
+class ExtraBytesStruct(ctypes.LittleEndianStructure):
+    _pack_ = 1
     _fields_ = [
         ('reserved', ctypes.c_uint8 * 2),
         ('data_type', ctypes.c_uint8),
@@ -208,20 +209,25 @@ class ExtraBytes(ctypes.LittleEndianStructure):
             return self.format_name(), '{}u1'.format(self.options)
         return self.format_name(), get_type_for_extra_dim(self.data_type)
 
+    @staticmethod
+    def size():
+        return ctypes.sizeof(ExtraBytesStruct)
+
 
 class ExtraBytesVlr(VLR, KnownVLR):
     def __init__(self, data=b''):
-        if (len(data) % 192) != 0:
-            raise ValueError("Data length of ExtraBytes vlr must be a multiple of 192")
+        if (len(data) % ExtraBytesStruct.size()) != 0:
+            raise ValueError("Data length of ExtraBytes vlr must be a multiple of {}".format(
+                ExtraBytesStruct.size() ))
         super().__init__('LASF_Spec', 4, 'extra_bytes', data)
         self.extra_bytes_structs = []
         self.parse_data()
 
     def parse_data(self):
-        num_extra_bytes_structs = len(self.record_data) // 192
+        num_extra_bytes_structs = len(self.record_data) // ExtraBytesStruct.size()
         self.extra_bytes_structs = [None] * num_extra_bytes_structs
         for i in range(num_extra_bytes_structs):
-            self.extra_bytes_structs[i] = ExtraBytes.from_buffer_copy(self.record_data[192 * i: 192 * (i + 1)])
+            self.extra_bytes_structs[i] = ExtraBytesStruct.from_buffer_copy(self.record_data[ExtraBytesStruct.size() * i: ExtraBytesStruct.size() * (i + 1)])
 
     def type_of_extra_dims(self):
         return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
@@ -234,7 +240,7 @@ class ExtraBytesVlr(VLR, KnownVLR):
         return super().into_raw()
 
     def __len__(self):
-        return VLR_HEADER_SIZE + len(self.extra_bytes_structs) * ctypes.sizeof(ExtraBytes)
+        return VLR_HEADER_SIZE + len(self.extra_bytes_structs) * ctypes.sizeof(ExtraBytesStruct)
 
     @staticmethod
     def official_user_id():
@@ -248,7 +254,7 @@ class ExtraBytesVlr(VLR, KnownVLR):
     def from_raw(cls, raw_vlr):
         return cls(raw_vlr.record_data)
 
-class WaveformPacketVlrRecord(ctypes.LittleEndianStructure):
+class WaveformPacketStruct(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
         ('bits_per_sample', ctypes.c_ubyte),
@@ -258,6 +264,11 @@ class WaveformPacketVlrRecord(ctypes.LittleEndianStructure):
         ('digitizer_gain', ctypes.c_double),
         ('digitizer_offset', ctypes.c_double)
     ]
+
+    @staticmethod
+    def size():
+        return ctypes.sizeof(WaveformPacketStruct)
+
 
 class WaveformPacketVlr(VLR, KnownVLR):
     def __init__(self, record_id, data=b''):
@@ -284,7 +295,7 @@ class WaveformPacketVlr(VLR, KnownVLR):
             data=raw_vlr.record_data
         )
         vlr.description = raw_vlr.header.description
-        vlr.parsed_record = WaveformPacketVlrRecord.from_buffer_copy(vlr.record_data)
+        vlr.parsed_record = WaveformPacketStruct.from_buffer_copy(vlr.record_data)
         return vlr
 
 
@@ -305,12 +316,9 @@ class VLRList:
     def append(self, vlr):
         self.vlrs.append(vlr)
 
-    def get_extra_bytes_vlr(self):
-        for vlr in self.vlrs:
-            if isinstance(vlr, ExtraBytesVlr):
-                return vlr
-        else:
-            return None
+
+    def get(self, vlr_type):
+        return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
     def extract_laszip_vlr(self):
         laszip_vlr_idx = self._laszip_vlr_idx()

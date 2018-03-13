@@ -89,8 +89,8 @@ def read_las_stream(data_stream):
     vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
     try:
-        extra_dims = vlrs.get_extra_bytes_vlr().type_of_extra_dims()
-    except AttributeError:
+        extra_dims = vlrs.get('ExtraBytesVlr')[0].type_of_extra_dims()
+    except IndexError:
         extra_dims = None
 
     offset_diff = header.offset_to_point_data - data_stream.tell()

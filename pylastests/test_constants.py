@@ -27,3 +27,9 @@ def test_has_waveform():
 
     for i in (0, 1, 2, 3, 6, 7, 8):
         assert pylas.point.dims.format_has_waveform_packet(i) == False
+
+def extra_bytes_struct_size():
+    assert pylas.vlr.ExtraBytesStruct.size() == 192
+
+def wavefor_packet_struct_size():
+    assert pylas.vlr.WaveformPacketStruct.size() == 26
