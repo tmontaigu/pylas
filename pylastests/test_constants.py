@@ -20,3 +20,10 @@ def test_lost_dims():
     assert set(pylas.lost_dimensions(0, 1)) == set()
     assert set(pylas.lost_dimensions(0, 2)) == set()
     assert set(pylas.lost_dimensions(0, 3)) == set()
+
+def test_has_waveform():
+    for i in (4, 5, 9, 10):
+        assert pylas.point.dims.format_has_waveform_packet(i) == True
+
+    for i in (0, 1, 2, 3, 6, 7, 8):
+        assert pylas.point.dims.format_has_waveform_packet(i) == False

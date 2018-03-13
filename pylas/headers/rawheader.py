@@ -12,7 +12,10 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
         ('gps_time_type', ctypes.c_uint16, 1),
-        ('reserved', ctypes.c_uint16, 15)
+        ('waveform_internal', ctypes.c_uint16, 1),
+        ('waveform_external', ctypes.c_uint16, 1),
+        ('synthetic_return_numbers', ctypes.c_uint16, 1),
+        ('reserved', ctypes.c_uint16, 12),
     ]
 
 
