@@ -114,7 +114,7 @@ class KnownVLR(ABC):
     def from_raw(cls, raw): pass
 
 
-class ClassificationLookup(ctypes.LittleEndianStructure):
+class ClassificationLookupStruct(ctypes.LittleEndianStructure):
     _fields_ = [
         ('class_number', ctypes.c_uint8),
         ('description', ctypes.c_char * 15)
@@ -129,30 +129,40 @@ class ClassificationLookup(ctypes.LittleEndianStructure):
     def __repr__(self):
         return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
 
+    @staticmethod
+    def size():
+        return ctypes.sizeof(ClassificationLookupStruct)
+
 
 class ClassificationLookupVlr(VLR, KnownVLR):
+    _lookup_size = ClassificationLookupStruct.size()
     def __init__(self, data=b''):
         super().__init__(self.official_user_id(), self.official_record_ids()[0], description='', data=data)
         self.lookups = []
 
+    def _is_max_num_lookups_reached(self):
+        return len(self) >= 256
+
     def add_lookup(self, class_number, description):
-        if len(self.lookups) < 256:
-            self.lookups.append(ClassificationLookup(class_number, description))
+        if not self._is_max_num_lookups_reached():
+            self.lookups.append(ClassificationLookupStruct(class_number, description))
         else:
             raise ValueError('Cannot add more lookups')
 
     def parse_data(self):
-        if len(self.record_data) % 16 != 0:
-            raise ValueError("Length of ClassificationLookup VLR's record_data must be a multiple of 16")
-        for i in range(len(self.record_data) // ctypes.sizeof(ClassificationLookup)):
-            self.lookups.append(ClassificationLookup.from_buffer(self.record_data[16 * i: 16 * (i + 1)]))
+        if len(self.record_data) % self._lookup_size != 0:
+            raise ValueError("Length of ClassificationLookup VLR's record_data must be a multiple of {}".format(
+                self._lookup_size))
+        for i in range(len(self.record_data) // ctypes.sizeof(ClassificationLookupStruct)):
+            self.lookups.append(ClassificationLookupStruct.from_buffer(
+                self.record_data[self._lookup_size * i: self._lookup_size * (i + 1)]))
 
     def into_raw(self):
         self.record_data = b''.join(bytes(lookup) for lookup in self.lookups)
         return super().into_raw()
 
     def __len__(self):
-        return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookup)
+        return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookupStruct)
 
     @staticmethod
     def official_user_id():
