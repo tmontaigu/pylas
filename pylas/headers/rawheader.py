@@ -12,19 +12,13 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
         ('gps_time_type', ctypes.c_uint16, 1),
-        ('waveform_internal', ctypes.c_uint16, 1),
-        ('waveform_external', ctypes.c_uint16, 1),
-        ('synthetic_return_numbers', ctypes.c_uint16, 1),
-        ('reserved', ctypes.c_uint16, 12),
+        ('waveform_internal', ctypes.c_uint16, 1), # 1.3
+        ('waveform_external', ctypes.c_uint16, 1), # 1.3
+        ('synthetic_return_numbers', ctypes.c_uint16, 1), # 1.3
+        ('wkt', ctypes.c_uint16, 1), # 1.4
+        ('reserved', ctypes.c_uint16, 11),
     ]
 
-
-class RawGUID:
-    def __init__(self):
-        self.data_1 = 0
-        self.data_2 = 0
-        self.data_3 = 0
-        self.data_4 = b'\x00' * type_lengths['uint8'] * 8
 
 
 LAS_FILE_SIGNATURE = b'LASF'
@@ -199,7 +193,6 @@ class RawHeader:
         raw_header = cls()
         data_stream = BinaryReader(stream)
 
-        # There must be a way to factorize this nicely
         for field in LAS_1_1_HEADER_FIELDS:
             val = data_stream.read(field.type, num=field.num)
             setattr(raw_header, field.name, val)
