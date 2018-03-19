@@ -96,11 +96,18 @@ def dtype_append(dtype, extra_dims_tuples):
 
 
 def build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
+    """ Builds the dict mapping point format id to numpy.dtype
+    In the dtypes, bit fields are still packed, and need to be unpacked each time
+    you want to access them
+    """
     return {fmt_id: point_format_to_dtype(point_fmt, dimensions_dict)
             for fmt_id, point_fmt in point_format_dimensions.items()}
 
 
 def build_unpacked_point_formats_dtypes(point_formats_dimensions, composed_fields_dict, dimensions_dict):
+    """ Builds the dict mapping point format id to numpy.dtype
+    In the dtypes, bit fields are unpacked and can be accessed directly
+    """
     unpacked_dtypes = {}
     for fmt_id, dim_names in point_formats_dimensions.items():
         composed_dims, dtype = composed_fields_dict[fmt_id], []
@@ -330,17 +337,50 @@ def repack_sub_fields(data, point_format_id):
 
 
 def get_dtype_of_format_id(point_format_id, extra_dims=None, unpacked=False):
+    """ Returns the numpy.dtype of the point_format_id
+    
+    Parameters:
+    ----------
+    point_format_id : {int}
+        The point format id
+    extra_dims : {List[(str, str)]}, optional
+        List of extra dims  (the default is None, which won't add extra dims)
+    unpacked : {bool}, optional
+        If True the resulting numpy.dtype will contain bitfields unpacked
+    
+    Raises
+    ------
+    errors.PointFormatNotSupported
+        If point format is not Supported
+    
+    Returns
+    -------
+    numpy.dtype
+        The dtype of the point format, to be used un a numpy.ndarray
+    """
+
     fmt_dtypes = ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
     try:
         points_dtype = fmt_dtypes[point_format_id]
-    except KeyError:
-        raise errors.PointFormatNotSupported(point_format_id)
+    except KeyError as e:
+        raise errors.PointFormatNotSupported(point_format_id) from e
     if extra_dims is not None:
         return dtype_append(points_dtype, extra_dims)
     return points_dtype
 
 
 def get_sub_fields_of_fmt_id(point_format_id):
+    """ Returns the sub fields of a point format
+    
+    Parameters:
+    ----------
+    point_format_id : {int}
+        The point format id
+    Returns
+    -------
+        
+    """
+
     composed_dims = COMPOSED_FIELDS[point_format_id]
     sub_fields_dict = {}
     for composed_dim_name, sub_fields in composed_dims.items():
@@ -402,21 +442,20 @@ def format_has_waveform_packet(point_format_id):
             return False
     else:
         return True
-    
 
 
-# TODO lost precision (ie 8bit fied to -> 5 bit field)
+# TODO lost precision (ie 8bit fields to -> 5 bit field)
 # but it's a bit harder
 def lost_dimensions(point_fmt_in, point_fmt_out):
     try:
         unpck_dims_in = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_in]
-    except KeyError:
-        raise errors.PointFormatNotSupported(point_fmt_in)
+    except KeyError as e:
+        raise errors.PointFormatNotSupported(point_fmt_in) from e
 
     try:
         unpck_dims_out = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_out]
-    except KeyError:
-        raise errors.PointFormatNotSupported(point_fmt_out)
+    except KeyError as e:
+        raise errors.PointFormatNotSupported(point_fmt_out) from e
 
     out_dims = unpck_dims_out.fields
     completely_lost = []

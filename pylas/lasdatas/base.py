@@ -87,13 +87,14 @@ class LasBase(object):
         self.header.number_of_points_records_ = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
 
-        self.header.x_max = self.x.max()
-        self.header.y_max = self.y.max()
-        self.header.z_max = self.z.max()
+        if len(self.points_data) > 0:
+            self.header.x_max = self.x.max()
+            self.header.y_max = self.y.max()
+            self.header.z_max = self.z.max()
 
-        self.header.x_min = self.x.min()
-        self.header.y_min = self.y.min()
-        self.header.z_min = self.z.min()
+            self.header.x_min = self.x.min()
+            self.header.y_min = self.y.min()
+            self.header.z_min = self.z.min()
 
     def write_to(self, out_stream, do_compress=False):
         self.update_header()
