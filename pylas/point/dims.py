@@ -29,7 +29,7 @@ def unpack(source_array, mask, dtype=np.uint8):
     return ((source_array & mask) >> lsb).astype(dtype)
 
 
-def pack_into(array, sub_field_array, mask, inplace=False):
+def pack(array, sub_field_array, mask, inplace=False):
     """ Packs a sub field's array into another array using a mask
 
     Parameters:
@@ -322,7 +322,7 @@ def repack_sub_fields(data, point_format_id):
         if dim_name in composed_dims:
             for sub_field in composed_dims[dim_name]:
                 try:
-                    pack_into(
+                    pack(
                         repacked_array[dim_name],
                         data[sub_field.name],
                         sub_field.mask,

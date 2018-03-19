@@ -2,8 +2,8 @@ from abc import ABC, abstractclassmethod, abstractmethod
 
 import numpy as np
 
-from pylas.point import dims
 from pylas.compression import decompress_buffer
+from pylas.point import dims
 
 
 class PointRecord(ABC):
@@ -174,7 +174,7 @@ class PackedPointRecord(PointRecord):
             )
         try:
             composed_dim, sub_field = self.sub_fields_dict[key]
-            dims.pack_into(
+            dims.pack(
                 self.array[composed_dim],
                 value,
                 sub_field.mask,
