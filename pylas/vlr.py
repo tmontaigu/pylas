@@ -1,6 +1,5 @@
 import ctypes
 from abc import ABC, abstractmethod, abstractclassmethod
-from collections import namedtuple
 
 from .extradims import get_type_for_extra_dim
 
@@ -15,7 +14,10 @@ class VLRHeader(ctypes.LittleEndianStructure):
         ('record_length_after_header', ctypes.c_uint16),
         ('description', ctypes.c_char * 32)
     ]
+
+
 VLR_HEADER_SIZE = ctypes.sizeof(VLRHeader)
+
 
 class RawVLR:
     """ As close as possible to the underlying data
@@ -67,7 +69,6 @@ class RawVLR:
         )
 
 
-
 class UnknownVLR(ABC):
     @abstractmethod
     def into_raw(self): pass
@@ -95,6 +96,7 @@ class KnownVLR(UnknownVLR):
         vlr = cls()
         vlr.parse_record_data(raw.record_data)
         return vlr
+
 
 class BaseVLR(UnknownVLR):
     def __init__(self, user_id, record_id, description=''):
@@ -144,8 +146,6 @@ class VLR(BaseVLR):
             self.__class__.__name__, self.user_id, self.record_id, len(self.record_data))
 
 
-
-
 class ClassificationLookupStruct(ctypes.LittleEndianStructure):
     _fields_ = [
         ('class_number', ctypes.c_uint8),
@@ -168,6 +168,7 @@ class ClassificationLookupStruct(ctypes.LittleEndianStructure):
 
 class ClassificationLookupVlr(BaseVLR, KnownVLR):
     _lookup_size = ClassificationLookupStruct.size()
+
     def __init__(self):
         super().__init__(self.official_user_id(), self.official_record_ids()[0], description='')
         self.lookups = []
@@ -180,7 +181,6 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
             self.lookups.append(ClassificationLookupStruct(class_number, description))
         else:
             raise ValueError('Cannot add more lookups')
-
 
     def into_raw(self):
         raw = super().into_raw()
@@ -266,11 +266,12 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
     def parse_record_data(self, data):
         if (len(data) % ExtraBytesStruct.size()) != 0:
             raise ValueError("Data length of ExtraBytes vlr must be a multiple of {}".format(
-                ExtraBytesStruct.size() ))
+                ExtraBytesStruct.size()))
         num_extra_bytes_structs = len(data) // ExtraBytesStruct.size()
         self.extra_bytes_structs = [None] * num_extra_bytes_structs
         for i in range(num_extra_bytes_structs):
-            self.extra_bytes_structs[i] = ExtraBytesStruct.from_buffer_copy(data[ExtraBytesStruct.size() * i: ExtraBytesStruct.size() * (i + 1)])
+            self.extra_bytes_structs[i] = ExtraBytesStruct.from_buffer_copy(
+                data[ExtraBytesStruct.size() * i: ExtraBytesStruct.size() * (i + 1)])
 
     def type_of_extra_dims(self):
         return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
@@ -294,6 +295,7 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
     def official_record_ids():
         return 4,
 
+
 class WaveformPacketStruct(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
@@ -315,7 +317,7 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             record_id=record_id,
-            description='',
+            description=description,
         )
         self.parsed_record = None
 
@@ -343,7 +345,6 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
         return vlr
 
 
-
 def vlr_factory(raw_vlr):
     user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
     for known_vlr in KnownVLR.__subclasses__():
@@ -353,13 +354,131 @@ def vlr_factory(raw_vlr):
         return VLR.from_raw(raw_vlr)
 
 
+class GeoKeyEntryStruct(ctypes.LittleEndianStructure):
+    _pack_ = 1
+    _fields_ = [
+        ('id', ctypes.c_uint16),
+        ('tiff_tag_location', ctypes.c_uint16),
+        ('count', ctypes.c_uint16),
+        ('value_offset', ctypes.c_uint16),
+    ]
+
+    @staticmethod
+    def size():
+        return ctypes.sizeof(GeoKeysHeaderStructs)
+
+    def __repr__(self):
+        return 'GeoKey(Id: {}, Location: {}, count: {}, offset: {})'.format(
+            self.id, self.tiff_tag_location, self.count, self.value_offset
+        )
+
+
+class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
+    _pack_ = 1
+    _fields_ = [
+        ('key_direction_version', ctypes.c_uint16),
+        ('key_revision', ctypes.c_uint16),
+        ('minor_revision', ctypes.c_uint16),
+        ('number_of_keys', ctypes.c_uint16),
+    ]
+
+    @staticmethod
+    def size():
+        return ctypes.sizeof(GeoKeysHeaderStructs)
+
+    def __repr__(self):
+        return 'GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})'.format(
+            self.key_direction_version, self.key_revision, self.minor_revision,
+            self.number_of_keys
+        )
+
+
+class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description=''
+        )
+        self.geo_keys_header = GeoKeysHeaderStructs()
+        self.geo_keys = [GeoKeyEntryStruct()]
+
+    def parse_record_data(self, record_data):
+        record_data = bytearray(record_data)
+        header_data = record_data[:ctypes.sizeof(GeoKeysHeaderStructs)]
+        self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
+        self.geo_keys, keys_data = [], record_data[ctypes.sizeof(GeoKeysHeaderStructs):]
+
+        for i in range(self.geo_keys_header.number_of_keys):
+            data = keys_data[(i * GeoKeyEntryStruct.size()): (i + 1) * GeoKeyEntryStruct.size()]
+            self.geo_keys.append(GeoKeyEntryStruct.from_buffer(data))
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 34735,
+
+
+class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description=''
+        )
+        self.doubles = []
+
+    def parse_record_data(self, record_data):
+        sizeof_double = ctypes.sizeof(ctypes.c_double)
+        if len(record_data) % sizeof_double != 0:
+            raise ValueError("GeoDoubleParams record data length () is not a multiple of sizeof(double) ()".format(
+                len(record_data), sizeof_double
+            ))
+        record_data = bytearray(record_data)
+        num_doubles = len(record_data) // sizeof_double
+        for i in range(num_doubles):
+            b = record_data[i * sizeof_double:(i + 1) * sizeof_double]
+            self.doubles.append(ctypes.c_double.from_buffer(b))
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 34736,
+
+
+class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description=''
+        )
+        self.strings = []
+
+    def parse_record_data(self, record_data):
+        self.strings = record_data.decode('ascii').split(NULL_BYTE)
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 34736,
+
+
 class VLRList:
     def __init__(self):
         self.vlrs = []
 
     def append(self, vlr):
         self.vlrs.append(vlr)
-
 
     def get(self, vlr_type):
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
