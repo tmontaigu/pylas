@@ -43,7 +43,7 @@ class RawVLR:
 
     @classmethod
     def read_from(cls, data_stream):
-        """ Instanciate a RawVLR by reading the content from the
+        """ Instantiate a RawVLR by reading the content from the
         data stream
         
         Parameters:
@@ -89,6 +89,7 @@ class KnownVLR(UnknownVLR):
     @abstractmethod
     def official_record_ids(): pass
 
+    @abstractmethod
     def parse_record_data(self, record_data): pass
 
     @classmethod
@@ -184,7 +185,7 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
 
     def into_raw(self):
         raw = super().into_raw()
-        raw = b''.join(bytes(lookup) for lookup in self.lookups)
+        raw.record_data = b''.join(bytes(lookup) for lookup in self.lookups)
         return raw
 
     def __len__(self):
@@ -215,6 +216,10 @@ class LasZipVlr(VLR, KnownVLR):
             'http://laszip.org',
         )
         self.record_data = data
+
+    def parse_record_data(self, record_data):
+        # Only laz-perf/laszip knows how to parse this
+        pass
 
     @staticmethod
     def official_user_id():
@@ -345,15 +350,6 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
         return vlr
 
 
-def vlr_factory(raw_vlr):
-    user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
-    for known_vlr in KnownVLR.__subclasses__():
-        if known_vlr.official_user_id() == user_id and raw_vlr.header.record_id in known_vlr.official_record_ids():
-            return known_vlr.from_raw(raw_vlr)
-    else:
-        return VLR.from_raw(raw_vlr)
-
-
 class GeoKeyEntryStruct(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
@@ -381,6 +377,14 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
         ('minor_revision', ctypes.c_uint16),
         ('number_of_keys', ctypes.c_uint16),
     ]
+
+    def __init__(self):
+        super().__init__(
+            key_directory_version=1,
+            key_revision=1,
+            minor_revision=0,
+            number_of_kets=0
+        )
 
     @staticmethod
     def size():
@@ -413,6 +417,15 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
             data = keys_data[(i * GeoKeyEntryStruct.size()): (i + 1) * GeoKeyEntryStruct.size()]
             self.geo_keys.append(GeoKeyEntryStruct.from_buffer(data))
 
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = bytes(self.geo_keys_header)
+        raw.record_data += b''.join(map(bytes, self.geo_keys))
+        return raw
+
+    def __len__(self):
+        return VLR_HEADER_SIZE + GeoKeysHeaderStructs.size() + len(self.geo_keys) * GeoKeyEntryStruct.size()
+
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -443,6 +456,14 @@ class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
             b = record_data[i * sizeof_double:(i + 1) * sizeof_double]
             self.doubles.append(ctypes.c_double.from_buffer(b))
 
+    def __len__(self):
+        return VLR_HEADER_SIZE + len(self.doubles) * ctypes.sizeof(ctypes.c_double)
+
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = b''.join(map(bytes, self.doubles))
+        return raw
+
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -462,7 +483,15 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
         self.strings = []
 
     def parse_record_data(self, record_data):
-        self.strings = record_data.decode('ascii').split(NULL_BYTE)
+        self.strings = [s.decode('ascii') for s in record_data.split(NULL_BYTE)]
+
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = NULL_BYTE.join(s.encode('ascii') for s in self.strings)
+        return raw
+
+    def __len__(self):
+        return VLR_HEADER_SIZE + sum(map(len, self.strings)) + len(NULL_BYTE) * (len(self.strings) - 1)
 
     @staticmethod
     def official_user_id():
@@ -470,7 +499,16 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
 
     @staticmethod
     def official_record_ids():
-        return 34736,
+        return 34737,
+
+
+def vlr_factory(raw_vlr):
+    user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
+    for known_vlr in KnownVLR.__subclasses__():
+        if known_vlr.official_user_id() == user_id and raw_vlr.header.record_id in known_vlr.official_record_ids():
+            return known_vlr.from_raw(raw_vlr)
+    else:
+        return VLR.from_raw(raw_vlr)
 
 
 class VLRList:
@@ -508,7 +546,7 @@ class VLRList:
             vlr.into_raw().write_to(out)
 
     def total_size_in_bytes(self):
-        return sum(len(vlr) for vlr in self.vlrs)
+        return sum(map(len, self.vlrs))
 
     def __iter__(self):
         yield from iter(self.vlrs)
