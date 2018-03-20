@@ -15,6 +15,11 @@ class VLRHeader(ctypes.LittleEndianStructure):
         ('description', ctypes.c_char * 32)
     ]
 
+    @classmethod
+    def from_stream(cls, stream):
+        return cls.from_buffer(bytearray(stream.read(ctypes.sizeof(cls))))
+
+
 
 VLR_HEADER_SIZE = ctypes.sizeof(VLRHeader)
 
@@ -57,8 +62,7 @@ class RawVLR:
         """
 
         raw_vlr = cls()
-        header = VLRHeader()
-        data_stream.readinto(header)
+        header = VLRHeader.from_stream(data_stream)
         raw_vlr.header = header
         raw_vlr.record_data = data_stream.read(header.record_length_after_header)
         return raw_vlr
