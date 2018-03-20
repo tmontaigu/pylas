@@ -448,18 +448,18 @@ def format_has_waveform_packet(point_format_id):
 # but it's a bit harder
 def lost_dimensions(point_fmt_in, point_fmt_out):
     try:
-        unpck_dims_in = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_in]
+        unpacked_dims_in = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_in]
     except KeyError as e:
         raise errors.PointFormatNotSupported(point_fmt_in) from e
 
     try:
-        unpck_dims_out = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_out]
+        unpacked_dims_out = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_out]
     except KeyError as e:
         raise errors.PointFormatNotSupported(point_fmt_out) from e
 
-    out_dims = unpck_dims_out.fields
+    out_dims = unpacked_dims_out.fields
     completely_lost = []
-    for dim_name in unpck_dims_in.names:
+    for dim_name in unpacked_dims_in.names:
         if dim_name not in out_dims:
             completely_lost.append(dim_name)
     return completely_lost
