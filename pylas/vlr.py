@@ -518,6 +518,12 @@ class VLRList:
     def append(self, vlr):
         self.vlrs.append(vlr)
 
+    def get_by_id(self, user_id='', record_ids=(None,)):
+        if user_id != '' and record_ids != (None,):
+            return [vlr for vlr in self.vlrs if vlr.user_id == user_id and vlr.record_id in record_ids]
+        else:
+            return [vlr for vlr in self.vlrs if vlr.user_id == user_id or vlr.record_id in record_ids]
+
     def get(self, vlr_type):
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
