@@ -4,9 +4,10 @@ import warnings
 
 from . import evlr, vlr
 from .compression import (compressed_id_to_uncompressed,
-                          is_point_format_compressed)
+                          is_point_format_compressed,
+                          laszip_decompress)
 from .headers import rawheader
-from .lasdatas import base, las12, las14
+from .lasdatas import las12, las14
 from .point import dims, record
 
 USE_UNPACKED = False
@@ -65,9 +66,10 @@ def read_las_buffer(buffer):
 
 
 def _warn_diff_not_zero(diff, end_of, start_of):
-     warnings.warn("There are {} bytes between {} and {}".format(diff, end_of, start_of))
+    warnings.warn("There are {} bytes between {} and {}".format(diff, end_of, start_of))
 
-# TODO: Sould probably raise instead of asserting, or at least warn
+
+# TODO: Should probably raise instead of asserting, or at least warn
 def read_las_stream(data_stream):
     """ Reads a stream (file object like)
 
@@ -79,6 +81,7 @@ def read_las_stream(data_stream):
     -------
     LasData
     """
+    stream_start_pos = data_stream.tell()
     point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
     header = rawheader.RawHeader.read_from(data_stream)
 
@@ -109,14 +112,21 @@ def read_las_stream(data_stream):
         if offset_to_chunk_table <= 0:
             warnings.warn("Strange offset to chunk table: {}, ignoring it..".format(
                 offset_to_chunk_table))
-            size_of_point_data = -1 # Read eveything
+            size_of_point_data = -1  # Read everything
 
-        points = point_record.from_compressed_buffer(
-            data_stream.read(size_of_point_data),
-            header.point_data_format_id,
-            header.number_of_point_records,
-            laszip_vlr
-        )
+        try:
+            points = point_record.from_compressed_buffer(
+                data_stream.read(size_of_point_data),
+                header.point_data_format_id,
+                header.number_of_point_records,
+                laszip_vlr
+            )
+        except RuntimeError as e:
+            # warnings.war or logging.warn ?
+            warnings.warn("LazPerf failed to decompress ({}) trying laszip".format(e))
+            data_stream.seek(stream_start_pos)
+            return read_las_buffer(laszip_decompress(data_stream))
+
     else:
         points = point_record.from_stream(
             data_stream,
@@ -143,7 +153,7 @@ def read_las_stream(data_stream):
                 print(waveform_header.user_id, waveform_header.record_id,
                       waveform_header.record_length_after_header)
                 print("Read: {} MBytes of waveform_record".format(
-                    len(waveform_record) / 10**6))
+                    len(waveform_record) / 10 ** 6))
             elif not ge.waveform_internal and ge.waveform_external:
                 print(
                     "Waveform data is in an external file, you'll have to load it yourself")
@@ -197,7 +207,6 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         raise ValueError('Point format {} is not compatible with file version {}'.format(
             point_format_id, file_version))
 
-
     header = source_las.header
     header.version = file_version
     header.point_data_format_id = point_format_id
@@ -230,43 +239,3 @@ def create_las(point_format=0, file_version=None):
     if file_version >= '1.4':
         return las14.LasData(header=header)
     return las12.LasData(header=header)
-
-import os
-def _pass_through_laszip(stream, action='decompress'):
-    import subprocess
-
-    laszip_names = ('laszip', 'laszip.exe', 'laszip-cli', 'laszip-cli.exe')
-
-    for binary in laszip_names:
-        in_path = [os.path.isfile(os.path.join(x, binary)) for x in os.environ["PATH"].split(os.pathsep)]
-        if any(in_path):
-            laszip_binary = binary
-            break
-    else:
-        raise FileNotFoundError('No laszip')
-    
-    if action == "decompress":
-        out_t = '-olas'
-    elif action == "compress":
-        out_t = '-olaz'
-    else:
-        raise ValueError('Invalid Action')
-
-
-    prc = subprocess.Popen(
-        [laszip_binary, "-stdin", out_t, "-stdout"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    data, stderr = prc.communicate(stream.read())
-    if prc.returncode != 0:
-        print("Unusual return code from %s: %d" % (laszip_binary, prc.returncode))
-        print(stderr.decode())
-    return data
-
-def laszip_compress(stream):
-    return _pass_through_laszip(stream, action='compress')
-
-def laszip_decompress(stream):
-    return _pass_through_laszip(stream, action='decompress')

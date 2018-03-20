@@ -1,3 +1,6 @@
+import os
+import subprocess
+
 import numpy as np
 
 from .errors import LazPerfNotFound
@@ -7,6 +10,7 @@ HAS_LAZPERF = False
 
 try:
     import lazperf
+
     HAS_LAZPERF = True
 except ModuleNotFoundError:
     HAS_LAZPERF = False
@@ -73,3 +77,43 @@ def compress_buffer(uncompressed_buffer, record_schema, offset):
     compressed = compressor.compress(uncompressed_buffer)
 
     return compressed
+
+
+def _pass_through_laszip(stream, action='decompress'):
+    laszip_names = ('laszip', 'laszip.exe', 'laszip-cli', 'laszip-cli.exe')
+
+    for binary in laszip_names:
+        in_path = [os.path.isfile(os.path.join(x, binary)) for x in os.environ["PATH"].split(os.pathsep)]
+        if any(in_path):
+            laszip_binary = binary
+            break
+    else:
+        raise FileNotFoundError('No laszip')
+
+    if action == "decompress":
+        out_t = '-olas'
+    elif action == "compress":
+        out_t = '-olaz'
+    else:
+        raise ValueError('Invalid Action')
+
+    prc = subprocess.Popen(
+        [laszip_binary, "-stdin", out_t, "-stdout"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    data, stderr = prc.communicate(stream.read())
+    if prc.returncode != 0:
+        raise RuntimeError("Laszip failed to {} with error code {}\n\t{}".format(
+            action, prc.returncode, '\n\t'.join(stderr.decode().splitlines())
+        ))
+    return data
+
+
+def laszip_compress(stream):
+    return _pass_through_laszip(stream, action='compress')
+
+
+def laszip_decompress(stream):
+    return _pass_through_laszip(stream, action='decompress')
