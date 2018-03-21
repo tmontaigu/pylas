@@ -6,6 +6,10 @@ class PointFormatNotSupported(Exception):
     pass
 
 
+class UnknownFileVersion(Exception):
+    pass
+
+
 class LazPerfNotFound(Exception):
     pass
 
