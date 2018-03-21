@@ -9,6 +9,7 @@ from .compression import (compressed_id_to_uncompressed,
 from .headers import rawheader
 from .lasdatas import las12, las14
 from .point import dims, record
+from . import errors
 
 USE_UNPACKED = False
 
@@ -120,7 +121,7 @@ def read_las_stream(data_stream):
                 header.number_of_point_records,
                 laszip_vlr
             )
-        except RuntimeError as e:
+        except (RuntimeError, errors.LazPerfNotFound) as e:
             logging.error("LazPerf failed to decompress ({}), trying laszip.".format(e))
             data_stream.seek(stream_start_pos)
             return read_las_buffer(laszip_decompress(data_stream))
