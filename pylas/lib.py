@@ -242,7 +242,7 @@ def create_las(point_format=0, file_version=None):
     else:
         file_version = dims.min_file_version_for_point_format(point_format)
 
-    header = rawheader.RawHeader()
+    header = rawheader.HeaderFactory().new(file_version)
     header.version = str(file_version)
     header.point_data_format_id = point_format
 

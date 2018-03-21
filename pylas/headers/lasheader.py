@@ -62,7 +62,7 @@ class Header:
 
 
     @classmethod
-    def from_raw(cls, raw_header: rawheader.RawHeader):
+    def from_raw(cls, raw_header):
         version = '{}.{}'.format(raw_header.version_major, raw_header.version_minor)
         header = cls(version=version, point_format=raw_header.point_data_format_id)
         header.scales = (raw_header.x_scale, raw_header.y_scale, raw_header.z_scale)

@@ -164,6 +164,9 @@ def test_create_fmt_6(file1_4):
     for dim_name in dim_names_fmt_6:
         new[dim_name] = file1_4[dim_name]
 
+    for dim_name in dim_names_fmt_6:
+        assert np.allclose(new[dim_name], file1_4[dim_name])
+
     new = write_then_read_again(new)
     for dim_name in dim_names_fmt_6:
         assert np.allclose(new[dim_name], file1_4[dim_name])
