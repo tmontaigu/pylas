@@ -26,7 +26,7 @@ def read_uncompressed():
 @pytest.fixture()
 def get_header():
     with open(simple_las, mode='rb') as fin:
-        return pylas.headers.rawheader.RawHeader.read_from(fin)
+        return pylas.headers.rawheader.HeaderFactory().read_from_stream(fin)
 
 # TODO add test of global encoding
 def test_raw_header(get_header):
@@ -45,7 +45,7 @@ def test_raw_header(get_header):
     assert header.point_data_format_id == 3
     assert header.point_data_record_length == 34
     assert header.number_of_point_records == 1065
-    assert header.number_of_points_by_return == (925, 114, 21, 5, 0)
+    assert tuple(header.number_of_points_by_return) == (925, 114, 21, 5, 0)
     assert header.x_scale == 0.01
     assert header.y_scale == 0.01
     assert header.z_scale == 0.01
@@ -60,19 +60,16 @@ def test_raw_header(get_header):
     assert header.z_min == pytest.approx(406.59)
 
 
-def test_waveform_is_none(read_simple):
-    assert read_simple.header.start_of_waveform_data_packet_record is None
-
 
 def test_no_vlr_for_simple(read_simple):
     f = read_simple
     assert f.vlrs == []
 
 
-def every_byte_has_been_read(open_simple):
+def test_every_byte_has_been_read(open_simple):
     fp = open_simple
-    _ = LasData(fp)
-    assert fp.tell() == os.path.getsize('simple.las')
+    _ = pylas.open(fp)
+    assert fp.tell() == os.path.getsize(simple_las)
     fp.close()
 
 
