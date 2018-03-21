@@ -1,6 +1,8 @@
 import ctypes
 import datetime
 
+from .. import errors
+
 LAS_FILE_SIGNATURE = b'LASF'
 PROJECT_NAME = b'pylas'
 
@@ -136,8 +138,14 @@ class HeaderFactory:
     }
     offset_to_major_version = RawHeader1_1.version_major.offset
 
+    def _try_get_header_class(self, version):
+        try:
+            return self.version_to_header[version]
+        except KeyError:
+            raise errors.UnknownFileVersion(version)
+
     def new(self, version):
-        return self.version_to_header[version]()
+        return self._try_get_header_class(version)()
 
     def read_from_stream(self, stream):
         old_pos = stream.tell()
@@ -146,7 +154,7 @@ class HeaderFactory:
         minor = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), 'little')
         version = '{}.{}'.format(major, minor)
 
-        header_class = self.version_to_header[version]
+        header_class = self._try_get_header_class(version)
         stream.seek(old_pos)
         return header_class.from_buffer(bytearray(stream.read(ctypes.sizeof(header_class))))
 

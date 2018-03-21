@@ -9,7 +9,7 @@ from . import evlr, vlr
 from .compression import (compressed_id_to_uncompressed,
                           is_point_format_compressed,
                           laszip_decompress)
-from .headers import rawheader
+from . import headers
 from .lasdatas import las12, las14
 from .point import dims, record
 from . import errors
@@ -86,8 +86,7 @@ def read_las_stream(data_stream):
     """
     stream_start_pos = data_stream.tell()
     point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
-    # header = rawheader.RawHeader.read_from(data_stream)
-    header = rawheader.HeaderFactory().read_from_stream(data_stream)
+    header = headers.HeaderFactory().read_from_stream(data_stream)
 
     offset_diff = header.header_size - data_stream.tell()
     if offset_diff != 0:
@@ -140,8 +139,7 @@ def read_las_stream(data_stream):
 
         # TODO Should be in a function
         if dims.format_has_waveform_packet(header.point_data_format_id):
-            ge = rawheader.GlobalEncoding.from_buffer_copy(
-                header.reserved.to_bytes(2, byteorder='little'))
+            ge = header.global_encoding
             if ge.waveform_internal and not ge.waveform_external:
                 offset_diff = data_stream.tell() - header.start_of_waveform_data_packet_record
                 if offset_diff != 0:
@@ -154,12 +152,12 @@ def read_las_stream(data_stream):
                 b = bytearray(data_stream.read(vlr.VLR_HEADER_SIZE))
                 waveform_header = vlr.VLRHeader.from_buffer(b)
                 waveform_record = data_stream.read()
-                print(waveform_header.user_id, waveform_header.record_id,
+                logging.log(waveform_header.user_id, waveform_header.record_id,
                       waveform_header.record_length_after_header)
-                print("Read: {} MBytes of waveform_record".format(
+                logging.log("Read: {} MBytes of waveform_record".format(
                     len(waveform_record) / 10 ** 6))
             elif not ge.waveform_internal and ge.waveform_external:
-                print(
+                logging.info(
                     "Waveform data is in an external file, you'll have to load it yourself")
             else:
                 raise ValueError(
@@ -242,7 +240,7 @@ def create_las(point_format=0, file_version=None):
     else:
         file_version = dims.min_file_version_for_point_format(point_format)
 
-    header = rawheader.HeaderFactory().new(file_version)
+    header = headers.HeaderFactory().new(file_version)
     header.version = str(file_version)
     header.point_data_format_id = point_format
 
