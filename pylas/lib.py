@@ -86,7 +86,8 @@ def read_las_stream(data_stream):
     """
     stream_start_pos = data_stream.tell()
     point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
-    header = rawheader.RawHeader.read_from(data_stream)
+    # header = rawheader.RawHeader.read_from(data_stream)
+    header = rawheader.HeaderFactory().read_from_stream(data_stream)
 
     offset_diff = header.header_size - data_stream.tell()
     if offset_diff != 0:
