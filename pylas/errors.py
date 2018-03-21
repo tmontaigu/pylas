@@ -1,3 +1,7 @@
+""" All the custom exceptions types
+"""
+
+
 class UnknownExtraType(Exception):
     pass
 

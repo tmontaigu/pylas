@@ -1,3 +1,9 @@
+""" The functions related to the LAZ format (compressed LAS)
+Lazperf is made optional by catching the ModuleNotFoundError, and raisin an exception
+when compression/decompression is actually needed
+
+There are also functions to use Laszip (meant to be used as a fallback)
+"""
 import os
 import subprocess
 

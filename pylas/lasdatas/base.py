@@ -100,8 +100,8 @@ class LasBase(object):
         self.update_header()
 
         if do_compress:
-            lazvrl = create_laz_vlr(self.header.point_data_format_id)
-            self.vlrs.append(vlr.LasZipVlr(lazvrl.data()))
+            laz_vrl = create_laz_vlr(self.header.point_data_format_id)
+            self.vlrs.append(vlr.LasZipVlr(laz_vrl.data()))
 
             self.header.offset_to_point_data = self.header.header_size + \
                 self.vlrs.total_size_in_bytes()
@@ -111,7 +111,7 @@ class LasBase(object):
 
             compressed_points = compress_buffer(
                 np.frombuffer(self.points_data.array, np.uint8),
-                lazvrl.schema,
+                laz_vrl.schema,
                 self.header.offset_to_point_data,
             )
 

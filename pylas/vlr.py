@@ -1,3 +1,8 @@
+""" The definition of the VLR Header, VLR, and VRL List as well as all the KnownVLR
+ are in this module.
+
+ A KnownVLR is a VLR that we know how to parse its record_data
+"""
 import ctypes
 from abc import ABC, abstractmethod, abstractclassmethod
 

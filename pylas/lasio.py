@@ -1,3 +1,5 @@
+""" Contains a the helper class used to read and write the las header
+"""
 import struct
 
 type_name_to_struct = {

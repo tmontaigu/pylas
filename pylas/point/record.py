@@ -1,9 +1,14 @@
+""" Contains the classes that manages Las PointRecords
+Las PointRecords are represented using Numpy's structured arrays,
+The PointRecord classes provide a few extra things to manage these arrays
+in the context of Las point data
+"""
 from abc import ABC, abstractclassmethod, abstractmethod
 
 import numpy as np
 
 from pylas.compression import decompress_buffer
-from pylas.point import dims
+from pylas.point import dims, packing
 
 
 class PointRecord(ABC):
@@ -105,7 +110,7 @@ class PackedPointRecord(PointRecord):
         """
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
-            return dims.unpack(self.array[composed_dim], sub_field.mask, dtype=sub_field.type)
+            return packing.unpack(self.array[composed_dim], sub_field.mask, dtype=sub_field.type)
         except KeyError:
             return self.array[item]
 
@@ -120,7 +125,7 @@ class PackedPointRecord(PointRecord):
             )
         try:
             composed_dim, sub_field = self.sub_fields_dict[key]
-            dims.pack(
+            packing.pack(
                 self.array[composed_dim],
                 value,
                 sub_field.mask,
@@ -217,7 +222,7 @@ class UnpackedPointRecord(PointRecord):
         return self.array.tobytes()
 
     def repack_sub_fields(self):
-        return dims.repack_sub_fields(self.array, self.point_format_id)
+        return packing.repack_sub_fields(self.array, self.point_format_id)
 
     def write_to(self, out):
         out.write(self.repack_sub_fields().tobytes())
@@ -258,7 +263,7 @@ class UnpackedPointRecord(PointRecord):
         data = np.frombuffer(
             point_data_buffer, dtype=points_dtype, count=count)
 
-        point_record = dims.unpack_sub_fields(
+        point_record = packing.unpack_sub_fields(
             data, point_format_id, extra_dims=extra_dims)
 
         return cls(point_record, point_format_id)
@@ -269,7 +274,7 @@ class UnpackedPointRecord(PointRecord):
             compressed_stream, point_format_id, count, laszip_vlr)
         uncompressed.flags.writeable = True
 
-        point_record = dims.unpack_sub_fields(uncompressed, point_format_id)
+        point_record = packing.unpack_sub_fields(uncompressed, point_format_id)
 
         return cls(point_record, point_format_id)
 

@@ -8,7 +8,6 @@ name = "pypi"
 [packages]
 
 numpy = "*"
-"7422b46" = {path = ".\\lazperf-1.1-cp36-cp36m-win_amd64.whl"}
 
 
 [dev-packages]

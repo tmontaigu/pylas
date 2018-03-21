@@ -1,3 +1,6 @@
+""" 'Entry point' of the library,
+ Contains the various functions meant to be use directly by a user
+"""
 import io
 import logging
 import struct
