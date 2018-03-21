@@ -1,6 +1,6 @@
 import io
+import logging
 import struct
-import warnings
 
 from . import evlr, vlr
 from .compression import (compressed_id_to_uncompressed,
@@ -66,7 +66,7 @@ def read_las_buffer(buffer):
 
 
 def _warn_diff_not_zero(diff, end_of, start_of):
-    warnings.warn("There are {} bytes between {} and {}".format(diff, end_of, start_of))
+    logging.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
 
 
 def read_las_stream(data_stream):
@@ -109,7 +109,7 @@ def read_las_stream(data_stream):
         offset_to_chunk_table = struct.unpack('<q', data_stream.read(8))[0]
         size_of_point_data = offset_to_chunk_table - data_stream.tell()
         if offset_to_chunk_table <= 0:
-            warnings.warn("Strange offset to chunk table: {}, ignoring it..".format(
+            logging.warning("Strange offset to chunk table: {}, ignoring it..".format(
                 offset_to_chunk_table))
             size_of_point_data = -1  # Read everything
 
@@ -121,8 +121,7 @@ def read_las_stream(data_stream):
                 laszip_vlr
             )
         except RuntimeError as e:
-            # warnings.war or logging.warn ?
-            warnings.warn("LazPerf failed to decompress ({}) trying laszip".format(e))
+            logging.error("LazPerf failed to decompress ({}), trying laszip.".format(e))
             data_stream.seek(stream_start_pos)
             return read_las_buffer(laszip_decompress(data_stream))
 
