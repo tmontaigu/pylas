@@ -60,18 +60,15 @@ def test_raw_header(get_header):
     assert header.z_min == pytest.approx(406.59)
 
 
-def test_waveform_is_none(read_simple):
-    assert read_simple.header.start_of_waveform_data_packet_record is None
-
 
 def test_no_vlr_for_simple(read_simple):
     f = read_simple
     assert f.vlrs == []
 
 
-def every_byte_has_been_read(open_simple):
+def test_every_byte_has_been_read(open_simple):
     fp = open_simple
-    _ = LasData(fp)
+    _ = pylas.open(fp)
     assert fp.tell() == os.path.getsize('simple.las')
     fp.close()
 
