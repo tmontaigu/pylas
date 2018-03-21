@@ -73,6 +73,8 @@ class PackedPointRecord(PointRecord):
             data.dtype) if point_format_id is None else point_format_id
         self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(
             self.point_format_id)
+        # TODO: Where to output extra dims names, here or in another method ?
+        self.dimensions_names = set(dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names)
 
     @property
     def point_size(self):
@@ -81,14 +83,6 @@ class PackedPointRecord(PointRecord):
     @property
     def actual_point_size(self):
         return self.point_size
-
-    # TODO: Where to output extra dims names, here or in another method ?
-    @property
-    def dimensions_names(self):
-        """ Returns the name of all the Standard LAS dimensions contained
-        in the point record
-        """
-        return dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
 
     def add_extra_dims(self, type_tuples):
         dtype_with_extra_dims = dims.dtype_append(

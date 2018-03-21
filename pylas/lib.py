@@ -224,6 +224,12 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
 
+def create_from_header(header):
+    if header.version >= '1.4':
+        return las14.LasData(header=header)
+    return las12.LasData(header=header)
+
+
 def create_las(point_format=0, file_version=None):
     if file_version is not None and point_format not in dims.VERSION_TO_POINT_FMT[file_version]:
         raise ValueError('Point format {} is not compatible with file version {}'.format(

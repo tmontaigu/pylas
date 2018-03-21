@@ -20,7 +20,6 @@ class VLRHeader(ctypes.LittleEndianStructure):
         return cls.from_buffer(bytearray(stream.read(ctypes.sizeof(cls))))
 
 
-
 VLR_HEADER_SIZE = ctypes.sizeof(VLRHeader)
 
 
@@ -521,6 +520,9 @@ class VLRList:
 
     def append(self, vlr):
         self.vlrs.append(vlr)
+
+    def extend(self, vlr_list):
+        self.vlrs.extend(vlr_list)
 
     def get_by_id(self, user_id='', record_ids=(None,)):
         if user_id != '' and record_ids != (None,):

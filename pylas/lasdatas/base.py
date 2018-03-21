@@ -76,7 +76,7 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        if key in dims.DIMENSIONS or key in self.points_data.sub_fields_dict:
+        if key in dims.DIMENSIONS or key in self.points_data.dimensions_names:
             self.points_data[key] = value
         else:
             super().__setattr__(key, value)
