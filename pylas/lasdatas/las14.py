@@ -1,6 +1,5 @@
+from pylas.vlrs.known import ExtraBytesVlr, ExtraBytesStruct
 from .base import LasBase
-from ..headers import rawheader
-from ..vlr import ExtraBytesVlr, ExtraBytesStruct
 from .. import extradims
 
 

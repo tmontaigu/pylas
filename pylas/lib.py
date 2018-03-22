@@ -5,14 +5,16 @@ import io
 import logging
 import struct
 
-from . import evlr, vlr
+import pylas.vlrs.rawvlr
+import pylas.vlrs.vlrlist
+from . import errors
+from . import evlr
+from . import headers
 from .compression import (compressed_id_to_uncompressed,
                           is_point_format_compressed,
                           laszip_decompress)
-from . import headers
 from .lasdatas import las12, las14
 from .point import dims, record
-from . import errors
 
 USE_UNPACKED = False
 
@@ -69,10 +71,6 @@ def read_las_buffer(buffer):
         return read_las_stream(stream)
 
 
-def _warn_diff_not_zero(diff, end_of, start_of):
-    logging.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
-
-
 def read_las_stream(data_stream):
     """ Reads a stream (file object like)
 
@@ -85,7 +83,6 @@ def read_las_stream(data_stream):
     LasData
     """
     stream_start_pos = data_stream.tell()
-    point_record = record.UnpackedPointRecord if USE_UNPACKED else record.PackedPointRecord
     header = headers.HeaderFactory().read_from_stream(data_stream)
 
     offset_diff = header.header_size - data_stream.tell()
@@ -93,7 +90,7 @@ def read_las_stream(data_stream):
         _warn_diff_not_zero(offset_diff, 'end of Header', 'start of VLRs')
         data_stream.seek(header.header_size)
 
-    vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
+    vlrs = pylas.vlrs.vlrlist.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
     try:
         extra_dims = vlrs.get('ExtraBytesVlr')[0].type_of_extra_dims()
@@ -110,16 +107,9 @@ def read_las_stream(data_stream):
         header.point_data_format_id = compressed_id_to_uncompressed(
             header.point_data_format_id)
 
-        offset_to_chunk_table = struct.unpack('<q', data_stream.read(8))[0]
-        size_of_point_data = offset_to_chunk_table - data_stream.tell()
-        if offset_to_chunk_table <= 0:
-            logging.warning("Strange offset to chunk table: {}, ignoring it..".format(
-                offset_to_chunk_table))
-            size_of_point_data = -1  # Read everything
-
         try:
-            points = point_record.from_compressed_buffer(
-                data_stream.read(size_of_point_data),
+            points = _read_compressed_points_data(
+                data_stream,
                 header.point_data_format_id,
                 header.number_of_point_records,
                 laszip_vlr
@@ -130,38 +120,27 @@ def read_las_stream(data_stream):
             return read_las_buffer(laszip_decompress(data_stream))
 
     else:
-        points = point_record.from_stream(
+        points = record.PackedPointRecord.from_stream(
             data_stream,
             header.point_data_format_id,
             header.number_of_point_records,
             extra_dims
         )
 
-        # TODO Should be in a function
         if dims.format_has_waveform_packet(header.point_data_format_id):
-            ge = header.global_encoding
-            if ge.waveform_internal and not ge.waveform_external:
-                offset_diff = data_stream.tell() - header.start_of_waveform_data_packet_record
-                if offset_diff != 0:
-                    _warn_diff_not_zero(offset_diff, 'end of point records', 'start of waveform data')
-                    data_stream.seek(-offset_diff, io.SEEK_CUR)
+            is_internal, is_external = header.global_encoding.waveform_internal, header.global_encoding.waveform_external
+            if is_internal == is_external:
+                raise ValueError(
+                    'Incoherent values for internal and external waveform flags, both are {})'.format(
+                        'set' if is_internal else 'unset'
+                    ))
 
-                # This is strange, the spec says, waveform data packet is in a EVLR
-                #  but in the 2 samples I have its a VLR
-                # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
-                b = bytearray(data_stream.read(vlr.VLR_HEADER_SIZE))
-                waveform_header = vlr.VLRHeader.from_buffer(b)
-                waveform_record = data_stream.read()
-                logging.log(waveform_header.user_id, waveform_header.record_id,
-                      waveform_header.record_length_after_header)
-                logging.log("Read: {} MBytes of waveform_record".format(
-                    len(waveform_record) / 10 ** 6))
-            elif not ge.waveform_internal and ge.waveform_external:
+            if is_internal:
+                # TODO: Find out what to do with these
+                _, _ = _read_internal_waveform_packet(data_stream, header)
+            elif is_external:
                 logging.info(
                     "Waveform data is in an external file, you'll have to load it yourself")
-            else:
-                raise ValueError(
-                    'Incoherent values for internal and external waveform flags')
 
     if header.version_major >= 1 and header.version_minor >= 4:
         evlrs = [evlr.RawEVLR.read_from(data_stream)
@@ -169,6 +148,47 @@ def read_las_stream(data_stream):
         return las14.LasData(header=header, vlrs=vlrs, points=points, evlrs=evlrs)
 
     return las12.LasData(header=header, vlrs=vlrs, points=points)
+
+
+def _warn_diff_not_zero(diff, end_of, start_of):
+    logging.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
+
+
+def _read_compressed_points_data(data_stream, point_format_id, num_points, laszip_vlr):
+    offset_to_chunk_table = struct.unpack('<q', data_stream.read(8))[0]
+    size_of_point_data = offset_to_chunk_table - data_stream.tell()
+
+    if offset_to_chunk_table <= 0:
+        logging.warning("Strange offset to chunk table: {}, ignoring it..".format(
+            offset_to_chunk_table))
+        size_of_point_data = -1  # Read everything
+
+    points = record.PackedPointRecord.from_compressed_buffer(
+        data_stream.read(size_of_point_data),
+        point_format_id,
+        num_points,
+        laszip_vlr
+    )
+    return points
+
+
+def _read_internal_waveform_packet(data_stream, header):
+    offset_diff = data_stream.tell() - header.start_of_waveform_data_packet_record
+    if offset_diff != 0:
+        _warn_diff_not_zero(offset_diff, 'end of point records', 'start of waveform data')
+        data_stream.seek(-offset_diff, io.SEEK_CUR)
+    # This is strange, the spec says, waveform data packet is in a EVLR
+    #  but in the 2 samples I have its a VLR
+    # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
+    b = bytearray(data_stream.read(pylas.vlrs.rawvlr.VLR_HEADER_SIZE))
+    waveform_header = pylas.vlrs.rawvlr.VLRHeader.from_buffer(b)
+    waveform_record = data_stream.read()
+    logging.info(waveform_header.user_id, waveform_header.record_id,
+                 waveform_header.record_length_after_header)
+    logging.debug("Read: {} MBytes of waveform_record".format(
+        len(waveform_record) / 10 ** 6))
+
+    return waveform_header, waveform_record
 
 
 def convert(source_las, *, point_format_id=None, file_version=None):
@@ -241,7 +261,6 @@ def create_las(point_format=0, file_version=None):
         file_version = dims.min_file_version_for_point_format(point_format)
 
     header = headers.HeaderFactory().new(file_version)
-    header.version = str(file_version)
     header.point_data_format_id = point_format
 
     if file_version >= '1.4':

@@ -10,7 +10,7 @@ class PointFormatNotSupported(Exception):
     pass
 
 
-class UnknownFileVersion(Exception):
+class FileVersionNotSupported(Exception):
     pass
 
 

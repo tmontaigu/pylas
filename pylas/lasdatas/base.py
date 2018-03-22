@@ -1,8 +1,8 @@
 import numpy as np
 
+import pylas.vlrs.vlrlist
 from pylas.point import record, dims
-
-from .. import vlr
+from pylas.vlrs import known
 from ..compression import (compress_buffer, create_laz_vlr,
                            uncompressed_id_to_compressed)
 from ..headers import rawheader
@@ -20,7 +20,7 @@ class LasBase(object):
     def __init__(self, *, header=None, vlrs=None, points=None):
         self.__dict__[
             'header'] = header if header is not None else rawheader.RawHeader()
-        self.__dict__['vlrs'] = vlrs if vlrs is not None else vlr.VLRList()
+        self.__dict__['vlrs'] = vlrs if vlrs is not None else pylas.vlrs.vlrlist.VLRList()
         if points is not None:
             if isinstance(points, record.PointRecord):
                 self.__dict__['points_data'] = points
@@ -104,7 +104,7 @@ class LasBase(object):
 
         if do_compress:
             laz_vrl = create_laz_vlr(self.header.point_data_format_id)
-            self.vlrs.append(vlr.LasZipVlr(laz_vrl.data()))
+            self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
 
             self.header.offset_to_point_data = self.header.header_size + \
                 self.vlrs.total_size_in_bytes()
