@@ -339,6 +339,9 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
         raw.record_data = bytes(self.parsed_record)
         return raw
 
+    def parse_record_data(self, record_data):
+        self.parsed_record = WaveformPacketStruct.from_buffer_copy(record_data)
+
     def __len__(self):
         return super().__len__() + WaveformPacketStruct.size()
 
@@ -354,7 +357,7 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
     def from_raw(cls, raw_vlr):
         vlr = cls(raw_vlr.header.record_id, description=raw_vlr.header.description.decode())
         vlr.description = raw_vlr.header.description
-        vlr.parsed_record = WaveformPacketStruct.from_buffer_copy(raw_vlr.record_data)
+        vlr.parse_record_data(raw_vlr.record_data)
         return vlr
 
 
