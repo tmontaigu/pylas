@@ -129,9 +129,18 @@ class RawHeader1_4(RawHeader1_3):
         ('start_of_first_evlr', ctypes.c_uint64),
         ('number_of_evlr', ctypes.c_uint32),
         ('number_of_point_records', ctypes.c_uint64),
-        ('number_of_points_by_return', ctypes.c_uint64 * 15)
+        ('_number_of_points_by_return', ctypes.c_uint64 * 15)
     ]
 
+    @property
+    def number_of_points_by_return(self):
+        return self._number_of_points_by_return
+
+    @number_of_points_by_return.setter
+    def number_of_points_by_return(self, value):
+        value = tuple(value)
+        self.legacy_number_of_points_by_return = value[:5]
+        self._number_of_points_by_return = value
 
 class HeaderFactory:
     version_to_header = {
