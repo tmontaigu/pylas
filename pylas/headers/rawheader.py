@@ -109,7 +109,6 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
 class RawHeader1_2(RawHeader1_1):
     _version_ = '1.2'
-    pass
 
 
 class RawHeader1_3(RawHeader1_2):
