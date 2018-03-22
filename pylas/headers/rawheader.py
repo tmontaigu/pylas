@@ -142,7 +142,7 @@ class HeaderFactory:
         try:
             return self.version_to_header[version]
         except KeyError:
-            raise errors.UnknownFileVersion(version)
+            raise errors.FileVersionNotSupported(version)
 
     def new(self, version):
         return self._try_get_header_class(version)()

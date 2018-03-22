@@ -398,4 +398,4 @@ def is_point_fmt_compatible_with_version(point_format_id, file_version):
     try:
         return point_format_id in VERSION_TO_POINT_FMT[str(file_version)]
     except KeyError:
-        raise errors.UnknownFileVersion(file_version)
+        raise errors.FileVersionNotSupported(file_version)
