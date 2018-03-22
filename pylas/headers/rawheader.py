@@ -87,7 +87,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         try:
             self.header_size = LAS_HEADERS_SIZE[str(new_version)]
         except KeyError:
-            raise ValueError('{} is not a valid las header version')
+            raise ValueError('{} is not a valid las header version'.format(new_version))
         self.version_major, self.version_minor = map(
             int, new_version.split('.'))
 
