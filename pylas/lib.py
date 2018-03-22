@@ -5,14 +5,16 @@ import io
 import logging
 import struct
 
-from . import evlr, vlr
+import pylas.vlrs.rawvlr
+import pylas.vlrs.vlrlist
+from . import errors
+from . import evlr
+from . import headers
 from .compression import (compressed_id_to_uncompressed,
                           is_point_format_compressed,
                           laszip_decompress)
-from . import headers
 from .lasdatas import las12, las14
 from .point import dims, record
-from . import errors
 
 USE_UNPACKED = False
 
@@ -88,7 +90,7 @@ def read_las_stream(data_stream):
         _warn_diff_not_zero(offset_diff, 'end of Header', 'start of VLRs')
         data_stream.seek(header.header_size)
 
-    vlrs = vlr.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
+    vlrs = pylas.vlrs.vlrlist.VLRList.read_from(data_stream, num_to_read=header.number_of_vlr)
 
     try:
         extra_dims = vlrs.get('ExtraBytesVlr')[0].type_of_extra_dims()
@@ -178,8 +180,8 @@ def _read_internal_waveform_packet(data_stream, header):
     # This is strange, the spec says, waveform data packet is in a EVLR
     #  but in the 2 samples I have its a VLR
     # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
-    b = bytearray(data_stream.read(vlr.VLR_HEADER_SIZE))
-    waveform_header = vlr.VLRHeader.from_buffer(b)
+    b = bytearray(data_stream.read(pylas.vlrs.rawvlr.VLR_HEADER_SIZE))
+    waveform_header = pylas.vlrs.rawvlr.VLRHeader.from_buffer(b)
     waveform_record = data_stream.read()
     logging.info(waveform_header.user_id, waveform_header.record_id,
                  waveform_header.record_length_after_header)
