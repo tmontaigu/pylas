@@ -1,10 +1,8 @@
-import pylas
-
 from setuptools import setup, find_packages
 
 setup(
     name='pylas',
-    version=pylas.__version__,
+    version='0.1',
     description='Las/Laz in python',
     url='https://github.com/tmontaigu/pylas',
     author='Thomas Montaigu',
