@@ -6,3 +6,5 @@ from .point.dims import (
     supported_point_formats,
     lost_dimensions,
 )
+
+__version__ = '0.1.0'
