@@ -78,6 +78,10 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def number_of_points_by_return(self):
         return self.legacy_number_of_points_by_return
 
+    @number_of_points_by_return.setter
+    def number_of_points_by_return(self, value):
+        self.legacy_number_of_points_by_return = tuple(value)
+
     @property
     def version(self):
         return "{}.{}".format(self.version_major, self.version_minor)

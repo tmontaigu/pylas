@@ -96,6 +96,9 @@ class LasBase(object):
             self.header.y_min = self.y.min()
             self.header.z_min = self.z.min()
 
+            unique, counts = np.unique(self.return_number, return_counts=True)
+            self.header.number_of_points_by_return = counts
+
     def write_to(self, out_stream, do_compress=False):
         self.update_header()
 
