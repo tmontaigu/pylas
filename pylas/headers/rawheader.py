@@ -1,8 +1,10 @@
 import ctypes
 import datetime
-import warnings
+import logging
 
 from .. import errors
+
+logger = logging.getLogger(__name__)
 
 LAS_FILE_SIGNATURE = b'LASF'
 PROJECT_NAME = b'pylas'
@@ -81,17 +83,9 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @number_of_points_by_return.setter
     def number_of_points_by_return(self, value):
-        try:
-            self.legacy_number_of_points_by_return = tuple(value)
-        except RuntimeError as e:
-            if 'invalid index' in str(e):
-                l = len(value)
-                warnings.warn(
-                    f'Max return too high, {l}, for LAS version, truncating.',
-                    errors.LasVersionWarning)
-                self.legacy_number_of_points_by_return = tuple(value[:5])
-            else:
-                raise e
+        if len(value) > 5:
+            logger.warning('Received return numbers up to {}, truncating to 5 for header.'.format(len(value)))
+        self.legacy_number_of_points_by_return = tuple(value[:5])
 
     @property
     def version(self):
@@ -150,17 +144,9 @@ class RawHeader1_4(RawHeader1_3):
     def number_of_points_by_return(self, value):
         value = tuple(value)
         self.legacy_number_of_points_by_return = value[:5]
-        try:
-            self._number_of_points_by_return = value
-        except RuntimeError as e:
-            if 'invalid index' in str(e):
-                l = len(value)
-                warnings.warn(
-                    f'Max return too high, {l}, for LAS version, truncating.',
-                    errors.LasVersionWarning)
-                self._number_of_points_by_return = value[:15]
-            else:
-                raise e
+        if len(value) > 15:
+            logger.warning('Received return numbers up to {}, truncating to 15 for header.'.format(len(value)))
+        self._number_of_points_by_return = value[:15]
 
 class HeaderFactory:
     version_to_header = {
