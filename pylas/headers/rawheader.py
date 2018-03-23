@@ -1,5 +1,6 @@
 import ctypes
 import datetime
+import warnings
 
 from .. import errors
 
@@ -80,7 +81,17 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @number_of_points_by_return.setter
     def number_of_points_by_return(self, value):
-        self.legacy_number_of_points_by_return = tuple(value)
+        try:
+            self.legacy_number_of_points_by_return = tuple(value)
+        except RuntimeError as e:
+            if 'invalid index' in str(e):
+                l = len(value)
+                warnings.warn(
+                    f'Max return too high, {l}, for LAS version, truncating.',
+                    errors.LasVersionWarning)
+                self.legacy_number_of_points_by_return = tuple(value[:5])
+            else:
+                raise e
 
     @property
     def version(self):
@@ -140,7 +151,17 @@ class RawHeader1_4(RawHeader1_3):
     def number_of_points_by_return(self, value):
         value = tuple(value)
         self.legacy_number_of_points_by_return = value[:5]
-        self._number_of_points_by_return = value
+        try:
+            self._number_of_points_by_return = value
+        except RuntimeError as e:
+            if 'invalid index' in str(e):
+                l = len(value)
+                warnings.warn(
+                    f'Max return too high, {l}, for LAS version, truncating.',
+                    errors.LasVersionWarning)
+                self._number_of_points_by_return = value[:15]
+            else:
+                raise e
 
 class HeaderFactory:
     version_to_header = {

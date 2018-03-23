@@ -20,3 +20,8 @@ class LazPerfNotFound(Exception):
 
 class IncompatibleDataFormat(Exception):
     pass
+
+class LasVersionWarning(UserWarning):
+    """
+    Warnings related to incompatible values for LAS version.
+    """
