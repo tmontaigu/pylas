@@ -102,7 +102,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         try:
             self.header_size = LAS_HEADERS_SIZE[str(new_version)]
         except KeyError:
-            raise ValueError('{} is not a valid las header version')
+            raise ValueError('{} is not a valid las header version'.format(new_version))
         self.version_major, self.version_minor = map(
             int, new_version.split('.'))
 
@@ -124,7 +124,6 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
 class RawHeader1_2(RawHeader1_1):
     _version_ = '1.2'
-    pass
 
 
 class RawHeader1_3(RawHeader1_2):
@@ -176,7 +175,7 @@ class HeaderFactory:
         try:
             return self.version_to_header[version]
         except KeyError:
-            raise errors.UnknownFileVersion(version)
+            raise errors.FileVersionNotSupported(version)
 
     def new(self, version):
         return self._try_get_header_class(version)()

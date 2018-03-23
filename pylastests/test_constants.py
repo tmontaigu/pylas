@@ -2,7 +2,7 @@ import pylas
 
 
 def test_vlr_header_size():
-    assert pylas.vlr.VLR_HEADER_SIZE == 54
+    assert pylas.vlrs.rawvlr.VLR_HEADER_SIZE == 54
 
 
 def test_header_sizes():

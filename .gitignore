@@ -7,3 +7,4 @@
 tests/.cache
 tests/.pytest_cache
 pylas.egg-info
+.pytest_cache

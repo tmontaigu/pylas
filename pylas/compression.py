@@ -28,13 +28,10 @@ def raise_if_no_lazperf():
 
 
 def is_point_format_compressed(point_format_id):
-    try:
-        compression_bit_7 = (point_format_id & 0x80) >> 7
-        compression_bit_6 = (point_format_id & 0x40) >> 6
-        if not compression_bit_6 and compression_bit_7:
-            return True
-    except ValueError:
-        pass
+    compression_bit_7 = (point_format_id & 0x80) >> 7
+    compression_bit_6 = (point_format_id & 0x40) >> 6
+    if not compression_bit_6 and compression_bit_7:
+        return True
     return False
 
 
