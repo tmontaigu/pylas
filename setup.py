@@ -7,7 +7,7 @@ setup(
     url='https://github.com/tmontaigu/pylas',
     author='Thomas Montaigu',
     install_requires=['numpy'],
-    # license='MIT',
+    license='BSD 3-Clause',
     packages=find_packages(exclude=('pylastests',)),
     zip_safe=False
 )
