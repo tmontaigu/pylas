@@ -3,6 +3,7 @@ import datetime
 import logging
 
 from .. import errors
+from .. import compression
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         ('header_size', ctypes.c_uint16),
         ('offset_to_point_data', ctypes.c_uint32),
         ('number_of_vlr', ctypes.c_uint32),
-        ('point_data_format_id', ctypes.c_uint8),
+        ('_point_data_format_id', ctypes.c_uint8),
         ('point_data_record_length', ctypes.c_uint16),
         ('legacy_number_of_point_records', ctypes.c_uint32),
         ('legacy_number_of_points_by_return', ctypes.c_uint32 * 5),
@@ -115,6 +116,17 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def write_to(self, out_stream):
         out_stream.write(bytes(self))
 
+    @property
+    def point_data_format_id(self):
+        return compression.compressed_id_to_uncompressed(self._point_data_format_id)
+
+    @point_data_format_id.setter
+    def point_data_format_id(self, value):
+        self._point_data_format_id = value
+
+    @property
+    def points_are_compressed(self):
+        return compression.is_point_format_compressed(self._point_data_format_id)
 
 class RawHeader1_2(RawHeader1_1):
     _version_ = '1.2'

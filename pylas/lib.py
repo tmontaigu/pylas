@@ -10,9 +10,7 @@ import pylas.vlrs.vlrlist
 from . import errors
 from . import evlr
 from . import headers
-from .compression import (compressed_id_to_uncompressed,
-                          is_point_format_compressed,
-                          laszip_decompress)
+from .compression import laszip_decompress
 from .lasdatas import las12, las14
 from .point import dims, record
 
@@ -102,10 +100,8 @@ def read_las_stream(data_stream):
         _warn_diff_not_zero(offset_diff, 'end of VLRs', 'start of point records')
         data_stream.seek(header.offset_to_point_data)
 
-    if is_point_format_compressed(header.point_data_format_id):
+    if header.points_are_compressed:
         laszip_vlr = vlrs.pop(vlrs.index('LasZipVlr'))
-        header.point_data_format_id = compressed_id_to_uncompressed(
-            header.point_data_format_id)
 
         try:
             points = _read_compressed_points_data(
