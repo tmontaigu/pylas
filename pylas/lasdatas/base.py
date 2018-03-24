@@ -18,18 +18,12 @@ def unscale_dimension(array_dim, scale, offset):
 
 class LasBase(object):
     def __init__(self, *, header=None, vlrs=None, points=None):
-        self.__dict__[
-            'header'] = header if header is not None else rawheader.RawHeader()
-        self.__dict__['vlrs'] = vlrs if vlrs is not None else pylas.vlrs.vlrlist.VLRList()
-        if points is not None:
-            if isinstance(points, record.PointRecord):
-                self.__dict__['points_data'] = points
-            else:
-                self.__dict__['points_data'] = record.PackedPointRecord(points)
-                self.header.point_data_format_id = self.points_data.point_format_id
-        else:
-            self.__dict__['points_data'] = record.PackedPointRecord.empty(
-                self.header.point_data_format_id)
+        if points is None:
+            points = record.PackedPointRecord.empty(header.point_data_format_id)
+        self.__dict__['points_data'] = points
+        self.header = header if header is not None else rawheader.HeaderFactory().new(
+            dims.min_file_version_for_point_format(self.points_data.point_format_id))
+        self.vlrs = vlrs if vlrs is not None else pylas.vlrs.vlrlist.VLRList()
 
     @property
     def x(self):
@@ -107,7 +101,7 @@ class LasBase(object):
             self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
 
             self.header.offset_to_point_data = self.header.header_size + \
-                self.vlrs.total_size_in_bytes()
+                                               self.vlrs.total_size_in_bytes()
             self.header.point_data_format_id = uncompressed_id_to_compressed(
                 self.header.point_data_format_id)
             self.header.number_of_vlr = len(self.vlrs)
@@ -125,7 +119,7 @@ class LasBase(object):
         else:
             self.header.number_of_vlr = len(self.vlrs)
             self.header.offset_to_point_data = self.header.header_size + \
-                self.vlrs.total_size_in_bytes()
+                                               self.vlrs.total_size_in_bytes()
 
             self.header.write_to(out_stream)
             self.vlrs.write_to(out_stream)
