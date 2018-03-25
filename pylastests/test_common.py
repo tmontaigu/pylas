@@ -117,7 +117,7 @@ def test_conversion_copies_fields(all_las_but_1_4):
         for dim_name in old_record.dimensions_names:
             try:
                 assert np.allclose(
-                    las.points_data[dim_name], old_record[dim_name])
+                    las.points_data[dim_name], old_record[dim_name]), "{} not equal".format(dim_name)
             except ValueError:
                 pass  # dim exists in old_record but not new
 
@@ -129,9 +129,9 @@ def test_rw_all_set_one(las):
         las[dim_name] = field
 
     for dim_name in las.points_data.dimensions_names:
-        assert np.alltrue(las[dim_name] == 1)
+        assert np.alltrue(las[dim_name] == 1), "{} not equal".format(dim_name)
 
     las2 = write_then_read_again(las)
 
     for dim_name in las.points_data.dimensions_names:
-        assert np.alltrue(las[dim_name] == las2[dim_name])
+        assert np.alltrue(las[dim_name] == las2[dim_name]), "{} not equal".format(dim_name)
