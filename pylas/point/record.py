@@ -76,10 +76,12 @@ class PackedPointRecord(PointRecord):
         self.array = data
         self.point_format_id = dims.np_dtype_to_point_format(
             data.dtype) if point_format_id is None else point_format_id
-        self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(
-            self.point_format_id)
-        # TODO: Where to output extra dims names, here or in another method ?
+        self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(self.point_format_id)
         self.dimensions_names = set(dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names)
+
+        standard_dims = self.dimensions_names.copy()
+        standard_dims.update(dims.get_dtype_of_format_id(self.point_format_id, unpacked=False).names)
+        self.extra_dimensions_names = set(self.array.dtype.names).difference(standard_dims)
 
     @property
     def point_size(self):
