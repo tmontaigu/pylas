@@ -2,9 +2,11 @@
 **/*.laz
 **/*.pyc
 
-.idea
-.vscode
-tests/.cache
-tests/.pytest_cache
-pylas.egg-info
-.pytest_cache
+.idea/
+.vscode/
+pylastests/.cache/
+pylastests/.pytest_cache/
+pylas.egg-info/
+.pytest_cache/
+.cache/
+.mypy_cache/
