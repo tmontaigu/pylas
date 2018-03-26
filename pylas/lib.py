@@ -100,7 +100,7 @@ def read_las_stream(data_stream):
         _warn_diff_not_zero(offset_diff, 'end of VLRs', 'start of point records')
         data_stream.seek(header.offset_to_point_data)
 
-    if header.points_are_compressed:
+    if header.are_points_compressed:
         laszip_vlr = vlrs.pop(vlrs.index('LasZipVlr'))
 
         try:

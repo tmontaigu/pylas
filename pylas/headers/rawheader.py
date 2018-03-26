@@ -125,7 +125,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         self._point_data_format_id = value
 
     @property
-    def points_are_compressed(self):
+    def are_points_compressed(self):
         return compression.is_point_format_compressed(self._point_data_format_id)
 
 class RawHeader1_2(RawHeader1_1):
