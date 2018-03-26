@@ -190,11 +190,15 @@ class PackedPointRecord(PointRecord):
         return cls(uncompressed, point_format_id)
 
     @classmethod
+    def zeros(cls, point_format_id, point_count):
+        data = np.zeros(point_count, dtype=dims.get_dtype_of_format_id(point_format_id))
+        return cls(data, point_format_id)
+
+    @classmethod
     def empty(cls, point_format_id):
         """ Creates an empty points record with the specified point format
         """
-        data = np.zeros(0, dtype=dims.get_dtype_of_format_id(point_format_id))
-        return cls(data, point_format_id)
+        return cls.zeros(point_format_id, point_count=0)
 
 
 # TODO This class is not used, the challenge is to find a way to make the user able to choose between Packed & Unpacked

@@ -243,9 +243,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
 
 def create_from_header(header):
+    points = record.PackedPointRecord.zeros(header.point_data_format_id, header.number_of_point_records)
     if header.version >= '1.4':
-        return las14.LasData(header=header)
-    return las12.LasData(header=header)
+        return las14.LasData(header=header, points=points)
+    return las12.LasData(header=header, points=points)
 
 
 def create_las(point_format=0, file_version=None):
