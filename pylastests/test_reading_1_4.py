@@ -6,7 +6,7 @@ from pylastests.test_common import test1_4_las
 
 @pytest.fixture()
 def file():
-    return pylas.open(test1_4_las)
+    return pylas.read(test1_4_las)
 
 
 def test_unscaled_x(file):

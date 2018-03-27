@@ -1,5 +1,5 @@
-from pylas.vlrs.known import vlr_factory
-from pylas.vlrs.rawvlr import RawVLR
+from .known import vlr_factory
+from .rawvlr import RawVLR
 
 
 class VLRList:

@@ -10,7 +10,7 @@ from pylastests.test_common import simple_las, simple_laz
 
 @pytest.fixture(params=[simple_las, simple_laz], scope='session')
 def read_simple(request):
-    return pylas.open(request.param)
+    return pylas.read(request.param)
 
 
 @pytest.fixture()
@@ -20,13 +20,14 @@ def open_simple():
 
 @pytest.fixture()
 def read_uncompressed():
-    return pylas.open(simple_laz)
+    return pylas.read(simple_laz)
 
 
 @pytest.fixture()
 def get_header():
-    with open(simple_las, mode='rb') as fin:
-        return pylas.headers.rawheader.HeaderFactory().read_from_stream(fin)
+    with pylas.open(simple_las) as fin:
+        return fin.header
+
 
 # TODO add test of global encoding
 def test_raw_header(get_header):
@@ -60,7 +61,6 @@ def test_raw_header(get_header):
     assert header.z_min == pytest.approx(406.59)
 
 
-
 def test_no_vlr_for_simple(read_simple):
     f = read_simple
     assert f.vlrs == []
@@ -68,7 +68,7 @@ def test_no_vlr_for_simple(read_simple):
 
 def test_every_byte_has_been_read(open_simple):
     fp = open_simple
-    _ = pylas.open(fp)
+    _ = pylas.read(fp, closefd=False)
     assert fp.tell() == os.path.getsize(simple_las)
     fp.close()
 
@@ -177,15 +177,13 @@ def test_blue(read_simple):
     assert f.blue.min() == 56
 
 
-
-
-
 def test_read_write_read(read_simple):
     out = io.BytesIO()
     read_simple.write(out)
     out.seek(0)
 
-    _ = pylas.open(out)
+    _ = pylas.read(out)
+
 
 # TODO factorize with test above
 def test_read_write_read_laz(read_simple):
@@ -193,12 +191,12 @@ def test_read_write_read_laz(read_simple):
     read_simple.write(out, do_compress=True)
     out.seek(0)
 
-    _ = pylas.open(out)
+    _ = pylas.read(out)
 
 
 def test_decompression_is_same_as_uncompressed():
-    u_las = pylas.open(simple_las)
-    c_las = pylas.open(simple_laz)
+    u_las = pylas.read(simple_las)
+    c_las = pylas.read(simple_laz)
 
     u_point_buffer = u_las.points_data.raw_bytes()
     c_points_buffer = c_las.points_data.raw_bytes()

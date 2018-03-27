@@ -2,17 +2,17 @@ import numpy as np
 import pytest
 
 import pylas
-from pylastests.test_common import test1_4_las, extra_bytes_las, write_then_read_again, simple_las
+from pylastests.test_common import test1_4_las, extra_bytes_las, write_then_read_again, extra_bytes_laz, simple_las
 
 
-@pytest.fixture()
-def extrab_las():
-    return pylas.open(extra_bytes_las)
+@pytest.fixture(params=[extra_bytes_las, extra_bytes_laz])
+def extrab_las(request):
+    return pylas.read(request.param)
 
 
 @pytest.fixture()
 def las1_4():
-    return pylas.open(test1_4_las)
+    return pylas.read(test1_4_las)
 
 
 def test_extra_names(extrab_las):
@@ -43,11 +43,8 @@ def test_add_extra_bytes(las1_4):
 
 
 def test_extra_dimensions_names_property():
-    simple = pylas.open(simple_las)
+    simple = pylas.read(simple_las)
     assert simple.points_data.extra_dimensions_names == set()
 
-    extra = pylas.open(extra_bytes_las)
+    extra = pylas.read(extra_bytes_las)
     assert extra.points_data.extra_dimensions_names == {'Colors', 'Intensity', 'Flags', 'Reserved', 'Time'}
-
-
-

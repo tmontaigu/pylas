@@ -7,8 +7,8 @@ from abc import ABC, abstractclassmethod, abstractmethod
 
 import numpy as np
 
-from pylas.compression import decompress_buffer
-from pylas.point import dims, packing
+from . import dims, packing
+from ..compression import decompress_buffer
 
 
 class PointRecord(ABC):

@@ -2,7 +2,7 @@
 """
 import numpy as np
 
-from pylas.point.dims import get_dtype_of_format_id, COMPOSED_FIELDS
+from .dims import get_dtype_of_format_id, COMPOSED_FIELDS
 
 
 def least_significant_bit(val):

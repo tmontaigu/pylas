@@ -1,6 +1,6 @@
-from pylas.vlrs.known import ExtraBytesVlr, ExtraBytesStruct
 from .base import LasBase
 from .. import extradims
+from ..vlrs.known import ExtraBytesVlr, ExtraBytesStruct
 
 
 class LasData(LasBase):

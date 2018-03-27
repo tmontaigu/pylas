@@ -13,23 +13,24 @@ simple_laz = os.path.dirname(__file__) + '/' + 'simple.laz'
 vegetation1_3_las = os.path.dirname(__file__) + '/vegetation_1_3.las'
 test1_4_las = os.path.dirname(__file__) + '/' + 'test1_4.las'
 extra_bytes_las = os.path.dirname(__file__) + '/extrabytes.las'
+extra_bytes_laz = os.path.dirname(__file__) + '/extra.laz'
 
 
 def write_then_read_again(las):
     out = io.BytesIO()
     las.write(out)
     out.seek(0)
-    return pylas.open(out)
+    return pylas.read(out)
 
 
 @pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las])
 def las(request):
-    return pylas.open(request.param)
+    return pylas.read(request.param)
 
 
 @pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las])
 def all_las_but_1_4(request):
-    return pylas.open(request.param)
+    return pylas.read(request.param)
 
 
 def dim_does_not_exists(las, dim_name):
@@ -46,6 +47,7 @@ def dim_does_exists(las, dim_name):
     except ValueError:
         return False
     return True
+
 
 # TODO: should propably use ALL_POiNTS_FORMATS_DIMS dict
 # to do this test
@@ -103,6 +105,7 @@ def test_change_format(las):
     assert dim_does_not_exists(las, 'green')
     assert dim_does_not_exists(las, 'blue')
     assert dim_does_not_exists(las, 'nir')
+
 
 # TODO: okay, so onversion from/to fmt <6 and > 6
 # cannot be tested like this becasue some fieds have more bits some there are some conversion 'issues'

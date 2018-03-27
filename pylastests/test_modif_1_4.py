@@ -9,7 +9,7 @@ from pylastests.test_common import test1_4_las
 
 @pytest.fixture(scope='session')
 def las():
-    return pylas.open(test1_4_las)
+    return pylas.read(test1_4_las)
 
 
 @pytest.fixture()
@@ -24,7 +24,7 @@ def test_classification(las, out):
     las.write(out)
     out.seek(0)
 
-    res = pylas.open(out)
+    res = pylas.read(out)
     assert np.alltrue(las.classification == res.classification)
 
 
@@ -35,5 +35,5 @@ def test_intensity(las, out):
     las.write(out)
     out.seek(0)
 
-    res = pylas.open(out)
+    res = pylas.read(out)
     assert np.alltrue(las.intensity == res.intensity)

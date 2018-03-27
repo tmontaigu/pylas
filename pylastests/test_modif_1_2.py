@@ -7,7 +7,7 @@ from pylastests.test_common import do_compression, simple_las, simple_laz
 
 @pytest.fixture(params=[simple_las, simple_laz])
 def las(request):
-    return pylas.open(request.param)
+    return pylas.read(request.param)
 
 
 def test_classification_overflows(las):
@@ -35,7 +35,7 @@ def test_classification_change(tmpdir, las, do_compress):
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
-    las = pylas.open(out)
+    las = pylas.read(out)
 
     assert np.allclose(c, las.classification)
 
@@ -54,7 +54,7 @@ def test_synthetic_change(tmpdir, las, do_compress):
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
-    las = pylas.open(out)
+    las = pylas.read(out)
 
     assert np.allclose(s, las.synthetic)
 
@@ -73,7 +73,7 @@ def test_key_point_change(tmpdir, las, do_compress):
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
-    las = pylas.open(out)
+    las = pylas.read(out)
 
     assert np.allclose(kp, las.key_point)
 
@@ -92,6 +92,6 @@ def test_withheld_changes(tmpdir, las, do_compress):
     out.close()
 
     out = tmpdir.join('tmp.las').open('rb')
-    las = pylas.open(out)
+    las = pylas.read(out)
 
     assert np.allclose(withheld, las.withheld)

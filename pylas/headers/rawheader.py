@@ -2,8 +2,8 @@ import ctypes
 import datetime
 import logging
 
-from .. import errors
 from .. import compression
+from .. import errors
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,9 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
         ('wkt', ctypes.c_uint16, 1),  # 1.4
         ('reserved', ctypes.c_uint16, 11),
     ]
+
+    def are_waveform_flag_equal(self):
+        return self.waveform_internal == self.waveform_external
 
 
 class RawHeader1_1(ctypes.LittleEndianStructure):
@@ -128,6 +131,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def are_points_compressed(self):
         return compression.is_point_format_compressed(self._point_data_format_id)
 
+
 class RawHeader1_2(RawHeader1_1):
     _version_ = '1.2'
 
@@ -160,6 +164,7 @@ class RawHeader1_4(RawHeader1_3):
             logger.warning('Received return numbers up to {}, truncating to 15 for header.'.format(len(value)))
         self._number_of_points_by_return = value[:15]
 
+
 class HeaderFactory:
     version_to_header = {
         '1.1': RawHeader1_1,
@@ -169,25 +174,36 @@ class HeaderFactory:
     }
     offset_to_major_version = RawHeader1_1.version_major.offset
 
-    def _try_get_header_class(self, version):
+    @classmethod
+    def header_class_for_version(cls, version):
         try:
-            return self.version_to_header[version]
+            return cls.version_to_header[str(version)]
         except KeyError:
             raise errors.FileVersionNotSupported(version)
 
-    def new(self, version):
-        return self._try_get_header_class(version)()
+    @classmethod
+    def new(cls, version):
+        return cls.header_class_for_version(version)()
 
-    def read_from_stream(self, stream):
+    @classmethod
+    def read_from_stream(cls, stream):
+        version = cls.peek_file_version(stream)
+        header_class = cls.header_class_for_version(version)
+        return header_class.from_buffer(bytearray(stream.read(ctypes.sizeof(header_class))))
+
+    @classmethod
+    def from_mmap(cls, mmap):
+        version = cls.peek_file_version(mmap)
+        return cls.header_class_for_version(version).from_buffer(mmap)
+
+    @classmethod
+    def peek_file_version(cls, stream):
         old_pos = stream.tell()
-        stream.seek(self.offset_to_major_version)
+        stream.seek(cls.offset_to_major_version)
         major = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), 'little')
         minor = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), 'little')
-        version = '{}.{}'.format(major, minor)
-
-        header_class = self._try_get_header_class(version)
         stream.seek(old_pos)
-        return header_class.from_buffer(bytearray(stream.read(ctypes.sizeof(header_class))))
+        return '{}.{}'.format(major, minor)
 
 
 LAS_HEADERS_SIZE = {

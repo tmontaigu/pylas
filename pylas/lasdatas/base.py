@@ -1,11 +1,10 @@
 import numpy as np
 
-import pylas.vlrs.vlrlist
-from pylas.point import record, dims
-from pylas.vlrs import known
 from ..compression import (compress_buffer, create_laz_vlr,
                            uncompressed_id_to_compressed)
 from ..headers import rawheader
+from ..point import record, dims
+from ..vlrs import known, vlrlist
 
 
 def scale_dimension(array_dim, scale, offset):
@@ -23,7 +22,7 @@ class LasBase(object):
         self.__dict__['points_data'] = points
         self.header = header if header is not None else rawheader.HeaderFactory().new(
             dims.min_file_version_for_point_format(self.points_data.point_format_id))
-        self.vlrs = vlrs if vlrs is not None else pylas.vlrs.vlrlist.VLRList()
+        self.vlrs = vlrs if vlrs is not None else vlrlist.VLRList()
 
     @property
     def x(self):

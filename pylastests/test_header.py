@@ -1,9 +1,7 @@
 import pylas
-import pytest
 from pylastests import test_common
 
 all_las_but_1_4 = test_common.all_las_but_1_4
-
 
 
 def test_number_of_points_return_is_updated(all_las_but_1_4):
@@ -21,11 +19,12 @@ def test_number_of_points_return_is_updated(all_las_but_1_4):
     las = test_common.write_then_read_again(las)
 
     assert tuple(las.header.number_of_points_by_return[:nb_slice]) == (nb_points // nb_slice,) * nb_slice
-    assert tuple(las.header.number_of_points_by_return[nb_slice:]) == (0,) * (len(las.header.number_of_points_by_return) - nb_slice)
+    assert tuple(las.header.number_of_points_by_return[nb_slice:]) == (0,) * (
+            len(las.header.number_of_points_by_return) - nb_slice)
 
 
 def test_nb_points_return_1_4():
-    las = pylas.open(test_common.test1_4_las)
+    las = pylas.read(test_common.test1_4_las)
 
     r = las.return_number
 
@@ -38,4 +37,3 @@ def test_nb_points_return_1_4():
     las = test_common.write_then_read_again(las)
 
     assert tuple(las.header.number_of_points_by_return) == ((1,) * 14) + (len(las.points_data) - 14,)
-

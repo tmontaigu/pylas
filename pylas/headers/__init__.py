@@ -1,1 +1,1 @@
-from .rawheader import HeaderFactory
+from .rawheader import HeaderFactory, LAS_FILE_SIGNATURE

@@ -7,7 +7,7 @@ from collections import namedtuple
 
 import numpy as np
 
-from pylas import errors
+from .. import errors
 
 
 def point_format_to_dtype(point_format, dimensions):

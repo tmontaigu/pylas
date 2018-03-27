@@ -7,12 +7,12 @@ from pylastests.test_common import write_then_read_again, simple_las, test1_4_la
 
 @pytest.fixture()
 def file1_4():
-    return pylas.open(test1_4_las)
+    return pylas.read(test1_4_las)
 
 
 @pytest.fixture()
 def file():
-    return pylas.open(simple_las)
+    return pylas.read(simple_las)
 
 
 def test_incompatible_data_type():
