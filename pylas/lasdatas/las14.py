@@ -38,6 +38,6 @@ class LasData(LasBase):
             self.header.legacy_number_of_point_records = 0
         else:
             self.header.legacy_number_of_point_records = len(self.points_data)
-        super().write_to(out_stream, do_compress=False)
+        super().write_to(out_stream, do_compress=do_compress)
         for evlr in self.evlrs:
             evlr.write_to(out_stream)
