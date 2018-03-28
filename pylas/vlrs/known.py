@@ -32,7 +32,7 @@ class KnownVLR(UnknownVLR):
 class ClassificationLookupStruct(ctypes.LittleEndianStructure):
     _fields_ = [
         ('class_number', ctypes.c_uint8),
-        ('description', ctypes.c_char * 15)
+        ('_description', ctypes.c_char * 15)
     ]
 
     def __init__(self, class_number, description):
@@ -40,6 +40,11 @@ class ClassificationLookupStruct(ctypes.LittleEndianStructure):
             super().__init__(class_number, description.encode())
         else:
             super().__init__(class_number, description)
+
+
+    @property
+    def description(self):
+        return self._description.decode()
 
     def __repr__(self):
         return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
@@ -78,7 +83,7 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
             raise ValueError("Length of ClassificationLookup VLR's record_data must be a multiple of {}".format(
                 self._lookup_size))
         for i in range(len(record_data) // ctypes.sizeof(ClassificationLookupStruct)):
-            self.lookups.append(ClassificationLookupStruct.from_buffer(
+            self.lookups.append(ClassificationLookupStruct.from_buffer_copy(
                 record_data[self._lookup_size * i: self._lookup_size * (i + 1)]))
 
     @staticmethod
