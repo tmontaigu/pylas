@@ -20,8 +20,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'pylas'
-copyright = '2018, mccarthyryanc'
-author = 'mccarthyryanc'
+copyright = '2018, pylas'
+author = 'pylas'
 
 # The short X.Y version
 version = ''
