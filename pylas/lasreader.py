@@ -133,7 +133,7 @@ class LasReader:
         waveform_header = rawvlr.VLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
         logger.info(waveform_header.user_id, waveform_header.record_id,
-                     waveform_header.record_length_after_header)
+                    waveform_header.record_length_after_header)
         logger.debug("Read: {} MBytes of waveform_record".format(
             len(waveform_record) / 10 ** 6))
 
