@@ -9,6 +9,8 @@ from .point import dims, record
 from .vlrs import rawvlr
 from .vlrs.vlrlist import VLRList
 
+logger = logging.getLogger(__name__)
+
 
 class LasReader:
     def __init__(self, stream, closefd=True):
@@ -54,7 +56,7 @@ class LasReader:
         try:
             points = self._read_points(vlrs)
         except (RuntimeError, errors.LazPerfNotFound) as e:
-            logging.error("LazPerf failed to decompress ({}), trying laszip.".format(e))
+            logger.error("LazPerf failed to decompress ({}), trying laszip.".format(e))
             self.stream.seek(self.start_pos)
             self.__init__(io.BytesIO(laszip_decompress(self.stream)))
             return self.read()
@@ -70,7 +72,7 @@ class LasReader:
                 # TODO: Find out what to do with these
                 _, _ = self._read_internal_waveform_packet()
             elif self.header.global_encoding.waveform_external:
-                logging.info("Waveform data is in an external file, you'll have to load it yourself")
+                logger.info("Waveform data is in an external file, you'll have to load it yourself")
 
         if self.header.version >= '1.4':
             evlrs = self.read_evlrs()
@@ -109,7 +111,7 @@ class LasReader:
         size_of_point_data = offset_to_chunk_table - self.stream.tell()
 
         if offset_to_chunk_table <= 0:
-            logging.warning("Strange offset to chunk table: {}, ignoring it..".format(
+            logger.warning("Strange offset to chunk table: {}, ignoring it..".format(
                 offset_to_chunk_table))
             size_of_point_data = -1  # Read everything
 
@@ -130,9 +132,9 @@ class LasReader:
         b = bytearray(self.stream.read(rawvlr.VLR_HEADER_SIZE))
         waveform_header = rawvlr.VLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
-        logging.info(waveform_header.user_id, waveform_header.record_id,
+        logger.info(waveform_header.user_id, waveform_header.record_id,
                      waveform_header.record_length_after_header)
-        logging.debug("Read: {} MBytes of waveform_record".format(
+        logger.debug("Read: {} MBytes of waveform_record".format(
             len(waveform_record) / 10 ** 6))
 
         return waveform_header, waveform_record
@@ -145,7 +147,7 @@ class LasReader:
         """ Helper function to warn about unknown bytes found in the file"""
         diff = expected_pos - self.stream.tell()
         if diff != 0:
-            logging.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
+            logger.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
 
     def close(self):
         self.stream.close()
