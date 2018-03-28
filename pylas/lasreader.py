@@ -62,7 +62,7 @@ class LasReader:
             return self.read()
 
         if dims.format_has_waveform_packet(self.header.point_data_format_id):
-            self.stream.seek(self.start_pos + self.header.start_of_first_waveform_data_packet)
+            self.stream.seek(self.start_pos + self.header.start_of_waveform_data_packet_record)
             if self.header.global_encoding.are_waveform_flag_equal():
                 raise ValueError(
                     'Incoherent values for internal and external waveform flags, both are {})'.format(
@@ -132,8 +132,6 @@ class LasReader:
         b = bytearray(self.stream.read(rawvlr.VLR_HEADER_SIZE))
         waveform_header = rawvlr.VLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
-        logger.info(waveform_header.user_id, waveform_header.record_id,
-                    waveform_header.record_length_after_header)
         logger.debug("Read: {} MBytes of waveform_record".format(
             len(waveform_record) / 10 ** 6))
 
