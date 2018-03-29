@@ -1,7 +1,7 @@
-pylas.lib module
-================
+pylas.lasreader module
+======================
 
-.. automodule:: pylas.lib
+.. automodule:: pylas.lasreader
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,5 +1,5 @@
-""" 'Entry point' of the library,
- Contains the various functions meant to be use directly by a user
+""" 'Entry point' of the library, Contains the various functions meant to be
+use directly by a user
 """
 
 from . import headers
@@ -21,11 +21,11 @@ def open_las(source, closefd=True):
 
 
 def read_las(source, closefd=True):
-    """" Entry point for reading las data in pylas
+    """ Entry point for reading las data in pylas
     It takes care of forwarding the call to the right function depending on
     the objects type
 
-    Parameter
+    Parameters
     ----------
     source : {str | file_object}
         The source to read data from
@@ -54,7 +54,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     Parameters
     ----------
-    source : {LasData}
+    source_las : {LasData}
         The source data to be converted
 
     point_format_id : {int}, optional
