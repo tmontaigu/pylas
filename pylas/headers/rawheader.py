@@ -70,7 +70,10 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             version=self._version_,
             generating_software=PROJECT_NAME,
             header_size=LAS_HEADERS_SIZE[self._version_],
-            offset_to_point_data=LAS_HEADERS_SIZE[self._version_]
+            offset_to_point_data=LAS_HEADERS_SIZE[self._version_],
+            x_scale=0.001,
+            y_scale=0.001,
+            z_scale=0.001
         )
 
     @property
