@@ -23,11 +23,16 @@ project = 'pylas'
 copyright = '2018, pylas'
 author = 'pylas'
 
-# The short X.Y version
-version = ''
-# The full version, including alpha/beta/rc tags
-release = ''
-
+# Parse the version from setup.py.
+with open('../setup.py') as f:
+    for line in f:
+        if line.find("version") >= 0:
+            version = line.split("=")[1].strip()
+            version = version.strip(',')
+            version = version.strip('"')
+            version = version.strip("'")
+            continue
+release = version
 
 # -- General configuration ---------------------------------------------------
 
@@ -45,6 +50,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -135,7 +141,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'pylas.tex', 'pylas Documentation',
-     'mccarthyryanc', 'manual'),
+     'Ryan McCarthy', 'manual'),
 ]
 
 

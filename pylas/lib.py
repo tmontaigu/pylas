@@ -25,10 +25,11 @@ def read_las(source, closefd=True):
     It takes care of forwarding the call to the right function depending on
     the objects type
 
-    Parameters:
+    Parameter
     ----------
     source : {str | file_object}
         The source to read data from
+
     Returns
     -------
     LasData object
@@ -51,7 +52,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     las = pylas.open('Stormwind.las')
     las = pylas.convert(las, point_format_id=6)
 
-    Parameters:
+    Parameters
     ----------
     source : {LasData}
         The source data to be converted
