@@ -11,6 +11,8 @@ Submodules
    pylas.evlr
    pylas.lasreader
    pylas.lib
+   pylas.vlrs.vlrlist
+   pylas.point.record
 
 Module contents
 ---------------

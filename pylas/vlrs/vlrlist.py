@@ -3,25 +3,76 @@ from .rawvlr import RawVLR
 
 
 class VLRList:
+    """ Class responsible for managing the vlrs
+    """
     def __init__(self):
         self.vlrs = []
 
     def append(self, vlr):
+        """ append a vlr to the list
+
+        Parameters
+        ----------
+        vlr: RawVlR | KnownVlr
+
+        Returns
+        -------
+
+        """
         self.vlrs.append(vlr)
 
     def extend(self, vlr_list):
+        """ append all elements of the vlr_list into self
+        """
         self.vlrs.extend(vlr_list)
 
     def get_by_id(self, user_id='', record_ids=(None,)):
+        """ Function to get vlrs by user_id and/or record_ids
+
+        Parameters
+        ----------
+        user_id: str, optional
+            the user id
+        record_ids: Iterable if int, optional
+            THe record ids of the vlr(s) you wish to get
+
+        Returns
+        -------
+        a List of vlrs matching the user_id and records_ids
+
+        """
         if user_id != '' and record_ids != (None,):
             return [vlr for vlr in self.vlrs if vlr.user_id == user_id and vlr.record_id in record_ids]
         else:
             return [vlr for vlr in self.vlrs if vlr.user_id == user_id or vlr.record_id in record_ids]
 
     def get(self, vlr_type):
+        """ Returns the list of vlr of the requested ype
+
+        Parameters
+        ----------
+        vlr_type: str, the class name of the vlr
+
+        Returns
+        -------
+        a List of vlrs matching the user_id and records_ids
+
+        """
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
     def extract(self, vlr_type):
+        """ Returns the list of vlr of the requested ype
+        The difference with get is that the returned vlrs will be removed from self
+
+        Parameters
+        ----------
+        vlr_type: str, the class name of the vlr
+
+        Returns
+        -------
+        a List of vlrs matching the user_id and records_ids
+
+        """
         kept_vlrs, extracted_vlrs = [], []
         for vlr in self.vlrs:
             if vlr.__class__.__name__ == vlr_type:

@@ -16,6 +16,12 @@ def unscale_dimension(array_dim, scale, offset):
 
 
 class LasBase(object):
+    """ LasBase is the base of all the different LasData classes.
+    These classes are objects that the user will interact with to manipulate las datas.
+
+    It connects the point record, header, vlrs together.
+    """
+
     def __init__(self, *, header=None, vlrs=None, points=None):
         if points is None:
             points = record.PackedPointRecord.empty(header.point_data_format_id)
@@ -56,26 +62,52 @@ class LasBase(object):
 
     @property
     def points(self):
+        """ returns the numpy array representing the points
+
+        Returns
+        -------
+        the Numpy structured array of points
+
+        """
         return self.points_data.array
 
     @points.setter
     def points(self, value):
         self.points_data = record.PackedPointRecord(value)
 
+    def __getattr__(self, item):
+        """ Automatically called by Python when the attribute
+        named 'item' is no found. We use this function to forward the call the
+        point record. This is the mechanism used to allow the users to access
+        the points dimensions directly through a LasData.
+
+        Parameters
+        ----------
+        item: str
+            name of the attribute, should be a dimension name
+
+        Returns
+        -------
+        The requested dimension if it exists
+
+        """
+        return self.points_data[item]
+
+    def __setattr__(self, key, value):
+        """ This is called on every access to an attriute of the instance.
+        Again we use this to forward the call the the points record
+        But this time checking if the key is actually a dimension name
+        """
+        if key in dims.DIMENSIONS or key in self.points_data.dimensions_names:
+            self.points_data[key] = value
+        else:
+            super().__setattr__(key, value)
+
     def __getitem__(self, item):
         return self.points_data[item]
 
     def __setitem__(self, key, value):
         self.points_data[key] = value
-
-    def __getattr__(self, item):
-        return self.points_data[item]
-
-    def __setattr__(self, key, value):
-        if key in dims.DIMENSIONS or key in self.points_data.dimensions_names:
-            self.points_data[key] = value
-        else:
-            super().__setattr__(key, value)
 
     def update_header(self):
         self.header.point_data_format_id = self.points_data.point_format_id
@@ -96,7 +128,15 @@ class LasBase(object):
             self.header.number_of_points_by_return = counts
 
     def write_to(self, out_stream, do_compress=False):
+        """ writes the data to a stream
 
+        Parameters
+        ----------
+        destination: file object
+            the destination stream, implementing the write methdd
+        do_compress: bool, optionnal, default False
+            Flag to indicate if you want the date to be compressed
+        """
         self.update_header()
 
         if do_compress:
@@ -136,6 +176,17 @@ class LasBase(object):
             self.points_data.write_to(out_stream)
 
     def write_to_file(self, filename, do_compress=None):
+        """ Writes the las data into a file
+
+        Parameters
+        ----------
+        filename : str
+            The file where the data should be written.
+        do_compress: bool, optional, default None
+            if None the extension of the filename will be used
+        to determine if the data should be compressed
+        otherwise the do_compress flag indicate if the data should be compressed
+        """
         is_ext_laz = filename.split('.')[-1] == 'laz'
         if is_ext_laz and do_compress is None:
             do_compress = True
@@ -143,6 +194,15 @@ class LasBase(object):
             self.write_to(out, do_compress=do_compress)
 
     def write(self, destination, do_compress=None):
+        """ Writes to a stream or file
+
+        Parameters
+        ----------
+        destination: str or file object
+            filename or stream to write to
+        do_compress: bool, optional, default False
+            Flags to indicate if you want to compress the data
+        """
         if isinstance(destination, str):
             self.write_to_file(destination)
         else:

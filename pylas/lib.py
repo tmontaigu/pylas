@@ -11,6 +11,35 @@ USE_UNPACKED = False
 
 
 def open_las(source, closefd=True):
+    """ Opens and reads the header of the las content in the source
+
+    >>> f = open('pylastests/simple.las', mode='rb')
+    >>> with open(f, closefd=False) as flas:
+    >>>     print(flas.header)
+    >>> f.closed
+    False
+
+    >>> f = open('pylastests/simple.las', mode='rb')
+    >>> with open(f) as flas:
+    >>>     las = flas.read()
+    >>> f.closed
+    True
+
+    Parameters
+    ----------
+    source : stream | str
+        if source is a str it must be a filename
+        a stream if a file object with the methods read, seek, tell
+    closefd: Wether the stream/file object shall be closed, this only work
+    when using open_las in a with statement. An exception is raised if
+    closefd is specified and the source is a filename
+
+
+    Returns
+    -------
+    LasReader
+
+    """
     if isinstance(source, str):
         stream = open(source, mode='rb')
         if not closefd:
@@ -44,13 +73,15 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     Automatically upgrades the file version if source file version is not compatible with
     the new point_format_id
 
-    # convert to point format 0
-    las = pylas.open('autzen.las')
-    las = pylas.convert(las, point_format_id=0)
+    .. code:: python
 
-    # convert to point format 6
-    las = pylas.open('Stormwind.las')
-    las = pylas.convert(las, point_format_id=6)
+        # convert to point format 0
+        >>> las = pylas.open('autzen.las')
+        >>> las = pylas.convert(las, point_format_id=0)
+
+        # convert to point format 6
+        >>> las = pylas.open('Stormwind.las')
+        >>> las = pylas.convert(las, point_format_id=6)
 
     Parameters
     ----------
@@ -101,7 +132,43 @@ def create_from_header(header):
     return las12.LasData(header=header, points=points)
 
 
-def create_las(point_format=0, file_version=None):
+def create_las(*, point_format=0, file_version=None):
+    """ Function to create a new las data object
+
+    Note that if you provide both point_format and file_version
+    an exception will be raised if they are not compatible
+
+    >>> las = create_las(point_format=6, file_version="1.2")
+    Traceback (most recent call last):
+     ...
+    ValueError: Point format 6 is not compatible with file version 1.2
+
+
+    If you provide only the point_format the file_version will automatically
+    selected for you.
+
+    >>> las = create_las(point_format=0)
+    >>> las.header.version == '1.2'
+    True
+
+    >>> las = create_las(point_format=6)
+    >>> las.header.version == '1.4'
+    True
+
+
+    Parameters
+    ----------
+    point_format : int, optional, default=0
+        The point format you want the resulting las to have
+    file_version: str, optional, default=None
+        The las version you want the created las to have
+
+    Returns
+    -------
+    pylas.lasdatas.base.LasBase
+       A new las data object
+
+    """
     if file_version is not None and point_format not in dims.VERSION_TO_POINT_FMT[file_version]:
         raise ValueError('Point format {} is not compatible with file version {}'.format(
             point_format, file_version
