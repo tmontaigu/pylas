@@ -96,16 +96,17 @@ class LasBase(object):
             self.header.number_of_points_by_return = counts
 
     def write_to(self, out_stream, do_compress=False):
-        try:
-            _ = self.vlrs.index('ExtraBytesVlr')
-        except ValueError:
-            pass
-        else:
-            raise NotImplementedError('Lazperf cannot compress LAS with extra bytes')
 
         self.update_header()
 
         if do_compress:
+            try:
+                _ = self.vlrs.index('ExtraBytesVlr')
+            except ValueError:
+                pass
+            else:
+                raise NotImplementedError('Lazperf cannot compress LAS with extra bytes')
+
             laz_vrl = create_laz_vlr(self.header.point_data_format_id)
             self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
 
