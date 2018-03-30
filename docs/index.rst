@@ -11,7 +11,7 @@ A popular format for lidar pointcloud and full waveform data is `LAS`_, and it's
 
 .. _LAS: https://www.asprs.org/committee-general/laser-las-file-format-exchange-activities.html
 
-Hear is an example of reading in LAZ data and getting some simple summaries of the pointcloud:
+Here is an example of reading in LAZ data and getting some simple summaries of the pointcloud:
 
 .. code:: python
 
