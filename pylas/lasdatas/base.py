@@ -2,7 +2,6 @@ import numpy as np
 
 from ..compression import (compress_buffer, create_laz_vlr,
                            uncompressed_id_to_compressed)
-from ..headers import rawheader
 from ..point import record, dims
 from ..vlrs import known, vlrlist
 
@@ -20,14 +19,28 @@ class LasBase(object):
     These classes are objects that the user will interact with to manipulate las datas.
 
     It connects the point record, header, vlrs together.
+
+    To access points dimensions using this class you have two possibilities
+
+    .. code:: python
+
+        las = pylas.read('some_file.las')
+        las.classification
+        # or
+        las['classification']
+
+
+    .. note::
+        using las['dimension_name']  is not possible with the scaled values of x, y, z
+
+
     """
 
-    def __init__(self, *, header=None, vlrs=None, points=None):
+    def __init__(self, *, header, vlrs=None, points=None):
         if points is None:
             points = record.PackedPointRecord.empty(header.point_data_format_id)
         self.__dict__['points_data'] = points
-        self.header = header if header is not None else rawheader.HeaderFactory().new(
-            dims.min_file_version_for_point_format(self.points_data.point_format_id))
+        self.header = header
         self.vlrs = vlrs if vlrs is not None else vlrlist.VLRList()
 
     @property

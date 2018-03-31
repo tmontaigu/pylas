@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class LasReader:
+    """ This class handles the reading of the different parts of a las file.
+
+    As the Header is necessary to be able to understand how the data is structured,
+    it will be read during initialisation of the instance
+
+    """
     def __init__(self, stream, closefd=True):
         self.start_pos = stream.tell()
         self._check_file_signature(stream)
@@ -34,8 +40,7 @@ class LasReader:
         returns it
         """
         self.stream.seek(self.start_pos)
-        header = headers.HeaderFactory().read_from_stream(self.stream)
-        return header
+        return headers.HeaderFactory().read_from_stream(self.stream)
 
     def read_vlrs(self):
         """ Reads and return the vlrs of the file

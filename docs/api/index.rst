@@ -13,6 +13,7 @@ Submodules
    pylas.lib
    pylas.vlrs.vlrlist
    pylas.point.record
+   pylas.lasdatas
 
 Module contents
 ---------------

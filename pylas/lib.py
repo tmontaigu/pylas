@@ -13,17 +13,17 @@ USE_UNPACKED = False
 def open_las(source, closefd=True):
     """ Opens and reads the header of the las content in the source
 
-    >>> f = open('pylastests/simple.las', mode='rb')
-    >>> with open(f, closefd=False) as flas:
-    >>>     print(flas.header)
-    >>> f.closed
-    False
+    .. code:: python
 
-    >>> f = open('pylastests/simple.las', mode='rb')
-    >>> with open(f) as flas:
-    >>>     las = flas.read()
-    >>> f.closed
-    True
+        f = open('pylastests/simple.las', mode='rb')
+        with open(f, closefd=False) as flas:
+            print(flas.header)
+        f.closed == False
+
+        f = open('pylastests/simple.las', mode='rb')
+        with open(f) as flas:
+            las = flas.read()
+        f.closed == True
 
     Parameters
     ----------
@@ -66,63 +66,6 @@ def read_las(source, closefd=True):
     """
     with open_las(source, closefd=closefd) as reader:
         return reader.read()
-
-
-def convert(source_las, *, point_format_id=None, file_version=None):
-    """ Converts a Las from one point format to another
-    Automatically upgrades the file version if source file version is not compatible with
-    the new point_format_id
-
-    .. code:: python
-
-        # convert to point format 0
-        >>> las = pylas.open('autzen.las')
-        >>> las = pylas.convert(las, point_format_id=0)
-
-        # convert to point format 6
-        >>> las = pylas.open('Stormwind.las')
-        >>> las = pylas.convert(las, point_format_id=6)
-
-    Parameters
-    ----------
-    source_las : {LasData}
-        The source data to be converted
-
-    point_format_id : {int}, optional
-        The new point format id (the default is None, which won't change the source format id)
-
-    Returns
-    -------
-    LasData if a destination is provided, else returns None
-    """
-    point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
-
-    if file_version is None:
-        file_version = dims.min_file_version_for_point_format(point_format_id)
-        # Don't downgrade the file version
-        if file_version < source_las.header.version:
-            file_version = source_las.header.version
-    elif dims.is_point_fmt_compatible_with_version(point_format_id, file_version):
-        file_version = str(file_version)
-    else:
-        raise ValueError('Point format {} is not compatible with file version {}'.format(
-            point_format_id, file_version))
-
-    header = source_las.header
-    header.version = file_version
-    header.point_data_format_id = point_format_id
-
-    points = record.PackedPointRecord.from_point_record(
-        source_las.points_data, point_format_id)
-
-    try:
-        evlrs = source_las.evlrs
-    except ValueError:
-        evlrs = []
-
-    if file_version >= '1.4':
-        return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
-    return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
 
 def create_from_header(header):
@@ -182,3 +125,84 @@ def create_las(*, point_format=0, file_version=None):
     if file_version >= '1.4':
         return las14.LasData(header=header)
     return las12.LasData(header=header)
+
+
+def convert(source_las, *, point_format_id=None, file_version=None):
+    """ Converts a Las from one point format to another
+    Automatically upgrades the file version if source file version is not compatible with
+    the new point_format_id
+
+
+    # convert to point format 0
+    >>> las = read_las('pylastests/simple.las')
+    >>> las.header.version
+    '1.2'
+    >>> las = convert(las, point_format_id=0)
+    >>> las.header.version
+    '1.2'
+
+    # convert to point format 6, which need version >= 1.4
+    # then convert back to point format 0, version is not downgraded
+    >>> las = read_las('pylastests/simple.las')
+    >>> las.header.version
+    '1.2'
+    >>> las = convert(las, point_format_id=6)
+    >>> las.header.version
+    '1.4'
+    >>> las = convert(las, point_format_id=0)
+    >>> las.header.version
+    '1.4'
+
+    # an exception is raised if the requested point format is not compatible
+    # with the file version
+    >>> las = read_las('pylastests/simple.las')
+    >>> convert(las, point_format_id=6, file_version='1.2')
+    Traceback (most recent call last):
+     ...
+    ValueError: Point format 6 is not compatible with file version 1.2
+
+    Parameters
+    ----------
+    source_las : {LasData}
+        The source data to be converted
+
+    point_format_id : {int}, optional
+        The new point format id (the default is None, which won't change the source format id)
+
+    file_version : str, optional,
+        The new file version. None by default which means that the file_version
+        may be upgraded for compatibility with the new point_format. The file version will not
+        be downgraded.
+
+    Returns
+    -------
+    LasData if a destination is provided, else returns None
+    """
+    point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
+
+    if file_version is None:
+        file_version = dims.min_file_version_for_point_format(point_format_id)
+        # Don't downgrade the file version
+        if file_version < source_las.header.version:
+            file_version = source_las.header.version
+    elif dims.is_point_fmt_compatible_with_version(point_format_id, file_version):
+        file_version = str(file_version)
+    else:
+        raise ValueError('Point format {} is not compatible with file version {}'.format(
+            point_format_id, file_version))
+
+    header = source_las.header
+    header.version = file_version
+    header.point_data_format_id = point_format_id
+
+    points = record.PackedPointRecord.from_point_record(
+        source_las.points_data, point_format_id)
+
+    try:
+        evlrs = source_las.evlrs
+    except ValueError:
+        evlrs = []
+
+    if file_version >= '1.4':
+        return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
+    return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)

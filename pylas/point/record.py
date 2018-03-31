@@ -63,16 +63,17 @@ class PackedPointRecord(PointRecord):
     This uses of less memory than if the sub-fields were unpacked
     However some operations on sub-fields require extra steps:
 
-
+    return number is a sub-field
     >>> packed_point_record = PackedPointRecord.zeros(0, 10)
-    >>> packed_point_record[return_number][:] = 1
+    >>> packed_point_record['return_number'][:] = 1
     >>> np.alltrue(packed_point_record == 1)
     False
 
-    >>> rn = packed_point_record[return_number]
+    >>> packed_point_record = PackedPointRecord.zeros(0, 10)
+    >>> rn = packed_point_record['return_number']
     >>> rn[:] = 1
-    >>> packed_point_record[return_number] = rn
-    >>> np.alltrue(packed_point_record == 1)
+    >>> packed_point_record['return_number'] = rn
+    >>> np.alltrue(packed_point_record['return_number'] == 1)
     True
     """
 
@@ -230,7 +231,17 @@ class PackedPointRecord(PointRecord):
 
     @classmethod
     def empty(cls, point_format_id):
-        """ Creates an empty points record with the specified point format
+        """ Creates an empty point record.
+
+        Parameters
+        ----------
+        point_format_id: int
+            The point format id the point record should have
+
+        Returns
+        -------
+        PackedPointRecord
+
         """
         return cls.zeros(point_format_id, point_count=0)
 
