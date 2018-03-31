@@ -1,5 +1,6 @@
 import ctypes
 import datetime
+import enum
 import logging
 
 from .. import compression
@@ -11,10 +12,15 @@ LAS_FILE_SIGNATURE = b'LASF'
 PROJECT_NAME = b'pylas'
 
 
+class GpsTimeType(enum.IntEnum):
+    WEEK_TIME = 0
+    STANDARD = 1
+
+
 class GlobalEncoding(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
-        ('gps_time_type', ctypes.c_uint16, 1),
+        ('_gps_time_type', ctypes.c_uint16, 1),
         ('waveform_internal', ctypes.c_uint16, 1),  # 1.3
         ('waveform_external', ctypes.c_uint16, 1),  # 1.3
         ('synthetic_return_numbers', ctypes.c_uint16, 1),  # 1.3
@@ -24,6 +30,19 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
 
     def are_waveform_flag_equal(self):
         return self.waveform_internal == self.waveform_external
+
+    @property
+    def gps_time_type(self):
+        if self._gps_time_type:
+            return GpsTimeType.STANDARD
+        else:
+            return GpsTimeType.WEEK_TIME
+
+    @gps_time_type.setter
+    def gps_time_type(self, value):
+        self._gps_time_type = value
+
+
 
 
 class RawHeader1_1(ctypes.LittleEndianStructure):
@@ -104,9 +123,8 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             self.header_size = LAS_HEADERS_SIZE[str(new_version)]
             self.offset_to_point_data = self.header_size
         except KeyError:
-            raise ValueError('{} is not a valid las header version'.format(new_version))
-        self.version_major, self.version_minor = map(
-            int, new_version.split('.'))
+            raise errors.FileVersionNotSupported(new_version)
+        self.version_major, self.version_minor = map(int, new_version.split('.'))
 
     @property
     def date(self):
