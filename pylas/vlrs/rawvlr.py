@@ -74,9 +74,6 @@ class UnknownVLR(ABC):
     @abstractmethod
     def into_raw(self): pass
 
-    @abstractmethod
-    def __len__(self): pass
-
     @abstractclassmethod
     def from_raw(cls, raw): pass
 

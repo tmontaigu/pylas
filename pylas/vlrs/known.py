@@ -6,7 +6,7 @@
 import ctypes
 from abc import abstractmethod
 
-from .rawvlr import NULL_BYTE, VLR_HEADER_SIZE, UnknownVLR, BaseVLR, VLR
+from .rawvlr import NULL_BYTE, UnknownVLR, BaseVLR, VLR
 from ..extradims import get_type_for_extra_dim
 
 
@@ -73,9 +73,6 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
         raw = super().into_raw()
         raw.record_data = b''.join(bytes(lookup) for lookup in self.lookups)
         return raw
-
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookupStruct)
 
     def parse_record_data(self, record_data):
         if len(record_data) % self._lookup_size != 0:
@@ -175,9 +172,6 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
         raw.record_data = b''.join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
         return raw
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.extra_bytes_structs) * ExtraBytesStruct.size()
-
     @staticmethod
     def official_user_id():
         return 'LASF_Spec'
@@ -219,9 +213,6 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
 
     def parse_record_data(self, record_data):
         self.parsed_record = WaveformPacketStruct.from_buffer_copy(record_data)
-
-    def __len__(self):
-        return super().__len__() + WaveformPacketStruct.size()
 
     @staticmethod
     def official_record_ids():
@@ -312,9 +303,6 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         raw.record_data += b''.join(map(bytes, self.geo_keys))
         return raw
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + GeoKeysHeaderStructs.size() + len(self.geo_keys) * GeoKeyEntryStruct.size()
-
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -344,9 +332,6 @@ class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
         for i in range(num_doubles):
             b = record_data[i * sizeof_double:(i + 1) * sizeof_double]
             self.doubles.append(ctypes.c_double.from_buffer(b))
-
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.doubles) * ctypes.sizeof(ctypes.c_double)
 
     def into_raw(self):
         raw = super().into_raw()
@@ -379,9 +364,6 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
         raw.record_data = NULL_BYTE.join(s.encode('ascii') for s in self.strings)
         return raw
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + sum(map(len, self.strings)) + len(NULL_BYTE) * (len(self.strings) - 1)
-
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -411,9 +393,6 @@ class WktMathTransformVlr(BaseVLR, KnownVLR):
     def parse_record_data(self, record_data):
         self.string = record_data.decode('utf-8')
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self._encode_string())
-
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -442,9 +421,6 @@ class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
 
     def parse_record_data(self, record_data):
         self.string = record_data.decode('utf-8')
-
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self._encode_string())
 
     @staticmethod
     def official_user_id():

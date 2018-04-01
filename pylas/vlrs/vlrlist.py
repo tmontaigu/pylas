@@ -1,5 +1,27 @@
 from .known import vlr_factory
-from .rawvlr import RawVLR
+from .rawvlr import RawVLR, VLR_HEADER_SIZE
+
+
+class RawVLRList:
+    def __init__(self, iterable=None):
+        if iterable is not None:
+            self.vlrs = list(iterable)
+        else:
+            self.vlrs = []
+
+    def append(self, raw_vlr):
+        self.vlrs.append(raw_vlr)
+
+    def __len__(self):
+        return len(self.vlrs)
+
+    def total_size_in_bytes(self):
+        return (VLR_HEADER_SIZE * len(self.vlrs)) + sum(len(v.record_data) for v in self.vlrs)
+
+    def write_to(self, out_stream):
+        for vlr in self.vlrs:
+            vlr.write_to(out_stream)
+
 
 
 class VLRList:
@@ -92,13 +114,6 @@ class VLRList:
         else:
             raise ValueError('{} is not in the VLR list'.format(vlr_type))
 
-    def write_to(self, out):
-        for vlr in self.vlrs:
-            vlr.into_raw().write_to(out)
-
-    def total_size_in_bytes(self):
-        return sum(map(len, self.vlrs))
-
     def __iter__(self):
         yield from iter(self.vlrs)
 
@@ -132,3 +147,4 @@ class VLRList:
         vlrs = cls()
         vlrs.vlrs = vlr_list
         return vlrs
+
