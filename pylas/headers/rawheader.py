@@ -43,8 +43,6 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
         self._gps_time_type = value
 
 
-
-
 class RawHeader1_1(ctypes.LittleEndianStructure):
     _version_ = '1.1'
     _pack_ = 1

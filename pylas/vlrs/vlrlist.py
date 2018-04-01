@@ -23,10 +23,10 @@ class RawVLRList:
             vlr.write_to(out_stream)
 
 
-
 class VLRList:
     """ Class responsible for managing the vlrs
     """
+
     def __init__(self):
         self.vlrs = []
 
@@ -147,4 +147,3 @@ class VLRList:
         vlrs = cls()
         vlrs.vlrs = vlr_list
         return vlrs
-

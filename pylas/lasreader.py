@@ -19,6 +19,7 @@ class LasReader:
     it will be read during initialisation of the instance
 
     """
+
     def __init__(self, stream, closefd=True):
         self.start_pos = stream.tell()
         self._check_file_signature(stream)
