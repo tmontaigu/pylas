@@ -191,8 +191,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         raise ValueError('Point format {} is not compatible with file version {}'.format(
             point_format_id, file_version))
 
-    header = source_las.header
-    header.version = file_version
+    header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_data_format_id = point_format_id
 
     points = record.PackedPointRecord.from_point_record(

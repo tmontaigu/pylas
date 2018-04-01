@@ -227,6 +227,17 @@ class HeaderFactory:
         stream.seek(old_pos)
         return '{}.{}'.format(major, minor)
 
+    @classmethod
+    def convert_header(cls, old_header, new_version):
+        new_header_class = cls.header_class_for_version(new_version)
+
+        b = bytearray(old_header)
+        b += b'\x00' * (ctypes.sizeof(new_header_class) - len(b))
+        new_header = new_header_class.from_buffer(b)
+        new_header.version = new_version
+
+        return new_header
+
 
 LAS_HEADERS_SIZE = {
     '1.1': ctypes.sizeof(RawHeader1_1),
