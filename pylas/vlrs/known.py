@@ -41,7 +41,6 @@ class ClassificationLookupStruct(ctypes.LittleEndianStructure):
         else:
             super().__init__(class_number, description)
 
-
     @property
     def description(self):
         return self._description.decode()
@@ -390,6 +389,70 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
     @staticmethod
     def official_record_ids():
         return 34737,
+
+
+class WktMathTransformVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description='',
+        )
+        self.string = ''
+
+    def _encode_string(self):
+        return self.string.encode('utf-8') + NULL_BYTE
+
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = self._encode_string()
+        return raw
+
+    def parse_record_data(self, record_data):
+        self.string = record_data.decode('utf-8')
+
+    def __len__(self):
+        return VLR_HEADER_SIZE + len(self._encode_string())
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 2112,
+
+
+class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description='',
+        )
+        self.string = ''
+
+    def _encode_string(self):
+        return self.string.encode('utf-8') + NULL_BYTE
+
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = self._encode_string()
+        return raw
+
+    def parse_record_data(self, record_data):
+        self.string = record_data.decode('utf-8')
+
+    def __len__(self):
+        return VLR_HEADER_SIZE + len(self._encode_string())
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 2112,
 
 
 def vlr_factory(raw_vlr):
