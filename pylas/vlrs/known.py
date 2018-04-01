@@ -25,6 +25,7 @@ class KnownVLR(UnknownVLR):
     @classmethod
     def from_raw(cls, raw):
         vlr = cls()
+        vlr.description = raw.header.description.decode('ascii')
         vlr.parse_record_data(raw.record_data)
         return vlr
 
@@ -57,7 +58,11 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
     _lookup_size = ClassificationLookupStruct.size()
 
     def __init__(self):
-        super().__init__(self.official_user_id(), self.official_record_ids()[0], description='')
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description='Classification Lookup'
+        )
         self.lookups = []
 
     def _is_max_num_lookups_reached(self):
@@ -148,7 +153,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
 class ExtraBytesVlr(BaseVLR, KnownVLR):
     def __init__(self):
-        super().__init__('LASF_Spec', self.official_record_ids()[0], 'extra_bytes')
+        super().__init__('LASF_Spec', self.official_record_ids()[0], 'Extra Bytes Record')
         self.extra_bytes_structs = []
 
     def parse_record_data(self, data):
@@ -282,7 +287,7 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description=''
+            description='GeoTIFF GeoKeyDirectoryTag'
         )
         self.geo_keys_header = GeoKeysHeaderStructs()
         self.geo_keys = [GeoKeyEntryStruct()]
@@ -317,7 +322,7 @@ class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description=''
+            description='GeoTIFF GeoDoubleParamsTag'
         )
         self.doubles = []
 
@@ -352,7 +357,7 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description=''
+            description='GeoTIFF GeoAsciiParamsTag'
         )
         self.strings = []
 
@@ -407,7 +412,7 @@ class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description='',
+            description='OGC Transformation Record',
         )
         self.string = ''
 
