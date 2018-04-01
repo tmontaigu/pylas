@@ -3,7 +3,7 @@ import numpy as np
 from ..compression import (compress_buffer, create_laz_vlr,
                            uncompressed_id_to_compressed)
 from ..point import record, dims
-from ..vlrs import known, vlrlist, rawvlr
+from ..vlrs import known, vlrlist
 
 
 def scale_dimension(array_dim, scale, offset):
@@ -145,9 +145,9 @@ class LasBase(object):
 
         Parameters
         ----------
-        destination: file object
-            the destination stream, implementing the write methdd
-        do_compress: bool, optionnal, default False
+        out_stream: file object
+            the destination stream, implementing the write method
+        do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
         """
         self.update_header()
@@ -175,16 +175,26 @@ class LasBase(object):
             )
 
             self.header.write_to(out_stream)
+            self._raise_if_not_expected_pos(out_stream, self.header.header_size)
             raw_vlrs.write_to(out_stream)
-            assert out_stream.tell() == self.header.offset_to_point_data
+            self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
             out_stream.write(compressed_points.tobytes())
         else:
             self.header.number_of_vlr = len(self.vlrs)
             self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
 
             self.header.write_to(out_stream)
+            self._raise_if_not_expected_pos(out_stream, self.header.header_size)
             raw_vlrs.write_to(out_stream)
+            self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
             self.points_data.write_to(out_stream)
+
+    @staticmethod
+    def _raise_if_not_expected_pos(stream, expected_pos):
+        if not stream.tell() == expected_pos:
+            raise RuntimeError('Writing, expected to at pos {} but stream is at pos {}'.format(
+                expected_pos, stream.tell()
+            ))
 
     def write_to_file(self, filename, do_compress=None):
         """ Writes the las data into a file
