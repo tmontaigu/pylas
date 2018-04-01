@@ -57,19 +57,24 @@ class PointRecord(ABC):
 
 class PackedPointRecord(PointRecord):
     """
-    Tn the PackedPointRecord, fields that are a combinations of many sub-fields (bit-sized fields)
+    In the PackedPointRecord, fields that are a combinations of many sub-fields (bit-sized fields)
     are still packed together and are only de-packed and re-packed when accessed.
 
     This uses of less memory than if the sub-fields were unpacked
     However some operations on sub-fields require extra steps:
-    Example, if return_number is a subfield:
-        packed_point_record[return_number][:] = 0
-        assert np.alltrue(packed_point_record== 0) # Fails
 
-        rn = packed_point_record[return_number]
-        rn[:] = 0
-        packed_point_record[return_number] = rn
-        assert np.alltrue(packed_point_record== 0) # Good
+    return number is a sub-field
+    >>> packed_point_record = PackedPointRecord.zeros(0, 10)
+    >>> packed_point_record['return_number'][:] = 1
+    >>> np.alltrue(packed_point_record == 1)
+    False
+
+    >>> packed_point_record = PackedPointRecord.zeros(0, 10)
+    >>> rn = packed_point_record['return_number']
+    >>> rn[:] = 1
+    >>> packed_point_record['return_number'] = rn
+    >>> np.alltrue(packed_point_record['return_number'] == 1)
+    True
     """
 
     def __init__(self, data, point_format_id=None):
@@ -85,10 +90,26 @@ class PackedPointRecord(PointRecord):
 
     @property
     def point_size(self):
+        """ Returns the point size in bytes taken by each points of the record
+
+        Returns
+        -------
+        int
+            The point size in byte
+
+        """
         return self.array.dtype.itemsize
 
     @property
     def actual_point_size(self):
+        """ Returns the point size in bytes taken by each points of the record
+
+        Returns
+        -------
+        int
+            The point size in byte
+
+        """
         return self.point_size
 
     def add_extra_dims(self, type_tuples):
@@ -191,12 +212,36 @@ class PackedPointRecord(PointRecord):
 
     @classmethod
     def zeros(cls, point_format_id, point_count):
+        """ Creates a new point record with all dimensions initialized to zero
+
+        Parameters
+        ----------
+        point_format_id: int
+            The point format id the point record should have
+        point_count : int
+            The number of point the point record should have
+
+        Returns
+        -------
+        PackedPointRecord
+
+        """
         data = np.zeros(point_count, dtype=dims.get_dtype_of_format_id(point_format_id))
         return cls(data, point_format_id)
 
     @classmethod
     def empty(cls, point_format_id):
-        """ Creates an empty points record with the specified point format
+        """ Creates an empty point record.
+
+        Parameters
+        ----------
+        point_format_id: int
+            The point format id the point record should have
+
+        Returns
+        -------
+        PackedPointRecord
+
         """
         return cls.zeros(point_format_id, point_count=0)
 

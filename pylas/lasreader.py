@@ -13,6 +13,13 @@ logger = logging.getLogger(__name__)
 
 
 class LasReader:
+    """ This class handles the reading of the different parts of a las file.
+
+    As the Header is necessary to be able to understand how the data is structured,
+    it will be read during initialisation of the instance
+
+    """
+
     def __init__(self, stream, closefd=True):
         self.start_pos = stream.tell()
         self._check_file_signature(stream)
@@ -32,12 +39,9 @@ class LasReader:
     def read_header(self):
         """ Reads the head of the las file, or if it has already been read,
         returns it
-
-        raises ValueError if the file signature field is not the expected one
         """
         self.stream.seek(self.start_pos)
-        header = headers.HeaderFactory().read_from_stream(self.stream)
-        return header
+        return headers.HeaderFactory().read_from_stream(self.stream)
 
     def read_vlrs(self):
         """ Reads and return the vlrs of the file
@@ -62,7 +66,7 @@ class LasReader:
             return self.read()
 
         if dims.format_has_waveform_packet(self.header.point_data_format_id):
-            self.stream.seek(self.start_pos + self.header.start_of_first_waveform_data_packet)
+            self.stream.seek(self.start_pos + self.header.start_of_waveform_data_packet_record)
             if self.header.global_encoding.are_waveform_flag_equal():
                 raise ValueError(
                     'Incoherent values for internal and external waveform flags, both are {})'.format(
@@ -132,14 +136,15 @@ class LasReader:
         b = bytearray(self.stream.read(rawvlr.VLR_HEADER_SIZE))
         waveform_header = rawvlr.VLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
-        logger.info(waveform_header.user_id, waveform_header.record_id,
-                    waveform_header.record_length_after_header)
         logger.debug("Read: {} MBytes of waveform_record".format(
             len(waveform_record) / 10 ** 6))
 
         return waveform_header, waveform_record
 
     def read_evlrs(self):
+        """ Reads the EVLRs of the file, fill fail if the file version
+        does not support evlrs
+        """
         self.stream.seek(self.start_pos + self.header.start_of_first_evlr)
         return [evlr.RawEVLR.read_from(self.stream) for _ in range(self.header.number_of_evlr)]
 
@@ -150,6 +155,8 @@ class LasReader:
             logger.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
 
     def close(self):
+        """ closes the file object used by the reader
+        """
         self.stream.close()
 
     def __enter__(self):

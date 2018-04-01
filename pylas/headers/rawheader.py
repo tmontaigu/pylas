@@ -1,5 +1,6 @@
 import ctypes
 import datetime
+import enum
 import logging
 
 from .. import compression
@@ -11,10 +12,15 @@ LAS_FILE_SIGNATURE = b'LASF'
 PROJECT_NAME = b'pylas'
 
 
+class GpsTimeType(enum.IntEnum):
+    WEEK_TIME = 0
+    STANDARD = 1
+
+
 class GlobalEncoding(ctypes.LittleEndianStructure):
     _pack_ = 1
     _fields_ = [
-        ('gps_time_type', ctypes.c_uint16, 1),
+        ('_gps_time_type', ctypes.c_uint16, 1),
         ('waveform_internal', ctypes.c_uint16, 1),  # 1.3
         ('waveform_external', ctypes.c_uint16, 1),  # 1.3
         ('synthetic_return_numbers', ctypes.c_uint16, 1),  # 1.3
@@ -24,6 +30,17 @@ class GlobalEncoding(ctypes.LittleEndianStructure):
 
     def are_waveform_flag_equal(self):
         return self.waveform_internal == self.waveform_external
+
+    @property
+    def gps_time_type(self):
+        if self._gps_time_type:
+            return GpsTimeType.STANDARD
+        else:
+            return GpsTimeType.WEEK_TIME
+
+    @gps_time_type.setter
+    def gps_time_type(self, value):
+        self._gps_time_type = value
 
 
 class RawHeader1_1(ctypes.LittleEndianStructure):
@@ -70,7 +87,10 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             version=self._version_,
             generating_software=PROJECT_NAME,
             header_size=LAS_HEADERS_SIZE[self._version_],
-            offset_to_point_data=LAS_HEADERS_SIZE[self._version_]
+            offset_to_point_data=LAS_HEADERS_SIZE[self._version_],
+            x_scale=0.001,
+            y_scale=0.001,
+            z_scale=0.001
         )
 
     @property
@@ -99,10 +119,10 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def version(self, new_version):
         try:
             self.header_size = LAS_HEADERS_SIZE[str(new_version)]
+            self.offset_to_point_data = self.header_size
         except KeyError:
-            raise ValueError('{} is not a valid las header version'.format(new_version))
-        self.version_major, self.version_minor = map(
-            int, new_version.split('.'))
+            raise errors.FileVersionNotSupported(new_version)
+        self.version_major, self.version_minor = map(int, new_version.split('.'))
 
     @property
     def date(self):
@@ -204,6 +224,17 @@ class HeaderFactory:
         minor = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), 'little')
         stream.seek(old_pos)
         return '{}.{}'.format(major, minor)
+
+    @classmethod
+    def convert_header(cls, old_header, new_version):
+        new_header_class = cls.header_class_for_version(new_version)
+
+        b = bytearray(old_header)
+        b += b'\x00' * (ctypes.sizeof(new_header_class) - len(b))
+        new_header = new_header_class.from_buffer(b)
+        new_header.version = new_version
+
+        return new_header
 
 
 LAS_HEADERS_SIZE = {

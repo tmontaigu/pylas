@@ -6,7 +6,7 @@
 import ctypes
 from abc import abstractmethod
 
-from .rawvlr import NULL_BYTE, VLR_HEADER_SIZE, UnknownVLR, BaseVLR, VLR
+from .rawvlr import NULL_BYTE, UnknownVLR, BaseVLR, VLR
 from ..extradims import get_type_for_extra_dim
 
 
@@ -25,6 +25,7 @@ class KnownVLR(UnknownVLR):
     @classmethod
     def from_raw(cls, raw):
         vlr = cls()
+        vlr.description = raw.header.description.decode('ascii')
         vlr.parse_record_data(raw.record_data)
         return vlr
 
@@ -32,7 +33,7 @@ class KnownVLR(UnknownVLR):
 class ClassificationLookupStruct(ctypes.LittleEndianStructure):
     _fields_ = [
         ('class_number', ctypes.c_uint8),
-        ('description', ctypes.c_char * 15)
+        ('_description', ctypes.c_char * 15)
     ]
 
     def __init__(self, class_number, description):
@@ -40,6 +41,10 @@ class ClassificationLookupStruct(ctypes.LittleEndianStructure):
             super().__init__(class_number, description.encode())
         else:
             super().__init__(class_number, description)
+
+    @property
+    def description(self):
+        return self._description.decode()
 
     def __repr__(self):
         return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
@@ -53,7 +58,11 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
     _lookup_size = ClassificationLookupStruct.size()
 
     def __init__(self):
-        super().__init__(self.official_user_id(), self.official_record_ids()[0], description='')
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description='Classification Lookup'
+        )
         self.lookups = []
 
     def _is_max_num_lookups_reached(self):
@@ -70,15 +79,12 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
         raw.record_data = b''.join(bytes(lookup) for lookup in self.lookups)
         return raw
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.lookups) * ctypes.sizeof(ClassificationLookupStruct)
-
     def parse_record_data(self, record_data):
         if len(record_data) % self._lookup_size != 0:
             raise ValueError("Length of ClassificationLookup VLR's record_data must be a multiple of {}".format(
                 self._lookup_size))
         for i in range(len(record_data) // ctypes.sizeof(ClassificationLookupStruct)):
-            self.lookups.append(ClassificationLookupStruct.from_buffer(
+            self.lookups.append(ClassificationLookupStruct.from_buffer_copy(
                 record_data[self._lookup_size * i: self._lookup_size * (i + 1)]))
 
     @staticmethod
@@ -147,7 +153,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
 class ExtraBytesVlr(BaseVLR, KnownVLR):
     def __init__(self):
-        super().__init__('LASF_Spec', self.official_record_ids()[0], 'extra_bytes')
+        super().__init__('LASF_Spec', self.official_record_ids()[0], 'Extra Bytes Record')
         self.extra_bytes_structs = []
 
     def parse_record_data(self, data):
@@ -170,9 +176,6 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
         raw = super().into_raw()
         raw.record_data = b''.join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
         return raw
-
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.extra_bytes_structs) * ExtraBytesStruct.size()
 
     @staticmethod
     def official_user_id():
@@ -215,9 +218,6 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
 
     def parse_record_data(self, record_data):
         self.parsed_record = WaveformPacketStruct.from_buffer_copy(record_data)
-
-    def __len__(self):
-        return super().__len__() + WaveformPacketStruct.size()
 
     @staticmethod
     def official_record_ids():
@@ -287,7 +287,7 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description=''
+            description='GeoTIFF GeoKeyDirectoryTag'
         )
         self.geo_keys_header = GeoKeysHeaderStructs()
         self.geo_keys = [GeoKeyEntryStruct()]
@@ -308,9 +308,6 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         raw.record_data += b''.join(map(bytes, self.geo_keys))
         return raw
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + GeoKeysHeaderStructs.size() + len(self.geo_keys) * GeoKeyEntryStruct.size()
-
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -325,7 +322,7 @@ class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description=''
+            description='GeoTIFF GeoDoubleParamsTag'
         )
         self.doubles = []
 
@@ -340,9 +337,6 @@ class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
         for i in range(num_doubles):
             b = record_data[i * sizeof_double:(i + 1) * sizeof_double]
             self.doubles.append(ctypes.c_double.from_buffer(b))
-
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.doubles) * ctypes.sizeof(ctypes.c_double)
 
     def into_raw(self):
         raw = super().into_raw()
@@ -363,7 +357,7 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
         super().__init__(
             self.official_user_id(),
             self.official_record_ids()[0],
-            description=''
+            description='GeoTIFF GeoAsciiParamsTag'
         )
         self.strings = []
 
@@ -375,9 +369,6 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
         raw.record_data = NULL_BYTE.join(s.encode('ascii') for s in self.strings)
         return raw
 
-    def __len__(self):
-        return VLR_HEADER_SIZE + sum(map(len, self.strings)) + len(NULL_BYTE) * (len(self.strings) - 1)
-
     @staticmethod
     def official_user_id():
         return 'LASF_Projection'
@@ -385,6 +376,64 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
     @staticmethod
     def official_record_ids():
         return 34737,
+
+
+class WktMathTransformVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description='',
+        )
+        self.string = ''
+
+    def _encode_string(self):
+        return self.string.encode('utf-8') + NULL_BYTE
+
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = self._encode_string()
+        return raw
+
+    def parse_record_data(self, record_data):
+        self.string = record_data.decode('utf-8')
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 2112,
+
+
+class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
+    def __init__(self):
+        super().__init__(
+            self.official_user_id(),
+            self.official_record_ids()[0],
+            description='OGC Transformation Record',
+        )
+        self.string = ''
+
+    def _encode_string(self):
+        return self.string.encode('utf-8') + NULL_BYTE
+
+    def into_raw(self):
+        raw = super().into_raw()
+        raw.record_data = self._encode_string()
+        return raw
+
+    def parse_record_data(self, record_data):
+        self.string = record_data.decode('utf-8')
+
+    @staticmethod
+    def official_user_id():
+        return 'LASF_Projection'
+
+    @staticmethod
+    def official_record_ids():
+        return 2112,
 
 
 def vlr_factory(raw_vlr):

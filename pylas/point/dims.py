@@ -18,7 +18,7 @@ def point_format_to_dtype(point_format, dimensions):
     point_format : tuple of str
         The dimensions names of the point format
     dimensions : dict
-        The dictionnary of dimensions
+        The dictionary of dimensions
     Returns
     -------
     numpy.dtype
@@ -239,18 +239,21 @@ POINT_FORMATS_DTYPE = _build_point_formats_dtypes(
     DIMENSIONS
 )
 
+# This Dict maps point_format_ids to their dimensions names
 ALL_POINT_FORMATS_DIMENSIONS = {**POINT_FORMAT_DIMENSIONS}
+# This Dict maps point_format_ids to their numpy.dtype
+# the dtype corresponds to the unpacked data
 ALL_POINT_FORMATS_DTYPE = {**POINT_FORMATS_DTYPE}
-
+# This Dict maps point_format_ids to their numpy.dtype
+# the dtype corresponds to the de packed data
 UNPACKED_POINT_FORMATS_DTYPES = _build_unpacked_point_formats_dtypes(
     POINT_FORMAT_DIMENSIONS,
-    COMPOSED_FIELDS, DIMENSIONS
+    COMPOSED_FIELDS,
+    DIMENSIONS
 )
 
 
 # TODO extra dims!
-
-
 def get_dtype_of_format_id(point_format_id, extra_dims=None, unpacked=False):
     """ Returns the numpy.dtype of the point_format_id
     

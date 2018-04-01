@@ -3,6 +3,11 @@ from .. import extradims
 from ..vlrs.known import ExtraBytesVlr, ExtraBytesStruct
 
 
+def ctypes_max_limit(byte_size, signed=False):
+    nb_bits = (byte_size * 8) - (1 if signed else 0)
+    return (2 ** nb_bits) - 1
+
+
 class LasData(LasBase):
     def __init__(self, *, header=None, vlrs=None, points=None, evlrs=None):
         super().__init__(header=header, vlrs=vlrs, points=points)
@@ -29,6 +34,10 @@ class LasData(LasBase):
         self.header.start_of_waveform_data_packet_record = 0
         self.header.start_of_first_evlr = 0
         self.header.number_of_evlr = len(self.evlrs)
-        super().write_to(out_stream, do_compress=False)
+        if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_number_of_point_records.size):
+            self.header.legacy_number_of_point_records = 0
+        else:
+            self.header.legacy_number_of_point_records = len(self.points_data)
+        super().write_to(out_stream, do_compress=do_compress)
         for evlr in self.evlrs:
             evlr.write_to(out_stream)
