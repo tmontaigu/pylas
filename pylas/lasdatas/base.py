@@ -125,7 +125,6 @@ class LasBase(object):
     def update_header(self):
         self.header.point_data_format_id = self.points_data.point_format_id
         self.header.number_of_point_records = len(self.points_data)
-        self.header.number_of_points_records_ = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
 
         if len(self.points_data) > 0:
@@ -168,26 +167,22 @@ class LasBase(object):
             self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
             self.header.number_of_vlr = len(raw_vlrs)
 
-            compressed_points = compress_buffer(
+            points_bytes = compress_buffer(
                 np.frombuffer(self.points_data.array, np.uint8),
                 laz_vrl.schema,
                 self.header.offset_to_point_data,
-            )
+            ).tobytes()
 
-            self.header.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.header_size)
-            raw_vlrs.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
-            out_stream.write(compressed_points.tobytes())
         else:
             self.header.number_of_vlr = len(self.vlrs)
             self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
+            points_bytes = self.points_data.raw_bytes()
 
-            self.header.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.header_size)
-            raw_vlrs.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
-            self.points_data.write_to(out_stream)
+        self.header.write_to(out_stream)
+        self._raise_if_not_expected_pos(out_stream, self.header.header_size)
+        raw_vlrs.write_to(out_stream)
+        self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
+        out_stream.write(points_bytes)
 
     @staticmethod
     def _raise_if_not_expected_pos(stream, expected_pos):

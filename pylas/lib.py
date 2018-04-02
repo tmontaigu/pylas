@@ -31,7 +31,7 @@ def open_las(source, closefd=True):
     source : stream | str
         if source is a str it must be a filename
         a stream if a file object with the methods read, seek, tell
-    closefd: Wether the stream/file object shall be closed, this only work
+    closefd: Whether the stream/file object shall be closed, this only work
     when using open_las in a with statement. An exception is raised if
     closefd is specified and the source is a filename
 
