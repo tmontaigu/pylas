@@ -107,7 +107,7 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        """ This is called on every access to an attriute of the instance.
+        """ This is called on every access to an attribute of the instance.
         Again we use this to forward the call the the points record
         But this time checking if the key is actually a dimension name
         """

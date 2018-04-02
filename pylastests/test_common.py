@@ -57,12 +57,14 @@ def test_change_format(las):
     in_version = las.header.version
 
     las = pylas.convert(las, point_format_id=2)
+    las = write_then_read_again(las)
     assert las.points_data.point_format_id == 2
     assert las.header.point_data_format_id == 2
     assert las.header.version == in_version
     assert dim_does_not_exists(las, 'gps_time')
 
     las = pylas.convert(las, point_format_id=1)
+    las = write_then_read_again(las)
     assert las.points_data.point_format_id == 1
     assert las.header.point_data_format_id == 1
     assert las.header.version == in_version
@@ -71,6 +73,7 @@ def test_change_format(las):
     assert dim_does_not_exists(las, 'blue')
 
     las = pylas.convert(las, point_format_id=0)
+    las = write_then_read_again(las)
     assert las.points_data.point_format_id == 0
     assert las.header.point_data_format_id == 0
     assert las.header.version == in_version
@@ -80,6 +83,7 @@ def test_change_format(las):
     assert dim_does_not_exists(las, 'gps_time')
 
     las = pylas.convert(las, point_format_id=8)
+    las = write_then_read_again(las)
     assert las.header.version == '1.4'
     assert las.points_data.point_format_id == 8
     assert las.header.point_data_format_id == 8
@@ -89,6 +93,7 @@ def test_change_format(las):
     assert dim_does_exists(las, 'nir')
 
     las = pylas.convert(las, point_format_id=7)
+    las = write_then_read_again(las)
     assert las.header.version == '1.4'
     assert las.points_data.point_format_id == 7
     assert las.header.point_data_format_id == 7
@@ -98,6 +103,7 @@ def test_change_format(las):
     assert dim_does_not_exists(las, 'nir')
 
     las = pylas.convert(las, point_format_id=6)
+    las = write_then_read_again(las)
     assert las.header.version == '1.4'
     assert las.points_data.point_format_id == 6
     assert las.header.point_data_format_id == 6
@@ -116,6 +122,7 @@ def test_conversion_copies_fields(all_las_but_1_4):
     for i in (0, 1, 2, 3, 2, 1, 0):
         old_record = las.points_data
         las = pylas.convert(las, point_format_id=i)
+        las = write_then_read_again(las)
 
         for dim_name in old_record.dimensions_names:
             try:

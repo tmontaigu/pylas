@@ -253,7 +253,6 @@ UNPACKED_POINT_FORMATS_DTYPES = _build_unpacked_point_formats_dtypes(
 )
 
 
-# TODO extra dims!
 def get_dtype_of_format_id(point_format_id, extra_dims=None, unpacked=False):
     """ Returns the numpy.dtype of the point_format_id
     
