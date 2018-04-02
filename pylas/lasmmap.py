@@ -1,18 +1,20 @@
 import mmap
 
 from . import headers
+from .lasdatas import base
 from .point import record
 from .vlrs import vlrlist
 
 
-class LasMMAP:
+class LasMMAP(base.LasBase):
     def __init__(self, filename):
-        self.fileref = open(filename, mode='r+b')
-        self.mmap = mmap.mmap(self.fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
-        self.header = headers.HeaderFactory.from_mmap(self.mmap)
-        if self.header.are_points_compressed:
+        fileref = open(filename, mode='r+b')
+        m = mmap.mmap(fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
+        header = headers.HeaderFactory.from_mmap(m)
+        if header.are_points_compressed:
             raise ValueError('Cannot mmap a compressed LAZ file')
-
+        super().__init__(header=header)
+        self.fileref, self.mmap = fileref, m
         self.mmap.seek(self.header.header_size)
         self.vlrs = vlrlist.VLRList.read_from(self.mmap, self.header.number_of_vlr)
 
@@ -21,7 +23,7 @@ class LasMMAP:
         except IndexError:
             extra_dims = None
 
-        self.points = record.PackedPointRecord.from_buffer(
+        self.points_data = record.PackedPointRecord.from_buffer(
             self.mmap,
             self.header.point_data_format_id,
             count=self.header.number_of_point_records,
