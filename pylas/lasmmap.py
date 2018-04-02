@@ -31,8 +31,41 @@ class LasMMAP(base.LasBase):
             extra_dims=extra_dims
         )
 
+    def _write_vlrs(self):
+        raw_vlrs = vlrlist.RawVLRList(vlr.into_raw() for vlr in self.vlrs)
+
+        original_vlrs_bytes_len = self.header.offset_to_point_data - self.header.header_size
+        bytes_len_diff = original_vlrs_bytes_len - raw_vlrs.total_size_in_bytes()
+        old_offset = self.header.offset_to_point_data
+        new_offset = old_offset - bytes_len_diff
+
+        self.header.offset_to_point_data = new_offset
+        self.header.number_of_vlr = len(raw_vlrs)
+        # To be able to use mmap.resize(),
+        # the header must be set to None so that the ctypes structure
+        # releases its pointer the the mmap buffer
+        self.header = None
+
+        if bytes_len_diff > 0:
+            self.mmap.move(
+                new_offset,
+                old_offset,
+                self.points_data.actual_point_size * len(self.points_data)
+            )
+            self.mmap.flush()
+            self.mmap.resize(len(self.mmap) - bytes_len_diff)
+        elif bytes_len_diff < 0:
+            self.mmap.resize(len(self.mmap) - bytes_len_diff)
+            self.mmap.move(
+                new_offset,
+                old_offset,
+                self.points_data.actual_point_size * len(self.points_data)
+            )
+        self.mmap.seek(new_offset)
+        raw_vlrs.write_to(self.mmap)
+
     def close(self):
-        self.header = None  # To delete pointer to mapped data
+        self._write_vlrs()
         self.mmap.close()
         self.fileref.close()
 
