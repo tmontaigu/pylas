@@ -162,6 +162,11 @@ class PackedPointRecord(PointRecord):
         """
         return self.array.shape[0]
 
+    def __repr__(self):
+        return '<PackedPointRecord(fmt: {}, len: {}, point size: {})>'.format(
+            self.point_format_id, len(self), self.actual_point_size
+        )
+
     def copy_fields_from(self, other_record):
         """ Tries to copy the values of the current dimensions from other_record
         """

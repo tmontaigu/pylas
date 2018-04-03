@@ -151,6 +151,9 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def are_points_compressed(self):
         return compression.is_point_format_compressed(self._point_data_format_id)
 
+    def __repr__(self):
+        return '<LasHeader({})>'.format(self.version)
+
 
 class RawHeader1_2(RawHeader1_1):
     _version_ = '1.2'
