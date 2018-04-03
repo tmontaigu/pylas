@@ -150,7 +150,6 @@ class LasBase(object):
             Flag to indicate if you want the date to be compressed
         """
         self.update_header()
-        raw_vlrs = vlrlist.RawVLRList(v.into_raw() for v in self.vlrs)
 
         if do_compress:
             try:
@@ -161,7 +160,8 @@ class LasBase(object):
                 raise NotImplementedError('Lazperf cannot compress LAS with extra bytes')
 
             laz_vrl = create_laz_vlr(self.header.point_data_format_id)
-            raw_vlrs.append(known.LasZipVlr(laz_vrl.data()).into_raw())
+            self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
+            raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
             self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
             self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
@@ -174,6 +174,7 @@ class LasBase(object):
             ).tobytes()
 
         else:
+            raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
             self.header.number_of_vlr = len(self.vlrs)
             self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
             points_bytes = self.points_data.raw_bytes()

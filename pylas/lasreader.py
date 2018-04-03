@@ -2,7 +2,7 @@ import io
 import logging
 import struct
 
-from . import headers, errors, evlr
+from . import headers, errors, evlrs
 from .compression import laszip_decompress
 from .lasdatas import las14, las12
 from .point import dims, record
@@ -146,7 +146,7 @@ class LasReader:
         does not support evlrs
         """
         self.stream.seek(self.start_pos + self.header.start_of_first_evlr)
-        return [evlr.RawEVLR.read_from(self.stream) for _ in range(self.header.number_of_evlr)]
+        return evlrs.EVLRList.read_from(self.stream, self.header.number_of_evlr)
 
     def _warn_if_not_at_expected_pos(self, expected_pos, end_of, start_of):
         """ Helper function to warn about unknown bytes found in the file"""

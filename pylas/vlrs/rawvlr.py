@@ -1,5 +1,6 @@
 import ctypes
-from abc import ABC, abstractmethod, abstractclassmethod
+
+from .. import utils
 
 NULL_BYTE = b'\x00'
 
@@ -28,7 +29,21 @@ class RawVLR:
 
     def __init__(self):
         self.header = VLRHeader()
-        self.record_data = b''
+        self._record_data = b''
+
+    @property
+    def record_data(self):
+        return self._record_data
+
+    @record_data.setter
+    def record_data(self, value):
+        if len(value) > utils.ctypes_max_limit(VLRHeader.record_length_after_header.size):
+            raise OverflowError('VLR record data length ({}) exceeds maximum'.format(len(value)))
+        self.header.record_length_after_header = len(value)
+        self._record_data = value
+
+    def size_in_bytes(self):
+        return VLR_HEADER_SIZE + self.header.record_length_after_header
 
     def write_to(self, out):
         """ Write the raw header content to the out stream
@@ -39,7 +54,6 @@ class RawVLR:
             The output stream
         """
 
-        self.header.record_length_after_header = len(self.record_data)
         out.write(bytes(self.header))
         out.write(self.record_data)
 
@@ -70,31 +84,11 @@ class RawVLR:
         )
 
 
-class UnknownVLR(ABC):
-    @abstractmethod
-    def into_raw(self): pass
-
-    @abstractclassmethod
-    def from_raw(cls, raw): pass
-
-
-class BaseVLR(UnknownVLR):
+class BaseVLR:
     def __init__(self, user_id, record_id, description=''):
         self.user_id = user_id
         self.record_id = record_id
         self.description = description
-
-    def into_raw(self):
-        raw_vlr = RawVLR()
-        raw_vlr.header.user_id = self.user_id.encode('utf8')
-        raw_vlr.header.description = self.description.encode('utf8')
-        raw_vlr.header.record_id = self.record_id
-        raw_vlr.record_length_after_header = 0
-        raw_vlr.record_data = b''
-        return raw_vlr
-
-    def __len__(self):
-        return VLR_HEADER_SIZE
 
 
 class VLR(BaseVLR):
@@ -102,11 +96,8 @@ class VLR(BaseVLR):
         super().__init__(user_id, record_id, description=description)
         self.record_data = b''
 
-    def into_raw(self):
-        raw_vlr = super().into_raw()
-        raw_vlr.header.record_length_after_header = len(self.record_data)
-        raw_vlr.record_data = self.record_data
-        return raw_vlr
+    def record_data_bytes(self):
+        return self.record_data
 
     @classmethod
     def from_raw(cls, raw_vlr):
@@ -117,9 +108,6 @@ class VLR(BaseVLR):
         )
         vlr.record_data = raw_vlr.record_data
         return vlr
-
-    def __len__(self):
-        return VLR_HEADER_SIZE + len(self.record_data)
 
     def __repr__(self):
         return "<{}(user_id: '{}', record_id: '{}', data len: '{}')>".format(

@@ -1,5 +1,5 @@
 from .known import vlr_factory
-from .rawvlr import RawVLR, VLR_HEADER_SIZE
+from .rawvlr import RawVLR
 
 
 class RawVLRList:
@@ -16,11 +16,23 @@ class RawVLRList:
         return len(self.vlrs)
 
     def total_size_in_bytes(self):
-        return (VLR_HEADER_SIZE * len(self.vlrs)) + sum(len(v.record_data) for v in self.vlrs)
+        return sum(v.size_in_bytes() for v in self.vlrs)
 
     def write_to(self, out_stream):
         for vlr in self.vlrs:
             vlr.write_to(out_stream)
+
+    @classmethod
+    def from_list(cls, vlrs):
+        raw_vlrs = cls()
+        for vlr in vlrs:
+            raw = RawVLR()
+            raw.header.user_id = vlr.user_id.encode('utf8')
+            raw.header.description = vlr.description.encode('utf8')
+            raw.header.record_id = vlr.record_id
+            raw.record_data = vlr.record_data_bytes()
+            raw_vlrs.append(raw)
+        return raw_vlrs
 
 
 class VLRList:
