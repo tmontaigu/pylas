@@ -4,6 +4,7 @@ use directly by a user
 
 from . import headers
 from .lasdatas import las12, las14
+from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .point import dims, record
 
@@ -66,6 +67,10 @@ def read_las(source, closefd=True):
     """
     with open_las(source, closefd=closefd) as reader:
         return reader.read()
+
+
+def mmap_las(filename):
+    return LasMMAP(filename)
 
 
 def create_from_header(header):
