@@ -33,8 +33,10 @@ class LasData(LasBase):
             raise NotImplementedError('LazPerf cannot compress 1.4 files with point format >= 6')
 
         self.header.start_of_waveform_data_packet_record = 0
-        self.header.start_of_first_evlr = 0
-        self.header.number_of_evlr = len(self.evlrs)
+        if len(self.evlrs) > 0:
+            raise NotImplementedError('Cannot write evlrs yet')
+            # self.header.start_of_first_evlr =
+            # self.header.number_of_evlr = len(self.evlrs)
         if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_number_of_point_records.size):
             self.header.legacy_number_of_point_records = 0
         else:
