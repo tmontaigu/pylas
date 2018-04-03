@@ -7,6 +7,20 @@ from .vlrs import vlrlist
 
 
 class LasMMAP(base.LasBase):
+    """ Memory map a LAS file.
+    It works like a regular LasData however the data is not actually read in memory
+    which is useful for large files.
+
+    .. note::
+        A LAZ (compressed LAS) cannot be mmapped
+
+    Changes made to the header or points data is directly done in the file.
+
+    VLRs are an exception, they are read and held into memory, (it is not a problem
+    as its the point data that actually account for most of a LAS file payload).
+    VLRS are written when closing the file so any changes to them is not directly reflected
+    """
+
     def __init__(self, filename):
         fileref = open(filename, mode='r+b')
         m = mmap.mmap(fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
