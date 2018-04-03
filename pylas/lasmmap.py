@@ -38,6 +38,8 @@ class LasMMAP(base.LasBase):
         bytes_len_diff = original_vlrs_bytes_len - raw_vlrs.total_size_in_bytes()
         old_offset = self.header.offset_to_point_data
         new_offset = old_offset - bytes_len_diff
+        points_bytes_len = self.points_data.actual_point_size * len(self.points_data)
+        header_size = self.header.header_size
 
         self.header.offset_to_point_data = new_offset
         self.header.number_of_vlr = len(raw_vlrs)
@@ -45,23 +47,16 @@ class LasMMAP(base.LasBase):
         # the header must be set to None so that the ctypes structure
         # releases its pointer the the mmap buffer
         self.header = None
+        self.points_data = record.PackedPointRecord.empty(0)
 
         if bytes_len_diff > 0:
-            self.mmap.move(
-                new_offset,
-                old_offset,
-                self.points_data.actual_point_size * len(self.points_data)
-            )
-            self.mmap.flush()
+            self.mmap.move(new_offset, old_offset, points_bytes_len)
             self.mmap.resize(len(self.mmap) - bytes_len_diff)
         elif bytes_len_diff < 0:
             self.mmap.resize(len(self.mmap) - bytes_len_diff)
-            self.mmap.move(
-                new_offset,
-                old_offset,
-                self.points_data.actual_point_size * len(self.points_data)
-            )
-        self.mmap.seek(new_offset)
+            self.mmap.move(new_offset, old_offset, points_bytes_len)
+
+        self.mmap.seek(header_size)
         raw_vlrs.write_to(self.mmap)
 
     def close(self):
