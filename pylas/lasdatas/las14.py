@@ -1,5 +1,5 @@
 from .base import LasBase
-from .. import evlr
+from .. import evlrs
 from .. import extradims
 from ..utils import ctypes_max_limit
 from ..vlrs.known import ExtraBytesVlr, ExtraBytesStruct
@@ -37,7 +37,7 @@ class LasData(LasBase):
             self.header.legacy_number_of_point_records = len(self.points_data)
         super().write_to(out_stream, do_compress=do_compress)
 
-        raw_evlrs = evlr.RawEVLRList.from_list(self.evlrs)
+        raw_evlrs = evlrs.RawEVLRList.from_list(self.evlrs)
         if len(self.evlrs) > 0:
             self.header.start_of_first_evlr = out_stream.tell()
             self.header.number_of_evlr = len(raw_evlrs)
