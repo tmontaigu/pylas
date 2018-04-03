@@ -1,5 +1,7 @@
 import ctypes
 
+from .vlrs import rawvlr, vlrlist, known
+
 
 class EVLRHeader(ctypes.LittleEndianStructure):
     _fields_ = [
@@ -17,7 +19,16 @@ EVLR_HEADER_SIZE = ctypes.sizeof(EVLRHeader)
 class RawEVLR:
     def __init__(self):
         self.header = EVLRHeader()
-        self.record_data = b''
+        self._record_data = b''
+
+    @property
+    def record_data(self):
+        return self._record_data
+
+    @record_data.setter
+    def record_data(self, value):
+        self._record_data = value
+        self.header.record_length_after_header = len(value)
 
     @classmethod
     def read_from(cls, data_stream):
@@ -25,6 +36,9 @@ class RawEVLR:
         raw_evlr.header = EVLRHeader.from_buffer(bytearray(data_stream.read(EVLR_HEADER_SIZE)))
         raw_evlr.record_data = data_stream.read(raw_evlr.header.record_length_after_header)
         return raw_evlr
+
+    def size_in_bytes(self):
+        return EVLR_HEADER_SIZE + self.header.record_length_after_header
 
     def write_to(self, out):
         out.write(bytes(self.header))
@@ -36,6 +50,38 @@ class RawEVLR:
         )
 
 
-class EVLR:
-    def __init__(self):
-        pass
+class EVLR(rawvlr.VLR):
+    pass
+
+
+def evlr_factory(raw):
+    return known.vlr_factory(raw)
+
+
+class RawEVLRList(vlrlist.RawVLRList):
+    @classmethod
+    def from_list(cls, vlrs):
+        raw_vlrs = cls()
+        for vlr in vlrs:
+            raw = RawEVLR()
+            raw.header.user_id = vlr.user_id.encode('utf8')
+            raw.header.description = vlr.description.encode('utf8')
+            raw.header.record_id = vlr.record_id
+            raw.record_data = vlr.record_data_bytes()
+            raw_vlrs.append(raw)
+        return raw_vlrs
+
+
+class EVLRList(vlrlist.VLRList):
+
+    @classmethod
+    def read_from(cls, data_stream, num_to_read):
+        evlr_list = cls()
+        for _ in range(num_to_read):
+            raw = RawEVLR.read_from(data_stream)
+            try:
+                evlr_list.append(evlr_factory(raw))
+            except UnicodeDecodeError:
+                print("Failed to decode VLR: {}".format(raw))
+
+        return evlr_list
