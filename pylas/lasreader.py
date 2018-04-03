@@ -12,6 +12,15 @@ from .vlrs.vlrlist import VLRList
 logger = logging.getLogger(__name__)
 
 
+def raise_if_wrong_file_signature(stream):
+    """ Reads the 4 first bytes of the stream to check that is LASF"""
+    file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
+    if file_sig != headers.LAS_FILE_SIGNATURE:
+        raise ValueError('File Signature ({}) is not {}'.format(
+            file_sig, headers.LAS_FILE_SIGNATURE
+        ))
+
+
 class LasReader:
     """ This class handles the reading of the different parts of a las file.
 
@@ -22,19 +31,10 @@ class LasReader:
 
     def __init__(self, stream, closefd=True):
         self.start_pos = stream.tell()
-        self._check_file_signature(stream)
+        raise_if_wrong_file_signature(stream)
         self.stream = stream
         self.closefd = closefd
         self.header = self.read_header()
-
-    @staticmethod
-    def _check_file_signature(stream):
-        """ Reads the 4 first bytes of the stream to check that is LASF"""
-        file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
-        if file_sig != headers.LAS_FILE_SIGNATURE:
-            raise ValueError('File Signature ({}) is not {}'.format(
-                file_sig, headers.LAS_FILE_SIGNATURE
-            ))
 
     def read_header(self):
         """ Reads the head of the las file, or if it has already been read,

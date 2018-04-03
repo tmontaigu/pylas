@@ -5,6 +5,8 @@ from .lasdatas import base
 from .point import record
 from .vlrs import vlrlist
 
+from . import lasreader
+
 
 class LasMMAP(base.LasBase):
     """ Memory map a LAS file.
@@ -23,6 +25,8 @@ class LasMMAP(base.LasBase):
 
     def __init__(self, filename):
         fileref = open(filename, mode='r+b')
+        lasreader.raise_if_wrong_file_signature(fileref)
+
         m = mmap.mmap(fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
         header = headers.HeaderFactory.from_mmap(m)
         if header.are_points_compressed:
