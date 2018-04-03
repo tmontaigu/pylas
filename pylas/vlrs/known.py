@@ -47,7 +47,7 @@ class ClassificationLookupStruct(ctypes.LittleEndianStructure):
         return self._description.decode()
 
     def __repr__(self):
-        return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
+        return '<ClassificationLookup({} : {})>'.format(self.class_number, self.description)
 
     @staticmethod
     def size():
@@ -170,7 +170,7 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
         return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
 
     def __repr__(self):
-        return 'ExtraBytesVlr(extra bytes structs: {})'.format(len(self.extra_bytes_structs))
+        return '<ExtraBytesVlr(extra bytes structs: {})>'.format(len(self.extra_bytes_structs))
 
     def into_raw(self):
         raw = super().into_raw()
@@ -249,7 +249,7 @@ class GeoKeyEntryStruct(ctypes.LittleEndianStructure):
         return ctypes.sizeof(GeoKeysHeaderStructs)
 
     def __repr__(self):
-        return 'GeoKey(Id: {}, Location: {}, count: {}, offset: {})'.format(
+        return '<GeoKey(Id: {}, Location: {}, count: {}, offset: {})>'.format(
             self.id, self.tiff_tag_location, self.count, self.value_offset
         )
 
@@ -276,7 +276,7 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
         return ctypes.sizeof(GeoKeysHeaderStructs)
 
     def __repr__(self):
-        return 'GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})'.format(
+        return '<GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})>'.format(
             self.key_direction_version, self.key_revision, self.minor_revision,
             self.number_of_keys
         )

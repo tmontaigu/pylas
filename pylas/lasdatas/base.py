@@ -227,7 +227,7 @@ class LasBase(object):
             self.write_to(destination, do_compress=do_compress)
 
     def __repr__(self):
-        return 'LasData({}.{}, point fmt: {}, {} points, {} vlrs)'.format(
+        return '<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>'.format(
             self.header.version_major,
             self.header.version_minor,
             self.points_data.point_format_id,

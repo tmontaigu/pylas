@@ -31,7 +31,7 @@ class RawEVLR:
         out.write(self.record_data)
 
     def __repr__(self):
-        return 'RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {}'.format(
+        return '<RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {})>'.format(
             self.header.user_id, self.header.record_id, self.header.record_length_after_header
         )
 

@@ -65,7 +65,7 @@ class RawVLR:
         return raw_vlr
 
     def __repr__(self):
-        return 'RawVLR(user_id: {}, record_id: {}, len: {})'.format(
+        return '<RawVLR(user_id: {}, record_id: {}, len: {})>'.format(
             self.header.user_id, self.header.record_id, self.header.record_length_after_header
         )
 
@@ -122,5 +122,5 @@ class VLR(BaseVLR):
         return VLR_HEADER_SIZE + len(self.record_data)
 
     def __repr__(self):
-        return "{}(user_id: '{}', record_id: '{}', data len: '{}')".format(
+        return "<{}(user_id: '{}', record_id: '{}', data len: '{}')>".format(
             self.__class__.__name__, self.user_id, self.record_id, len(self.record_data))
