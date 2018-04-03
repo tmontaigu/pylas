@@ -38,7 +38,7 @@ class RawVLR:
     @record_data.setter
     def record_data(self, value):
         if len(value) > utils.ctypes_max_limit(VLRHeader.record_length_after_header.size):
-            raise OverflowError('VLR record data length ({}) = exceeds maximum'.format(len(value)))
+            raise OverflowError('VLR record data length ({}) exceeds maximum'.format(len(value)))
         self.header.record_length_after_header = len(value)
         self._record_data = value
 
