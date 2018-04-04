@@ -97,7 +97,7 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
         return 0,
 
 
-class LasZipVlr(VLR, KnownVLR):
+class LasZipVlr(BaseVLR, KnownVLR):
     def __init__(self, data):
         super().__init__(
             LasZipVlr.official_user_id(),
@@ -215,6 +215,9 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
 
     def parse_record_data(self, record_data):
         self.parsed_record = WaveformPacketStruct.from_buffer_copy(record_data)
+
+    def record_data_bytes(self):
+        return bytes(self.parsed_record)
 
     @staticmethod
     def official_record_ids():

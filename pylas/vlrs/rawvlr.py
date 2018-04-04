@@ -5,7 +5,10 @@ from .. import utils
 NULL_BYTE = b'\x00'
 
 
-class VLRHeader(ctypes.LittleEndianStructure):
+class RawVLRHeader(ctypes.LittleEndianStructure):
+    """ Close representation of a VLR Header as it is written
+    in the LAS file.
+    """
     _fields_ = [
         ('_reserved', ctypes.c_uint16),
         ('user_id', ctypes.c_char * 16),
@@ -19,7 +22,7 @@ class VLRHeader(ctypes.LittleEndianStructure):
         return cls.from_buffer(bytearray(stream.read(ctypes.sizeof(cls))))
 
 
-VLR_HEADER_SIZE = ctypes.sizeof(VLRHeader)
+VLR_HEADER_SIZE = ctypes.sizeof(RawVLRHeader)
 
 
 class RawVLR:
@@ -28,8 +31,8 @@ class RawVLR:
     """
 
     def __init__(self):
-        self.header = VLRHeader()
-        self._record_data = b''
+        self.header = RawVLRHeader()
+        self.record_data = b''
 
     @property
     def record_data(self):
@@ -37,7 +40,7 @@ class RawVLR:
 
     @record_data.setter
     def record_data(self, value):
-        if len(value) > utils.ctypes_max_limit(VLRHeader.record_length_after_header.size):
+        if len(value) > utils.ctypes_max_limit(RawVLRHeader.record_length_after_header.size):
             raise OverflowError('VLR record data length ({}) exceeds maximum'.format(len(value)))
         self.header.record_length_after_header = len(value)
         self._record_data = value
@@ -73,7 +76,7 @@ class RawVLR:
         """
 
         raw_vlr = cls()
-        header = VLRHeader.from_stream(data_stream)
+        header = RawVLRHeader.from_stream(data_stream)
         raw_vlr.header = header
         raw_vlr.record_data = data_stream.read(header.record_length_after_header)
         return raw_vlr

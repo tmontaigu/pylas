@@ -134,7 +134,7 @@ class LasReader:
         #  but in the 2 samples I have its a VLR
         # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
         b = bytearray(self.stream.read(rawvlr.VLR_HEADER_SIZE))
-        waveform_header = rawvlr.VLRHeader.from_buffer(b)
+        waveform_header = rawvlr.RawVLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
         logger.debug("Read: {} MBytes of waveform_record".format(
             len(waveform_record) / 10 ** 6))
