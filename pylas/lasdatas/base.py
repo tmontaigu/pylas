@@ -104,12 +104,7 @@ class LasBase(object):
         The requested dimension if it exists
 
         """
-        if item in dims.DIMENSIONS or item in self.points_data.dimensions_names:
-            return self.points_data[item]
-        else:
-            raise AttributeError("'{}' object has no attribute '{}'".format(
-                self.__class__.__name__, item
-            ))
+        return self.points_data[item]
 
     def __setattr__(self, key, value):
         """ This is called on every access to an attribute of the instance.
