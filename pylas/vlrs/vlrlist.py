@@ -144,6 +144,19 @@ class VLRList:
 
     @classmethod
     def read_from(cls, data_stream, num_to_read):
+        """ Reads vlrs and parse them if possible from the stream
+
+        Parameters
+        ----------
+        data_stream : stream to read from
+        num_to_read : number of vlrs to be read
+
+        Returns
+        -------
+        pylas.vlrs.vlrlist.VLRList
+            List of vlrs
+
+        """
         vlrlist = cls()
         for _ in range(num_to_read):
             raw = RawVLR.read_from(data_stream)

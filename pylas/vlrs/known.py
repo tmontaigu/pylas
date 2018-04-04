@@ -11,6 +11,13 @@ from ..extradims import get_type_for_extra_dim
 
 
 class KnownVLR:
+    """ Interface that any KnownVLR must implement.
+    A KnownVLR is a VLR for which we know how to parse its record_data
+
+    Implementing this interfaces allows to automatically call the
+    right parser for the right VLR when reading them.
+    """
+
     @staticmethod
     @abstractmethod
     def official_user_id(): pass
@@ -297,7 +304,6 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         header_data = record_data[:ctypes.sizeof(GeoKeysHeaderStructs)]
         self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
         self.geo_keys, keys_data = [], record_data[ctypes.sizeof(GeoKeysHeaderStructs):]
-        self.geo_keys_header.number_of_keys += 1  # But why is this needed ?
         num_keys = len(record_data[ctypes.sizeof(GeoKeysHeaderStructs):]) // ctypes.sizeof(GeoKeyEntryStruct)
         if num_keys != self.geo_keys_header.number_of_keys:
             # print("Mismatch num keys")
