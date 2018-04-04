@@ -46,7 +46,7 @@ class LasReader:
     def read_vlrs(self):
         """ Reads and return the vlrs of the file
         """
-        self.stream.seek(self.start_pos + self.header.header_size)
+        self.stream.seek(self.start_pos + self.header.size)
         return VLRList.read_from(self.stream, num_to_read=self.header.number_of_vlr)
 
     def read(self):

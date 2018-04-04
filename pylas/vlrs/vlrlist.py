@@ -1,5 +1,9 @@
+import logging
+
 from .known import vlr_factory
 from .rawvlr import RawVLR
+
+logger = logging.getLogger(__name__)
 
 
 class RawVLRList:
@@ -163,7 +167,7 @@ class VLRList:
             try:
                 vlrlist.append(vlr_factory(raw))
             except UnicodeDecodeError:
-                print("Failed to decode VLR: {}".format(raw))
+                logger.error("Failed to decode VLR: {}".format(raw))
 
         return vlrlist
 

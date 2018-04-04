@@ -33,7 +33,7 @@ class LasMMAP(base.LasBase):
             raise ValueError('Cannot mmap a compressed LAZ file')
         super().__init__(header=header)
         self.fileref, self.mmap = fileref, m
-        self.mmap.seek(self.header.header_size)
+        self.mmap.seek(self.header.size)
         self.vlrs = vlrlist.VLRList.read_from(self.mmap, self.header.number_of_vlr)
 
         try:
@@ -52,12 +52,12 @@ class LasMMAP(base.LasBase):
     def _write_vlrs(self):
         raw_vlrs = vlrlist.RawVLRList(vlr.into_raw() for vlr in self.vlrs)
 
-        original_vlrs_bytes_len = self.header.offset_to_point_data - self.header.header_size
+        original_vlrs_bytes_len = self.header.offset_to_point_data - self.header.size
         bytes_len_diff = original_vlrs_bytes_len - raw_vlrs.total_size_in_bytes()
         old_offset = self.header.offset_to_point_data
         new_offset = old_offset - bytes_len_diff
         points_bytes_len = self.points_data.actual_point_size * len(self.points_data)
-        header_size = self.header.header_size
+        header_size = self.header.size
 
         self.header.offset_to_point_data = new_offset
         self.header.number_of_vlr = len(raw_vlrs)

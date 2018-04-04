@@ -1,6 +1,9 @@
 import ctypes
+import logging
 
 from .vlrs import rawvlr, vlrlist, known
+
+logger = logging.getLogger(__name__)
 
 
 class EVLRHeader(ctypes.LittleEndianStructure):
@@ -82,6 +85,6 @@ class EVLRList(vlrlist.VLRList):
             try:
                 evlr_list.append(evlr_factory(raw))
             except UnicodeDecodeError:
-                print("Failed to decode VLR: {}".format(raw))
+                logger.error("Failed to decode VLR: {}".format(raw))
 
         return evlr_list

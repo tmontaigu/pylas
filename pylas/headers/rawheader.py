@@ -60,7 +60,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         ('generating_software', ctypes.c_char * 32),
         ('creation_day_of_year', ctypes.c_uint16),
         ('creation_year', ctypes.c_uint16),
-        ('header_size', ctypes.c_uint16),
+        ('size', ctypes.c_uint16),
         ('offset_to_point_data', ctypes.c_uint32),
         ('number_of_vlr', ctypes.c_uint32),
         ('_point_data_format_id', ctypes.c_uint8),
@@ -86,7 +86,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             file_signature=LAS_FILE_SIGNATURE,
             version=self._version_,
             generating_software=PROJECT_NAME,
-            header_size=LAS_HEADERS_SIZE[self._version_],
+            size=LAS_HEADERS_SIZE[self._version_],
             offset_to_point_data=LAS_HEADERS_SIZE[self._version_],
             x_scale=0.001,
             y_scale=0.001,
@@ -118,8 +118,8 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     @version.setter
     def version(self, new_version):
         try:
-            self.header_size = LAS_HEADERS_SIZE[str(new_version)]
-            self.offset_to_point_data = self.header_size
+            self.size = LAS_HEADERS_SIZE[str(new_version)]
+            self.offset_to_point_data = self.size
         except KeyError:
             raise errors.FileVersionNotSupported(new_version)
         self.version_major, self.version_minor = map(int, new_version.split('.'))

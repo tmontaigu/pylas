@@ -40,7 +40,7 @@ def test_raw_header(get_header):
     assert header.generating_software.rstrip(b'\0').decode() == 'TerraScan'
     assert header.creation_day_of_year == 0
     assert header.creation_year == 0
-    assert header.header_size == 227
+    assert header.size == 227
     assert header.offset_to_point_data == 227
     assert header.number_of_vlr == 0
     assert header.point_data_format_id == 3

@@ -163,7 +163,7 @@ class LasBase(object):
             self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
-            self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
+            self.header.offset_to_point_data = self.header.size + raw_vlrs.total_size_in_bytes()
             self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
             self.header.number_of_vlr = len(raw_vlrs)
 
@@ -176,11 +176,11 @@ class LasBase(object):
         else:
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
             self.header.number_of_vlr = len(self.vlrs)
-            self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
+            self.header.offset_to_point_data = self.header.size + raw_vlrs.total_size_in_bytes()
             points_bytes = self.points_data.raw_bytes()
 
         self.header.write_to(out_stream)
-        self._raise_if_not_expected_pos(out_stream, self.header.header_size)
+        self._raise_if_not_expected_pos(out_stream, self.header.size)
         raw_vlrs.write_to(out_stream)
         self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
         out_stream.write(points_bytes)

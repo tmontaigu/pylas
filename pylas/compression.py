@@ -24,7 +24,7 @@ except ModuleNotFoundError:
 
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
-        raise LazPerfNotFound('Lazperf not found, cannot manipulate laz data')
+        raise LazPerfNotFound('Cannot manipulate laz data')
 
 
 def is_point_format_compressed(point_format_id):
