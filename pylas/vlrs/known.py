@@ -300,7 +300,7 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         self.geo_keys_header.number_of_keys += 1  # But why is this needed ?
         num_keys = len(record_data[ctypes.sizeof(GeoKeysHeaderStructs):]) // ctypes.sizeof(GeoKeyEntryStruct)
         if num_keys != self.geo_keys_header.number_of_keys:
-            print("Mismatch num keys")
+            # print("Mismatch num keys")
             self.geo_keys_header.number_of_keys = num_keys
 
         for i in range(self.geo_keys_header.number_of_keys):
