@@ -10,6 +10,11 @@ class LasData(LasBase):
         super().__init__(header=header, vlrs=vlrs, points=points)
         self.evlrs = [] if evlrs is None else evlrs
 
+    def update_header(self):
+        super().update_header()
+        if len(self.vlrs.get('WktCoordinateSystemVlr')) == 1:
+            self.header.global_encoding.wkt = 1
+
     def add_extra_dim(self, dim_name, dim_type):
         name = dim_name.replace(' ', '_')
         type_id = extradims.get_id_for_extra_dim_type(dim_type)

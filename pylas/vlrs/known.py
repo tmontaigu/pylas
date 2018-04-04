@@ -379,6 +379,13 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
 
 
 class WktMathTransformVlr(BaseVLR, KnownVLR):
+    """
+    From the Spec:
+        Note that the math transform WKT record is added for completeness, and a coordinate system WKT
+        may or may not require a math transform WKT record
+
+    """
+
     def __init__(self):
         super().__init__(
             self.official_user_id(),
@@ -406,6 +413,10 @@ class WktMathTransformVlr(BaseVLR, KnownVLR):
 
 
 class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
+    """ Replaces Coordinates Reference System for new las files (point fmt >= 5)
+    "LAS is not using the “ESRI WKT”
+    """
+
     def __init__(self):
         super().__init__(
             self.official_user_id(),
