@@ -74,7 +74,7 @@ def mmap_las(filename):
 
 
 def create_from_header(header):
-    points = record.PackedPointRecord.zeros(header.point_data_format_id, header.number_of_point_records)
+    points = record.PackedPointRecord.zeros(header.point_data_format_id, header.point_count)
     if header.version >= '1.4':
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)

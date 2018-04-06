@@ -45,7 +45,7 @@ def test_raw_header(get_header):
     assert header.number_of_vlr == 0
     assert header.point_data_format_id == 3
     assert header.point_data_record_length == 34
-    assert header.number_of_point_records == 1065
+    assert header.point_count == 1065
     assert tuple(header.number_of_points_by_return) == (925, 114, 21, 5, 0)
     assert header.x_scale == 0.01
     assert header.y_scale == 0.01

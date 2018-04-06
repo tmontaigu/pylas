@@ -65,7 +65,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         ('number_of_vlr', ctypes.c_uint32),
         ('_point_data_format_id', ctypes.c_uint8),
         ('point_data_record_length', ctypes.c_uint16),
-        ('legacy_number_of_point_records', ctypes.c_uint32),
+        ('legacy_point_count', ctypes.c_uint32),
         ('legacy_number_of_points_by_return', ctypes.c_uint32 * 5),
         ('x_scale', ctypes.c_double),
         ('y_scale', ctypes.c_double),
@@ -94,12 +94,12 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         )
 
     @property
-    def number_of_point_records(self):
-        return self.legacy_number_of_point_records
+    def point_count(self):
+        return self.legacy_point_count
 
-    @number_of_point_records.setter
-    def number_of_point_records(self, value):
-        self.legacy_number_of_point_records = value
+    @point_count.setter
+    def point_count(self, value):
+        self.legacy_point_count = value
 
     @property
     def number_of_points_by_return(self):
@@ -171,7 +171,7 @@ class RawHeader1_4(RawHeader1_3):
     _fields_ = [
         ('start_of_first_evlr', ctypes.c_uint64),
         ('number_of_evlr', ctypes.c_uint32),
-        ('number_of_point_records', ctypes.c_uint64),
+        ('point_count', ctypes.c_uint64),
         ('_number_of_points_by_return', ctypes.c_uint64 * 15)
     ]
 

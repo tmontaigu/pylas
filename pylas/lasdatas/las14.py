@@ -36,10 +36,10 @@ class LasData(LasBase):
         start = out_stream.tell()
         self.header.start_of_waveform_data_packet_record = 0
 
-        if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_number_of_point_records.size):
-            self.header.legacy_number_of_point_records = 0
+        if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_point_count.size):
+            self.header.legacy_point_count = 0
         else:
-            self.header.legacy_number_of_point_records = len(self.points_data)
+            self.header.legacy_point_count = len(self.points_data)
         super().write_to(out_stream, do_compress=do_compress)
 
         raw_evlrs = evlrs.RawEVLRList.from_list(self.evlrs)
