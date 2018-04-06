@@ -117,14 +117,14 @@ def create_las(*, point_format=0, file_version=None):
        A new las data object
 
     """
-    if file_version is not None and point_format not in dims.VERSION_TO_POINT_FMT[file_version]:
+    if file_version is not None and not dims.is_point_fmt_compatible_with_version(point_format, file_version):
         raise ValueError('Point format {} is not compatible with file version {}'.format(
             point_format, file_version
         ))
     else:
         file_version = dims.min_file_version_for_point_format(point_format)
 
-    header = headers.HeaderFactory().new(file_version)
+    header = headers.HeaderFactory.new(file_version)
     header.point_data_format_id = point_format
 
     if file_version >= '1.4':
