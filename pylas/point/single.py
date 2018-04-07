@@ -1,5 +1,7 @@
 import ctypes
+import struct
 
+from collections import namedtuple
 from . import dims
 
 DIM_TYPE_TO_CTYPES = {
@@ -15,6 +17,18 @@ DIM_TYPE_TO_CTYPES = {
     'f8': ctypes.c_double
 }
 
+DIM_TYPE_TO_STRUCT_TYPE = {
+    'u1': 'B',
+    'u2': 'H',
+    'u4': 'I',
+    'u8': 'L',
+    'i1': 'b',
+    'i2': 'h',
+    'i4': 'i',
+    'i8': 'L',
+    'f4': 'f',
+    'f8': 'd',
+}
 
 def _build_point_fmt_to_ctypes_fields(fmt_dimensions_names, dimension_dict, to_ctypes):
     fields = []
@@ -40,6 +54,18 @@ for fmt_id, fields in PACKED_FIELDS.items():
         (ctypes.LittleEndianStructure,),
         {
             '_pack_': 1,
-            '_fields_': fields
+            '_fields_': fields,
+            '__slots__': [f[0] for f in fields]
         }
     )
+
+StructStrings = {}
+StructSizes = {}
+ptuples = {}
+
+for fmt_id, fields in dims.POINT_FORMAT_DIMENSIONS.items():
+    ptuples[fmt_id] = namedtuple(f'PointTuple{fmt_id}', tuple(fields))
+    fields_type = [dims.DIMENSIONS[name][1] for name in fields]
+    StructStrings[fmt_id] = '<' + ''.join(DIM_TYPE_TO_STRUCT_TYPE[t] for t in fields_type)
+    StructSizes[fmt_id] = struct.calcsize(StructStrings[fmt_id])
+

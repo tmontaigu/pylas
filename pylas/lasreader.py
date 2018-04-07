@@ -156,14 +156,15 @@ class LasReader:
 
     def iterpoints(self):
         from .point import single
-        import ctypes
-        point_class = single.PackedPointTypes[self.header.point_data_format_id]
+        import struct
         self.stream.seek(self.header.offset_to_point_data)
-        start = self.header.offset_to_point_data
-        size = ctypes.sizeof(point_class)
+        size = single.StructSizes[self.header.point_data_format_id]
+        point_class = single.ptuples[self.header.point_data_format_id]
+        fmt_string = single.StructStrings[self.header.point_data_format_id]
         for i in range(self.header.point_count):
             b = self.stream.read(size)
-            yield point_class.from_buffer_copy(b)
+            p = point_class._make(struct.unpack(fmt_string, b))
+            yield p
 
     def close(self):
         """ closes the file object used by the reader
