@@ -154,6 +154,17 @@ class LasReader:
         if diff != 0:
             logger.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
 
+    def iterpoints(self):
+        from .point import single
+        import ctypes
+        point_class = single.PackedPointTypes[self.header.point_data_format_id]
+        self.stream.seek(self.header.offset_to_point_data)
+        start = self.header.offset_to_point_data
+        size = ctypes.sizeof(point_class)
+        for i in range(self.header.point_count):
+            b = self.stream.read(size)
+            yield point_class.from_buffer_copy(b)
+
     def close(self):
         """ closes the file object used by the reader
         """
