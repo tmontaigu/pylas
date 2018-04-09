@@ -154,12 +154,16 @@ class LasReader:
         if diff != 0:
             logger.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
 
+    # When there are extra-bytes we have a problem
+    # also scaled x,y,z are not part of the returned PointClass members
     def iterpoints(self):
         from .point import single
         import struct
         self.stream.seek(self.header.offset_to_point_data)
+        if self.header.are_points_compressed:
+            raise RuntimeError('Cannot iter on compressed points')
         size = single.StructSizes[self.header.point_data_format_id]
-        point_class = single.ptuples[self.header.point_data_format_id]
+        point_class = single.PointTupleClasses[self.header.point_data_format_id]
         fmt_string = single.StructStrings[self.header.point_data_format_id]
         for i in range(self.header.point_count):
             b = self.stream.read(size)
