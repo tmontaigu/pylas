@@ -2,7 +2,7 @@ import io
 import logging
 import struct
 
-from . import headers, errors, evlr
+from . import headers, errors, evlrs
 from .compression import laszip_decompress
 from .lasdatas import las14, las12
 from .point import dims, record
@@ -10,6 +10,15 @@ from .vlrs import rawvlr
 from .vlrs.vlrlist import VLRList
 
 logger = logging.getLogger(__name__)
+
+
+def raise_if_wrong_file_signature(stream):
+    """ Reads the 4 first bytes of the stream to check that is LASF"""
+    file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
+    if file_sig != headers.LAS_FILE_SIGNATURE:
+        raise ValueError('File Signature ({}) is not {}'.format(
+            file_sig, headers.LAS_FILE_SIGNATURE
+        ))
 
 
 class LasReader:
@@ -22,19 +31,10 @@ class LasReader:
 
     def __init__(self, stream, closefd=True):
         self.start_pos = stream.tell()
-        self._check_file_signature(stream)
+        raise_if_wrong_file_signature(stream)
         self.stream = stream
         self.closefd = closefd
         self.header = self.read_header()
-
-    @staticmethod
-    def _check_file_signature(stream):
-        """ Reads the 4 first bytes of the stream to check that is LASF"""
-        file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
-        if file_sig != headers.LAS_FILE_SIGNATURE:
-            raise ValueError('File Signature ({}) is not {}'.format(
-                file_sig, headers.LAS_FILE_SIGNATURE
-            ))
 
     def read_header(self):
         """ Reads the head of the las file, or if it has already been read,
@@ -46,7 +46,7 @@ class LasReader:
     def read_vlrs(self):
         """ Reads and return the vlrs of the file
         """
-        self.stream.seek(self.start_pos + self.header.header_size)
+        self.stream.seek(self.start_pos + self.header.size)
         return VLRList.read_from(self.stream, num_to_read=self.header.number_of_vlr)
 
     def read(self):
@@ -103,7 +103,7 @@ class LasReader:
             points = record.PackedPointRecord.from_stream(
                 self.stream,
                 self.header.point_data_format_id,
-                self.header.number_of_point_records,
+                self.header.point_count,
                 extra_dims
             )
         return points
@@ -122,7 +122,7 @@ class LasReader:
         points = record.PackedPointRecord.from_compressed_buffer(
             self.stream.read(size_of_point_data),
             self.header.point_data_format_id,
-            self.header.number_of_point_records,
+            self.header.point_count,
             laszip_vlr
         )
         return points
@@ -134,7 +134,7 @@ class LasReader:
         #  but in the 2 samples I have its a VLR
         # but also the 2 samples have a wrong user_id (LAS_Spec instead of LASF_Spec)
         b = bytearray(self.stream.read(rawvlr.VLR_HEADER_SIZE))
-        waveform_header = rawvlr.VLRHeader.from_buffer(b)
+        waveform_header = rawvlr.RawVLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
         logger.debug("Read: {} MBytes of waveform_record".format(
             len(waveform_record) / 10 ** 6))
@@ -146,7 +146,7 @@ class LasReader:
         does not support evlrs
         """
         self.stream.seek(self.start_pos + self.header.start_of_first_evlr)
-        return [evlr.RawEVLR.read_from(self.stream) for _ in range(self.header.number_of_evlr)]
+        return evlrs.EVLRList.read_from(self.stream, self.header.number_of_evlr)
 
     def _warn_if_not_at_expected_pos(self, expected_pos, end_of, start_of):
         """ Helper function to warn about unknown bytes found in the file"""

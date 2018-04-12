@@ -162,6 +162,11 @@ class PackedPointRecord(PointRecord):
         """
         return self.array.shape[0]
 
+    def __repr__(self):
+        return '<PackedPointRecord(fmt: {}, len: {}, point size: {})>'.format(
+            self.point_format_id, len(self), self.actual_point_size
+        )
+
     def copy_fields_from(self, other_record):
         """ Tries to copy the values of the current dimensions from other_record
         """
@@ -194,6 +199,21 @@ class PackedPointRecord(PointRecord):
             stream.read(count * points_dtype.itemsize))
         data = np.frombuffer(
             point_data_buffer, dtype=points_dtype, count=count)
+
+        return cls(data, point_format_id)
+
+    @classmethod
+    def from_buffer(cls, buffer, point_format_id, count, offset, extra_dims=None):
+        points_dtype = dims.get_dtype_of_format_id(
+            point_format_id,
+            extra_dims=extra_dims
+        )
+        data = np.frombuffer(
+            buffer,
+            dtype=points_dtype,
+            offset=offset,
+            count=count
+        )
 
         return cls(data, point_format_id)
 

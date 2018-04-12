@@ -6,11 +6,18 @@
 import ctypes
 from abc import abstractmethod
 
-from .rawvlr import NULL_BYTE, UnknownVLR, BaseVLR, VLR
+from .rawvlr import NULL_BYTE, BaseVLR, VLR
 from ..extradims import get_type_for_extra_dim
 
 
-class KnownVLR(UnknownVLR):
+class KnownVLR:
+    """ Interface that any KnownVLR must implement.
+    A KnownVLR is a VLR for which we know how to parse its record_data
+
+    Implementing this interfaces allows to automatically call the
+    right parser for the right VLR when reading them.
+    """
+
     @staticmethod
     @abstractmethod
     def official_user_id(): pass
@@ -18,6 +25,9 @@ class KnownVLR(UnknownVLR):
     @staticmethod
     @abstractmethod
     def official_record_ids(): pass
+
+    @abstractmethod
+    def record_data_bytes(self): pass
 
     @abstractmethod
     def parse_record_data(self, record_data): pass
@@ -47,7 +57,7 @@ class ClassificationLookupStruct(ctypes.LittleEndianStructure):
         return self._description.decode()
 
     def __repr__(self):
-        return 'ClassificationLookup({} : {})'.format(self.class_number, self.description)
+        return '<ClassificationLookup({} : {})>'.format(self.class_number, self.description)
 
     @staticmethod
     def size():
@@ -66,18 +76,13 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
         self.lookups = []
 
     def _is_max_num_lookups_reached(self):
-        return len(self) >= 256
+        return len(self.lookups) >= 256
 
     def add_lookup(self, class_number, description):
         if not self._is_max_num_lookups_reached():
             self.lookups.append(ClassificationLookupStruct(class_number, description))
         else:
             raise ValueError('Cannot add more lookups')
-
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = b''.join(bytes(lookup) for lookup in self.lookups)
-        return raw
 
     def parse_record_data(self, record_data):
         if len(record_data) % self._lookup_size != 0:
@@ -86,6 +91,9 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
         for i in range(len(record_data) // ctypes.sizeof(ClassificationLookupStruct)):
             self.lookups.append(ClassificationLookupStruct.from_buffer_copy(
                 record_data[self._lookup_size * i: self._lookup_size * (i + 1)]))
+
+    def record_data_bytes(self):
+        return b''.join(bytes(lookup) for lookup in self.lookups)
 
     @staticmethod
     def official_user_id():
@@ -96,7 +104,7 @@ class ClassificationLookupVlr(BaseVLR, KnownVLR):
         return 0,
 
 
-class LasZipVlr(VLR, KnownVLR):
+class LasZipVlr(BaseVLR, KnownVLR):
     def __init__(self, data):
         super().__init__(
             LasZipVlr.official_user_id(),
@@ -108,6 +116,9 @@ class LasZipVlr(VLR, KnownVLR):
     def parse_record_data(self, record_data):
         # Only laz-perf/laszip knows how to parse this
         pass
+
+    def record_data_bytes(self):
+        return self.record_data
 
     @staticmethod
     def official_user_id():
@@ -166,16 +177,14 @@ class ExtraBytesVlr(BaseVLR, KnownVLR):
             self.extra_bytes_structs[i] = ExtraBytesStruct.from_buffer_copy(
                 data[ExtraBytesStruct.size() * i: ExtraBytesStruct.size() * (i + 1)])
 
+    def record_data_bytes(self):
+        return b''.join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
+
     def type_of_extra_dims(self):
         return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
 
     def __repr__(self):
-        return 'ExtraBytesVlr(extra bytes structs: {})'.format(len(self.extra_bytes_structs))
-
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = b''.join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
-        return raw
+        return '<ExtraBytesVlr(extra bytes structs: {})>'.format(len(self.extra_bytes_structs))
 
     @staticmethod
     def official_user_id():
@@ -211,13 +220,11 @@ class WaveformPacketVlr(BaseVLR, KnownVLR):
         )
         self.parsed_record = None
 
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = bytes(self.parsed_record)
-        return raw
-
     def parse_record_data(self, record_data):
         self.parsed_record = WaveformPacketStruct.from_buffer_copy(record_data)
+
+    def record_data_bytes(self):
+        return bytes(self.parsed_record)
 
     @staticmethod
     def official_record_ids():
@@ -249,7 +256,7 @@ class GeoKeyEntryStruct(ctypes.LittleEndianStructure):
         return ctypes.sizeof(GeoKeysHeaderStructs)
 
     def __repr__(self):
-        return 'GeoKey(Id: {}, Location: {}, count: {}, offset: {})'.format(
+        return '<GeoKey(Id: {}, Location: {}, count: {}, offset: {})>'.format(
             self.id, self.tiff_tag_location, self.count, self.value_offset
         )
 
@@ -276,7 +283,7 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
         return ctypes.sizeof(GeoKeysHeaderStructs)
 
     def __repr__(self):
-        return 'GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})'.format(
+        return '<GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})>'.format(
             self.key_direction_version, self.key_revision, self.minor_revision,
             self.number_of_keys
         )
@@ -297,16 +304,19 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         header_data = record_data[:ctypes.sizeof(GeoKeysHeaderStructs)]
         self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
         self.geo_keys, keys_data = [], record_data[ctypes.sizeof(GeoKeysHeaderStructs):]
+        num_keys = len(record_data[ctypes.sizeof(GeoKeysHeaderStructs):]) // ctypes.sizeof(GeoKeyEntryStruct)
+        if num_keys != self.geo_keys_header.number_of_keys:
+            # print("Mismatch num keys")
+            self.geo_keys_header.number_of_keys = num_keys
 
         for i in range(self.geo_keys_header.number_of_keys):
             data = keys_data[(i * GeoKeyEntryStruct.size()): (i + 1) * GeoKeyEntryStruct.size()]
             self.geo_keys.append(GeoKeyEntryStruct.from_buffer(data))
 
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = bytes(self.geo_keys_header)
-        raw.record_data += b''.join(map(bytes, self.geo_keys))
-        return raw
+    def record_data_bytes(self):
+        b = bytes(self.geo_keys_header)
+        b += b''.join(map(bytes, self.geo_keys))
+        return b
 
     @staticmethod
     def official_user_id():
@@ -338,10 +348,8 @@ class GeoDoubleParamsVlr(BaseVLR, KnownVLR):
             b = record_data[i * sizeof_double:(i + 1) * sizeof_double]
             self.doubles.append(ctypes.c_double.from_buffer(b))
 
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = b''.join(map(bytes, self.doubles))
-        return raw
+    def record_data_bytes(self):
+        return b''.join(map(bytes, self.doubles))
 
     @staticmethod
     def official_user_id():
@@ -364,10 +372,8 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
     def parse_record_data(self, record_data):
         self.strings = [s.decode('ascii') for s in record_data.split(NULL_BYTE)]
 
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = NULL_BYTE.join(s.encode('ascii') for s in self.strings)
-        return raw
+    def record_data_bytes(self):
+        return NULL_BYTE.join(s.encode('ascii') for s in self.strings)
 
     @staticmethod
     def official_user_id():
@@ -379,6 +385,13 @@ class GeoAsciiParamsVlr(BaseVLR, KnownVLR):
 
 
 class WktMathTransformVlr(BaseVLR, KnownVLR):
+    """
+    From the Spec:
+        Note that the math transform WKT record is added for completeness, and a coordinate system WKT
+        may or may not require a math transform WKT record
+
+    """
+
     def __init__(self):
         super().__init__(
             self.official_user_id(),
@@ -390,13 +403,11 @@ class WktMathTransformVlr(BaseVLR, KnownVLR):
     def _encode_string(self):
         return self.string.encode('utf-8') + NULL_BYTE
 
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = self._encode_string()
-        return raw
-
     def parse_record_data(self, record_data):
         self.string = record_data.decode('utf-8')
+
+    def record_data_bytes(self):
+        return self._encode_string()
 
     @staticmethod
     def official_user_id():
@@ -408,6 +419,10 @@ class WktMathTransformVlr(BaseVLR, KnownVLR):
 
 
 class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
+    """ Replaces Coordinates Reference System for new las files (point fmt >= 5)
+    "LAS is not using the “ESRI WKT”
+    """
+
     def __init__(self):
         super().__init__(
             self.official_user_id(),
@@ -419,13 +434,11 @@ class WktCoordinateSystemVlr(BaseVLR, KnownVLR):
     def _encode_string(self):
         return self.string.encode('utf-8') + NULL_BYTE
 
-    def into_raw(self):
-        raw = super().into_raw()
-        raw.record_data = self._encode_string()
-        return raw
-
     def parse_record_data(self, record_data):
         self.string = record_data.decode('utf-8')
+
+    def record_data_bytes(self):
+        return self._encode_string()
 
     @staticmethod
     def official_user_id():

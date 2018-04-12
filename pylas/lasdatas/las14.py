@@ -1,17 +1,19 @@
 from .base import LasBase
+from .. import evlrs
 from .. import extradims
+from ..utils import ctypes_max_limit
 from ..vlrs.known import ExtraBytesVlr, ExtraBytesStruct
-
-
-def ctypes_max_limit(byte_size, signed=False):
-    nb_bits = (byte_size * 8) - (1 if signed else 0)
-    return (2 ** nb_bits) - 1
 
 
 class LasData(LasBase):
     def __init__(self, *, header=None, vlrs=None, points=None, evlrs=None):
         super().__init__(header=header, vlrs=vlrs, points=points)
         self.evlrs = [] if evlrs is None else evlrs
+
+    def update_header(self):
+        super().update_header()
+        if len(self.vlrs.get('WktCoordinateSystemVlr')) == 1:
+            self.header.global_encoding.wkt = 1
 
     def add_extra_dim(self, dim_name, dim_type):
         name = dim_name.replace(' ', '_')
@@ -31,13 +33,19 @@ class LasData(LasBase):
         if do_compress and self.points_data.point_format_id >= 6:
             raise NotImplementedError('LazPerf cannot compress 1.4 files with point format >= 6')
 
+        start = out_stream.tell()
         self.header.start_of_waveform_data_packet_record = 0
-        self.header.start_of_first_evlr = 0
-        self.header.number_of_evlr = len(self.evlrs)
-        if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_number_of_point_records.size):
-            self.header.legacy_number_of_point_records = 0
+
+        if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_point_count.size):
+            self.header.legacy_point_count = 0
         else:
-            self.header.legacy_number_of_point_records = len(self.points_data)
+            self.header.legacy_point_count = len(self.points_data)
         super().write_to(out_stream, do_compress=do_compress)
-        for evlr in self.evlrs:
-            evlr.write_to(out_stream)
+
+        raw_evlrs = evlrs.RawEVLRList.from_list(self.evlrs)
+        if len(self.evlrs) > 0:
+            self.header.start_of_first_evlr = out_stream.tell()
+            self.header.number_of_evlr = len(raw_evlrs)
+        raw_evlrs.write_to(out_stream)
+        out_stream.seek(start)
+        self.header.write_to(out_stream)

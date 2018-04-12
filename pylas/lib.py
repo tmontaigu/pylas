@@ -4,6 +4,7 @@ use directly by a user
 
 from . import headers
 from .lasdatas import las12, las14
+from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .point import dims, record
 
@@ -30,7 +31,7 @@ def open_las(source, closefd=True):
     source : stream | str
         if source is a str it must be a filename
         a stream if a file object with the methods read, seek, tell
-    closefd: Wether the stream/file object shall be closed, this only work
+    closefd: Whether the stream/file object shall be closed, this only work
     when using open_las in a with statement. An exception is raised if
     closefd is specified and the source is a filename
 
@@ -68,8 +69,12 @@ def read_las(source, closefd=True):
         return reader.read()
 
 
+def mmap_las(filename):
+    return LasMMAP(filename)
+
+
 def create_from_header(header):
-    points = record.PackedPointRecord.zeros(header.point_data_format_id, header.number_of_point_records)
+    points = record.PackedPointRecord.zeros(header.point_data_format_id, header.point_count)
     if header.version >= '1.4':
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)
@@ -112,14 +117,14 @@ def create_las(*, point_format=0, file_version=None):
        A new las data object
 
     """
-    if file_version is not None and point_format not in dims.VERSION_TO_POINT_FMT[file_version]:
+    if file_version is not None and not dims.is_point_fmt_compatible_with_version(point_format, file_version):
         raise ValueError('Point format {} is not compatible with file version {}'.format(
             point_format, file_version
         ))
     else:
         file_version = dims.min_file_version_for_point_format(point_format)
 
-    header = headers.HeaderFactory().new(file_version)
+    header = headers.HeaderFactory.new(file_version)
     header.point_data_format_id = point_format
 
     if file_version >= '1.4':

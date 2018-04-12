@@ -60,12 +60,12 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         ('generating_software', ctypes.c_char * 32),
         ('creation_day_of_year', ctypes.c_uint16),
         ('creation_year', ctypes.c_uint16),
-        ('header_size', ctypes.c_uint16),
+        ('size', ctypes.c_uint16),
         ('offset_to_point_data', ctypes.c_uint32),
         ('number_of_vlr', ctypes.c_uint32),
         ('_point_data_format_id', ctypes.c_uint8),
         ('point_data_record_length', ctypes.c_uint16),
-        ('legacy_number_of_point_records', ctypes.c_uint32),
+        ('legacy_point_count', ctypes.c_uint32),
         ('legacy_number_of_points_by_return', ctypes.c_uint32 * 5),
         ('x_scale', ctypes.c_double),
         ('y_scale', ctypes.c_double),
@@ -86,7 +86,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             file_signature=LAS_FILE_SIGNATURE,
             version=self._version_,
             generating_software=PROJECT_NAME,
-            header_size=LAS_HEADERS_SIZE[self._version_],
+            size=LAS_HEADERS_SIZE[self._version_],
             offset_to_point_data=LAS_HEADERS_SIZE[self._version_],
             x_scale=0.001,
             y_scale=0.001,
@@ -94,12 +94,12 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         )
 
     @property
-    def number_of_point_records(self):
-        return self.legacy_number_of_point_records
+    def point_count(self):
+        return self.legacy_point_count
 
-    @number_of_point_records.setter
-    def number_of_point_records(self, value):
-        self.legacy_number_of_point_records = value
+    @point_count.setter
+    def point_count(self, value):
+        self.legacy_point_count = value
 
     @property
     def number_of_points_by_return(self):
@@ -118,8 +118,8 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     @version.setter
     def version(self, new_version):
         try:
-            self.header_size = LAS_HEADERS_SIZE[str(new_version)]
-            self.offset_to_point_data = self.header_size
+            self.size = LAS_HEADERS_SIZE[str(new_version)]
+            self.offset_to_point_data = self.size
         except KeyError:
             raise errors.FileVersionNotSupported(new_version)
         self.version_major, self.version_minor = map(int, new_version.split('.'))
@@ -151,6 +151,9 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def are_points_compressed(self):
         return compression.is_point_format_compressed(self._point_data_format_id)
 
+    def __repr__(self):
+        return '<LasHeader({})>'.format(self.version)
+
 
 class RawHeader1_2(RawHeader1_1):
     _version_ = '1.2'
@@ -168,7 +171,7 @@ class RawHeader1_4(RawHeader1_3):
     _fields_ = [
         ('start_of_first_evlr', ctypes.c_uint64),
         ('number_of_evlr', ctypes.c_uint32),
-        ('number_of_point_records', ctypes.c_uint64),
+        ('point_count', ctypes.c_uint64),
         ('_number_of_points_by_return', ctypes.c_uint64 * 15)
     ]
 

@@ -11,7 +11,7 @@ def scale_dimension(array_dim, scale, offset):
 
 
 def unscale_dimension(array_dim, scale, offset):
-    return (array_dim - offset) / scale
+    return (np.array(array_dim) - offset) / scale
 
 
 class LasBase(object):
@@ -107,7 +107,7 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        """ This is called on every access to an attriute of the instance.
+        """ This is called on every access to an attribute of the instance.
         Again we use this to forward the call the the points record
         But this time checking if the key is actually a dimension name
         """
@@ -124,8 +124,7 @@ class LasBase(object):
 
     def update_header(self):
         self.header.point_data_format_id = self.points_data.point_format_id
-        self.header.number_of_point_records = len(self.points_data)
-        self.header.number_of_points_records_ = len(self.points_data)
+        self.header.point_count = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
 
         if len(self.points_data) > 0:
@@ -151,7 +150,6 @@ class LasBase(object):
             Flag to indicate if you want the date to be compressed
         """
         self.update_header()
-        raw_vlrs = vlrlist.RawVLRList(v.into_raw() for v in self.vlrs)
 
         if do_compress:
             try:
@@ -162,32 +160,30 @@ class LasBase(object):
                 raise NotImplementedError('Lazperf cannot compress LAS with extra bytes')
 
             laz_vrl = create_laz_vlr(self.header.point_data_format_id)
-            raw_vlrs.append(known.LasZipVlr(laz_vrl.data()).into_raw())
+            self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
+            raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
-            self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
+            self.header.offset_to_point_data = self.header.size + raw_vlrs.total_size_in_bytes()
             self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
             self.header.number_of_vlr = len(raw_vlrs)
 
-            compressed_points = compress_buffer(
+            points_bytes = compress_buffer(
                 np.frombuffer(self.points_data.array, np.uint8),
                 laz_vrl.schema,
                 self.header.offset_to_point_data,
-            )
+            ).tobytes()
 
-            self.header.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.header_size)
-            raw_vlrs.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
-            out_stream.write(compressed_points.tobytes())
         else:
+            raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
             self.header.number_of_vlr = len(self.vlrs)
-            self.header.offset_to_point_data = self.header.header_size + raw_vlrs.total_size_in_bytes()
+            self.header.offset_to_point_data = self.header.size + raw_vlrs.total_size_in_bytes()
+            points_bytes = self.points_data.raw_bytes()
 
-            self.header.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.header_size)
-            raw_vlrs.write_to(out_stream)
-            self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
-            self.points_data.write_to(out_stream)
+        self.header.write_to(out_stream)
+        self._raise_if_not_expected_pos(out_stream, self.header.size)
+        raw_vlrs.write_to(out_stream)
+        self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
+        out_stream.write(points_bytes)
 
     @staticmethod
     def _raise_if_not_expected_pos(stream, expected_pos):
@@ -232,7 +228,7 @@ class LasBase(object):
             self.write_to(destination, do_compress=do_compress)
 
     def __repr__(self):
-        return 'LasData({}.{}, point fmt: {}, {} points, {} vlrs)'.format(
+        return '<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>'.format(
             self.header.version_major,
             self.header.version_minor,
             self.points_data.point_format_id,

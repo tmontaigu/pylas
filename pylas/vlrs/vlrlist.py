@@ -1,5 +1,9 @@
+import logging
+
 from .known import vlr_factory
-from .rawvlr import RawVLR, VLR_HEADER_SIZE
+from .rawvlr import RawVLR
+
+logger = logging.getLogger(__name__)
 
 
 class RawVLRList:
@@ -16,11 +20,23 @@ class RawVLRList:
         return len(self.vlrs)
 
     def total_size_in_bytes(self):
-        return (VLR_HEADER_SIZE * len(self.vlrs)) + sum(len(v.record_data) for v in self.vlrs)
+        return sum(v.size_in_bytes() for v in self.vlrs)
 
     def write_to(self, out_stream):
         for vlr in self.vlrs:
             vlr.write_to(out_stream)
+
+    @classmethod
+    def from_list(cls, vlrs):
+        raw_vlrs = cls()
+        for vlr in vlrs:
+            raw = RawVLR()
+            raw.header.user_id = vlr.user_id.encode('utf8')
+            raw.header.description = vlr.description.encode('utf8')
+            raw.header.record_id = vlr.record_id
+            raw.record_data = vlr.record_data_bytes()
+            raw_vlrs.append(raw)
+        return raw_vlrs
 
 
 class VLRList:
@@ -132,13 +148,26 @@ class VLRList:
 
     @classmethod
     def read_from(cls, data_stream, num_to_read):
+        """ Reads vlrs and parse them if possible from the stream
+
+        Parameters
+        ----------
+        data_stream : stream to read from
+        num_to_read : number of vlrs to be read
+
+        Returns
+        -------
+        pylas.vlrs.vlrlist.VLRList
+            List of vlrs
+
+        """
         vlrlist = cls()
         for _ in range(num_to_read):
             raw = RawVLR.read_from(data_stream)
             try:
                 vlrlist.append(vlr_factory(raw))
             except UnicodeDecodeError:
-                print("Failed to decode VLR: {}".format(raw))
+                logger.error("Failed to decode VLR: {}".format(raw))
 
         return vlrlist
 
