@@ -11,7 +11,7 @@ def scale_dimension(array_dim, scale, offset):
 
 
 def unscale_dimension(array_dim, scale, offset):
-    return (array_dim - offset) / scale
+    return (np.array(array_dim) - offset) / scale
 
 
 class LasBase(object):
