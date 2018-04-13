@@ -29,7 +29,7 @@ Python 3 Only.
 
 lazperf_ is an optionnal, but recommended dependency that allows pylas to read and write compressed LAZ files.
 
-.. _lazperf: https://github.com/hobu.laz-perf
+.. _lazperf: https://github.com/hobu/laz-perf
 
 
 

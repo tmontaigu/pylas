@@ -8,7 +8,7 @@ Submodules
 
    pylas.compression
    pylas.errors
-   pylas.evlr
+   pylas.evlrs
    pylas.lasreader
    pylas.lib
    pylas.vlrs.vlrlist

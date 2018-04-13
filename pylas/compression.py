@@ -1,5 +1,5 @@
 """ The functions related to the LAZ format (compressed LAS)
-Lazperf is made optional by catching the ModuleNotFoundError, and raisin an exception
+Lazperf is made optional by catching the ModuleNotFoundError, and raising an exception
 when compression/decompression is actually needed
 
 There are also functions to use Laszip (meant to be used as a fallback)

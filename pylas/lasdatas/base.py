@@ -45,14 +45,20 @@ class LasBase(object):
 
     @property
     def x(self):
+        """ Returns the scaled x positions of the points as doubles
+        """
         return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
 
     @property
     def y(self):
+        """ Returns the scaled y positions of the points as doubles
+        """
         return scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
 
     @property
     def z(self):
+        """ Returns the scaled z positions of the points as doubles
+        """
         return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
     @x.setter

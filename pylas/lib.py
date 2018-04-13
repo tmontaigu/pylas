@@ -1,5 +1,5 @@
 """ 'Entry point' of the library, Contains the various functions meant to be
-use directly by a user
+uses directly by a user
 """
 
 from . import headers
@@ -138,7 +138,8 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     the new point_format_id
 
 
-    # convert to point format 0
+    convert to point format 0
+
     >>> las = read_las('pylastests/simple.las')
     >>> las.header.version
     '1.2'
@@ -146,8 +147,9 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     >>> las.header.version
     '1.2'
 
-    # convert to point format 6, which need version >= 1.4
-    # then convert back to point format 0, version is not downgraded
+    convert to point format 6, which need version >= 1.4
+    then convert back to point format 0, version is not downgraded
+
     >>> las = read_las('pylastests/simple.las')
     >>> las.header.version
     '1.2'
@@ -158,8 +160,9 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     >>> las.header.version
     '1.4'
 
-    # an exception is raised if the requested point format is not compatible
-    # with the file version
+    an exception is raised if the requested point format is not compatible
+    with the file version
+
     >>> las = read_las('pylastests/simple.las')
     >>> convert(las, point_format_id=6, file_version='1.2')
     Traceback (most recent call last):
@@ -181,7 +184,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     Returns
     -------
-    LasData if a destination is provided, else returns None
+        LasData
     """
     point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
 

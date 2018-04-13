@@ -12,7 +12,7 @@ from .vlrs.vlrlist import VLRList
 logger = logging.getLogger(__name__)
 
 
-def raise_if_wrong_file_signature(stream):
+def _raise_if_wrong_file_signature(stream):
     """ Reads the 4 first bytes of the stream to check that is LASF"""
     file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
     if file_sig != headers.LAS_FILE_SIGNATURE:
@@ -31,7 +31,7 @@ class LasReader:
 
     def __init__(self, stream, closefd=True):
         self.start_pos = stream.tell()
-        raise_if_wrong_file_signature(stream)
+        _raise_if_wrong_file_signature(stream)
         self.stream = stream
         self.closefd = closefd
         self.header = self.read_header()
@@ -142,7 +142,7 @@ class LasReader:
         return waveform_header, waveform_record
 
     def read_evlrs(self):
-        """ Reads the EVLRs of the file, fill fail if the file version
+        """ Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """
         self.stream.seek(self.start_pos + self.header.start_of_first_evlr)

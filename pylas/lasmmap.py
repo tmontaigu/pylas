@@ -25,7 +25,7 @@ class LasMMAP(base.LasBase):
 
     def __init__(self, filename):
         fileref = open(filename, mode='r+b')
-        lasreader.raise_if_wrong_file_signature(fileref)
+        lasreader._raise_if_wrong_file_signature(fileref)
 
         m = mmap.mmap(fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
         header = headers.HeaderFactory.from_mmap(m)
