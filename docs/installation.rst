@@ -20,8 +20,8 @@ However laszip cannot currently be used by pylas to compress data.
 .. _LAStools's: https://rapidlasso.com/lastools/
 
 
-Installing from source
-======================
+Installing from Pypi
+====================
 
 .. code:: shell
 
