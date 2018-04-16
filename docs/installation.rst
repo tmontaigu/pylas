@@ -23,16 +23,8 @@ However laszip cannot currently be used by pylas to compress data.
 Installing from source
 ======================
 
-It is not possible to install from pypi.
-.. code-block:: bash
+.. code:: shell
 
-    pip install https://github.com/tmontaigu/pylas.git
-
-or
-
-.. code:: bash
-
-    git clone https://github.com/tmontaigu/pylas.git
     pip install pylas
 
 

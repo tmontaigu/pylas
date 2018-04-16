@@ -85,7 +85,7 @@ class VLRList:
             return [vlr for vlr in self.vlrs if vlr.user_id == user_id or vlr.record_id in record_ids]
 
     def get(self, vlr_type):
-        """ Returns the list of vlr of the requested ype
+        """ Returns the list of vlrs of the requested type
 
         Parameters
         ----------
@@ -93,14 +93,15 @@ class VLRList:
 
         Returns
         -------
-        a List of vlrs matching the user_id and records_ids
+        :py:class:`list`
+            a List of vlrs matching the user_id and records_ids
 
         """
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
     def extract(self, vlr_type):
-        """ Returns the list of vlr of the requested ype
-        The difference with get is that the returned vlrs will be removed from self
+        """ Returns the list of vlrs of the requested type
+        The difference with get is that the returned vlrs will be removed from the list
 
         Parameters
         ----------
