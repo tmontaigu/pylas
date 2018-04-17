@@ -92,7 +92,13 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        self.points_data = record.PackedPointRecord(value)
+        new_point_record = record.PackedPointRecord(value)
+        if not dims.is_point_fmt_compatible_with_version(new_point_record.point_format_id, self.header.version):
+            raise ValueError("Point format {} is not compatible with version {}".format(
+                new_point_record.point_format_id, self.header.version))
+
+        self.points_data = new_point_record
+        self.header.point_data_format_id = self.points_data.point_format_id
 
     def __getattr__(self, item):
         """ Automatically called by Python when the attribute
@@ -155,7 +161,6 @@ class LasBase(object):
         do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
         """
-        self.update_header()
 
         if do_compress:
             try:
