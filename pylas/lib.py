@@ -38,7 +38,7 @@ def open_las(source, closefd=True):
 
     Returns
     -------
-    LasReader
+    pylas.lasreader.LasReader
 
     """
     if isinstance(source, str):
@@ -62,7 +62,7 @@ def read_las(source, closefd=True):
 
     Returns
     -------
-    pylas.lasdatas.LasBase
+    pylas.lasdatas.base.LasBase
         The object you can interact with to get access to the LAS points & VLRs
     """
     with open_las(source, closefd=closefd) as reader:
