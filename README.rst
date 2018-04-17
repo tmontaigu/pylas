@@ -21,6 +21,9 @@ Example
             las = f.read()
     print(las.vlrs)
 
+Some rough documentation is available on ReadTheDocs_ .
+
+.. _ReadTheDocs: http://pylas.readthedocs.io/en/latest/index.html
 
 Dependencies & Requirements
 ---------------------------
