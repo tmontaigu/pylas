@@ -6,14 +6,14 @@ Submodules
 
 .. toctree::
 
-   pylas.compression
-   pylas.errors
-   pylas.evlrs
-   pylas.lasreader
    pylas.lib
+   pylas.lasdatas
+   pylas.lasreader
    pylas.vlrs.vlrlist
    pylas.point.record
-   pylas.lasdatas
+   pylas.evlrs
+   pylas.errors
+   pylas.compression
 
 Module contents
 ---------------

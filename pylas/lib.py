@@ -1,5 +1,5 @@
 """ 'Entry point' of the library, Contains the various functions meant to be
-uses directly by a user
+used directly by a user
 """
 
 from . import headers
@@ -52,8 +52,8 @@ def open_las(source, closefd=True):
 
 def read_las(source, closefd=True):
     """ Entry point for reading las data in pylas
-    It takes care of forwarding the call to the right function depending on
-    the objects type
+
+    Reads the whole file in memory.
 
     Parameters
     ----------
@@ -62,7 +62,7 @@ def read_las(source, closefd=True):
 
     Returns
     -------
-    LasData object
+    pylas.lasdatas.LasBase
         The object you can interact with to get access to the LAS points & VLRs
     """
     with open_las(source, closefd=closefd) as reader:
@@ -83,8 +83,10 @@ def create_from_header(header):
 def create_las(*, point_format=0, file_version=None):
     """ Function to create a new las data object
 
-    Note that if you provide both point_format and file_version
-    an exception will be raised if they are not compatible
+    .. note::
+
+        If you provide both point_format and file_version
+        an exception will be raised if they are not compatible
 
     >>> las = create_las(point_format=6, file_version="1.2")
     Traceback (most recent call last):
