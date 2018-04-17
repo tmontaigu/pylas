@@ -18,7 +18,9 @@ try:
     import lazperf
 
     HAS_LAZPERF = True
-except ModuleNotFoundError:
+    # we should capture ModuleNotRoundError but its python3.6 exception type
+    # and ReadTheDocs does uses 3.5
+except:
     HAS_LAZPERF = False
 
 
