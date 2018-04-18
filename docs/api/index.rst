@@ -1,6 +1,13 @@
 pylas package
 =============
 
+.. module:: pylas
+.. autofunction:: read
+.. autofunction:: open
+.. autofunction:: create
+.. autofunction:: convert
+
+
 Submodules
 ----------
 
@@ -15,10 +22,3 @@ Submodules
    pylas.errors
    pylas.compression
 
-Module contents
----------------
-
-.. automodule:: pylas
-    :members:
-    :undoc-members:
-    :show-inheritance:

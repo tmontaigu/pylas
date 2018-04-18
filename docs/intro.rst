@@ -12,7 +12,7 @@ LAS files are organized in 3 main parts:
 3) Point Records
 
 
-The header contains informations about the data such as its version, the point format (which tells the different
+The header contains information about the data such as its version, the point format (which tells the different
 dimensions stored for each points).
 
 After the header, LAS files may contains VLRs (Variable Length Record).
