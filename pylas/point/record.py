@@ -266,7 +266,6 @@ class PackedPointRecord(PointRecord):
         return cls.zeros(point_format_id, point_count=0)
 
 
-# TODO This class is not used, the challenge is to find a way to make the user able to choose between Packed & Unpacked
 class UnpackedPointRecord(PointRecord):
     """
     In the Unpacked Point Record, all the sub-fields are un-packed meaning that they are in their

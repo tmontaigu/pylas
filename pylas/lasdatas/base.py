@@ -92,7 +92,13 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        self.points_data = record.PackedPointRecord(value)
+        new_point_record = record.PackedPointRecord(value)
+        if not dims.is_point_fmt_compatible_with_version(new_point_record.point_format_id, self.header.version):
+            raise ValueError("Point format {} is not compatible with version {}".format(
+                new_point_record.point_format_id, self.header.version))
+
+        self.points_data = new_point_record
+        self.header.point_data_format_id = self.points_data.point_format_id
 
     def __getattr__(self, item):
         """ Automatically called by Python when the attribute
@@ -155,7 +161,6 @@ class LasBase(object):
         do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
         """
-        self.update_header()
 
         if do_compress:
             try:
@@ -219,11 +224,31 @@ class LasBase(object):
     def write(self, destination, do_compress=None):
         """ Writes to a stream or file
 
+        When destination is a string, it will be interpreted as the path were the file should be written to,
+        also if do_compress is None, the compression will be guessed from the file extension:
+
+        - .laz -> compressed
+        - .las -> uncompressed
+
+        .. note::
+
+            This means that you could do something like:
+                # Create .laz but not compressed
+
+                las.write('out.laz', do_compress=False)
+
+                # Create .las but compressed
+
+                las.write('out.las', do_compress=True)
+
+            While it should not confuse Las/Laz readers, it will confuse humans so avoid doing it
+
+
         Parameters
         ----------
         destination: str or file object
             filename or stream to write to
-        do_compress: bool, optional, default False
+        do_compress: bool, optional
             Flags to indicate if you want to compress the data
         """
         if isinstance(destination, str):
