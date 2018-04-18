@@ -11,6 +11,15 @@ The easiest one is using :func:`pylas.read` function.
 This function will read everything in the file (Header, vlrs, point records, ...) and return an object
 that you can use to access to the data.
 
+.. code:: python
+
+    las = pylas.read('somefile.las')
+
+    import s3fs
+    fs = s3fs.S3FileSystem()
+    with fs.open('my-bucket/some_file.las', 'rb') as f:
+         las = pylas.read()
+
 
 The other way to read a las file is to use the :func:`pylas.open`.
 As the name suggest, this function does not read the whole file, but opens it and only read the header.
