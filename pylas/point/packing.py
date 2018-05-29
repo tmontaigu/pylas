@@ -64,7 +64,7 @@ def pack(array, sub_field_array, mask, inplace=False):
         return array | ((sub_field_array << lsb) & mask).astype(array.dtype)
 
 
-def unpack_sub_fields(data, point_format_id, extra_dims=None):
+def unpack_sub_fields(data, point_format_id):
     """ Unpack all the composed fields of the structured_array into their corresponding
     sub-fields
 
@@ -72,10 +72,8 @@ def unpack_sub_fields(data, point_format_id, extra_dims=None):
         A new structured array with the sub-fields de-packed
     """
     composed_dims = COMPOSED_FIELDS[point_format_id]
-    if extra_dims is None:
-        extra_dims = get_extra_dimensions_spec(data.dtype, point_format_id)
-    dtype = get_dtype_of_format_id(
-        point_format_id, extra_dims=extra_dims, unpacked=True)
+    extra_dims = get_extra_dimensions_spec(data.dtype, point_format_id)
+    dtype = get_dtype_of_format_id(point_format_id, extra_dims, unpacked=True)
     point_record = np.zeros_like(data, dtype)
 
     for dim_name in data.dtype.names:

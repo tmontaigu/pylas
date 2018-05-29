@@ -333,8 +333,7 @@ class UnpackedPointRecord(PointRecord):
         data = np.frombuffer(
             point_data_buffer, dtype=points_dtype, count=count)
 
-        point_record = packing.unpack_sub_fields(
-            data, point_format_id, extra_dims=extra_dims)
+        point_record = packing.unpack_sub_fields(data, point_format_id)
 
         return cls(point_record, point_format_id)
 
