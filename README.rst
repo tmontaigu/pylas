@@ -3,6 +3,12 @@ pylas
 
 Another way of reading LAS/LAZ in Python.
 
+.. image:: https://readthedocs.org/projects/pylas/badge/?version=latest
+:target: https://pylas.readthedocs.io/en/latest/?badge=latest
+:alt: Documentation Status
+
+
+
 Example
 -------
 
