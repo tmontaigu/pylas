@@ -162,6 +162,8 @@ class LasBase(object):
             Flag to indicate if you want the date to be compressed
         """
 
+        self.update_header()
+
         if do_compress:
             try:
                 _ = self.vlrs.index('ExtraBytesVlr')
