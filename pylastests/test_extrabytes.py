@@ -15,6 +15,16 @@ def las1_4():
     return pylas.read(test1_4_las)
 
 
+def test_extra_dim_spec():
+    extra_dims_specs = [('codification', 'u4')]
+    dtype = pylas.point.dims.get_dtype_of_format_id(0)
+    dtype = pylas.point.dims.dtype_append(dtype, extra_dims_specs)
+
+    found_extra_dims_spec = pylas.point.dims.get_extra_dimensions_spec(dtype, 0)
+
+    assert found_extra_dims_spec == extra_dims_specs
+
+
 def test_extra_names(extrab_las):
     all_dims = set(extrab_las.points_data.array.dtype.names)
 

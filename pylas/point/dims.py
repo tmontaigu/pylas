@@ -401,3 +401,16 @@ def is_point_fmt_compatible_with_version(point_format_id, file_version):
         return point_format_id in VERSION_TO_POINT_FMT[str(file_version)]
     except KeyError:
         raise errors.FileVersionNotSupported(file_version)
+
+
+def is_official_dimension(dimension_name, point_fmt):
+    official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
+    return dimension_name in official_names_for_fmt
+
+
+def get_extra_dimensions_spec(np_dtype, point_format_id):
+    extra_dims_names = [
+        name for name in np_dtype.names
+        if not is_official_dimension(name, point_format_id) and name not in COMPOSED_FIELDS[point_format_id]
+    ]
+    return [(name, np_dtype[name]) for name in extra_dims_names]

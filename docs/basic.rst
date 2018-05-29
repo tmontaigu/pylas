@@ -14,6 +14,7 @@ that you can use to access to the data.
 .. code:: python
 
     las = pylas.read('somefile.las')
+    print(np.unique(las.classification))
 
     import s3fs
     fs = s3fs.S3FileSystem()
@@ -25,7 +26,6 @@ The other way to read a las file is to use the :func:`pylas.open`.
 As the name suggest, this function does not read the whole file, but opens it and only read the header.
 
 This is useful if you only need to read the header without loading the whole file in memory.
-
 
 
 Converting

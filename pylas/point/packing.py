@@ -2,7 +2,7 @@
 """
 import numpy as np
 
-from .dims import get_dtype_of_format_id, COMPOSED_FIELDS
+from .dims import get_dtype_of_format_id, COMPOSED_FIELDS, get_extra_dimensions_spec
 
 
 def least_significant_bit(val):
@@ -71,9 +71,11 @@ def unpack_sub_fields(data, point_format_id, extra_dims=None):
     Returns:
         A new structured array with the sub-fields de-packed
     """
+    composed_dims = COMPOSED_FIELDS[point_format_id]
+    if extra_dims is None:
+        extra_dims = get_extra_dimensions_spec(data.dtype, point_format_id)
     dtype = get_dtype_of_format_id(
         point_format_id, extra_dims=extra_dims, unpacked=True)
-    composed_dims = COMPOSED_FIELDS[point_format_id]
     point_record = np.zeros_like(data, dtype)
 
     for dim_name in data.dtype.names:
