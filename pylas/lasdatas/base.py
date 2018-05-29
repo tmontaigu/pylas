@@ -16,7 +16,7 @@ def unscale_dimension(array_dim, scale, offset):
 
 class LasBase(object):
     """ LasBase is the base of all the different LasData classes.
-    These classes are objects that the user will interact with to manipulate las datas.
+    These classes are objects that the user will interact with to manipulate las data.
 
     It connects the point record, header, vlrs together.
 
@@ -214,8 +214,8 @@ class LasBase(object):
             The file where the data should be written.
         do_compress: bool, optional, default None
             if None the extension of the filename will be used
-        to determine if the data should be compressed
-        otherwise the do_compress flag indicate if the data should be compressed
+            to determine if the data should be compressed
+            otherwise the do_compress flag indicate if the data should be compressed
         """
         is_ext_laz = filename.split('.')[-1] == 'laz'
         if is_ext_laz and do_compress is None:

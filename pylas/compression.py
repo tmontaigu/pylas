@@ -18,8 +18,8 @@ try:
     import lazperf
 
     HAS_LAZPERF = True
-    # we should capture ModuleNotRoundError but its python3.6 exception type
-    # and ReadTheDocs does uses 3.5
+    # we should capture ModuleNotRoundError but it's a python3.6 exception type
+    # and ReadTheDocs does use 3.5
 except:
     HAS_LAZPERF = False
 
@@ -93,7 +93,7 @@ def _pass_through_laszip(stream, action='decompress'):
             laszip_binary = binary
             break
     else:
-        raise FileNotFoundError('No laszip')
+        raise FileNotFoundError('Could not find laszip executable')
 
     if action == "decompress":
         out_t = '-olas'

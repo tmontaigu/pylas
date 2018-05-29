@@ -81,7 +81,7 @@ and LAS file version.
 The point formats 1, 2, 3, 4, 5 are based on the point format 0, meaning that they have
 the same dimensions plus some additional dimensions:
 
-* Point Format 1 *
+* Point Format 1
 
 +------------------+
 | Added dimensions |
@@ -90,7 +90,7 @@ the same dimensions plus some additional dimensions:
 +------------------+
 
 
-* Point Format 2 *
+* Point Format 2
 
 +------------------+
 | Added dimensions |
@@ -102,7 +102,7 @@ the same dimensions plus some additional dimensions:
 | blue             |
 +------------------+
 
-* Point Format 3 *
+* Point Format 3
 
 +------------------+
 | Added dimensions |
@@ -117,7 +117,7 @@ the same dimensions plus some additional dimensions:
 +------------------+
 
 
-* Point Format 4 *
+* Point Format 4
 
 +---------------------------+
 | Added dimensions          |
@@ -140,7 +140,7 @@ the same dimensions plus some additional dimensions:
 +---------------------------+
 
 
-* Point Format 5 *
+* Point Format 5
 
 +---------------------------+
 | Added dimensions          |
