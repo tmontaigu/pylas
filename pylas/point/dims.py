@@ -376,15 +376,9 @@ def lost_dimensions(point_fmt_in, point_fmt_out):
     """  Returns a list of the names of the dimensions that will be lost
     when converting from point_fmt_in to point_fmt_out
     """
-    try:
-        unpacked_dims_in = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_in]
-    except KeyError as e:
-        raise errors.PointFormatNotSupported(point_fmt_in) from e
 
-    try:
-        unpacked_dims_out = UNPACKED_POINT_FORMATS_DTYPES[point_fmt_out]
-    except KeyError as e:
-        raise errors.PointFormatNotSupported(point_fmt_out) from e
+    unpacked_dims_in = get_dtype_of_format_id(point_fmt_in, unpacked=True)
+    unpacked_dims_out = get_dtype_of_format_id(point_fmt_out, unpacked=True)
 
     out_dims = unpacked_dims_out.fields
     completely_lost = []
@@ -403,6 +397,12 @@ def is_point_fmt_compatible_with_version(point_format_id, file_version):
         raise errors.FileVersionNotSupported(file_version)
 
 
+def raise_if_version_not_compatible_with_fmt(point_format_id, file_version):
+    if not is_point_fmt_compatible_with_version(point_format_id, file_version):
+        raise ValueError('Point format {} is not compatible with file version {}'.format(
+            point_format_id, file_version))
+
+
 def is_official_dimension(dimension_name, point_fmt):
     official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
     return dimension_name in official_names_for_fmt
@@ -414,3 +414,4 @@ def get_extra_dimensions_spec(np_dtype, point_format_id):
         if not is_official_dimension(name, point_format_id) and name not in COMPOSED_FIELDS[point_format_id]
     ]
     return [(name, np_dtype[name]) for name in extra_dims_names]
+

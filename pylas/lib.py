@@ -119,10 +119,8 @@ def create_las(*, point_format=0, file_version=None):
        A new las data object
 
     """
-    if file_version is not None and not dims.is_point_fmt_compatible_with_version(point_format, file_version):
-        raise ValueError('Point format {} is not compatible with file version {}'.format(
-            point_format, file_version
-        ))
+    if file_version is not None:
+        dims.raise_if_version_not_compatible_with_fmt(point_format, file_version)
     else:
         file_version = dims.min_file_version_for_point_format(point_format)
 
@@ -191,15 +189,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
 
     if file_version is None:
-        file_version = dims.min_file_version_for_point_format(point_format_id)
-        # Don't downgrade the file version
-        if file_version < source_las.header.version:
-            file_version = source_las.header.version
-    elif dims.is_point_fmt_compatible_with_version(point_format_id, file_version):
-        file_version = str(file_version)
+        file_version = max(source_las.header.version, dims.min_file_version_for_point_format(point_format_id))
     else:
-        raise ValueError('Point format {} is not compatible with file version {}'.format(
-            point_format_id, file_version))
+        file_version = str(file_version)
+        dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
 
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_data_format_id = point_format_id
