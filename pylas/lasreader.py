@@ -65,7 +65,7 @@ class LasReader:
             self.__init__(io.BytesIO(laszip_decompress(self.stream)))
             return self.read()
 
-        if dims.format_has_waveform_packet(self.header.point_data_format_id):
+        if dims.format_has_waveform_packet(self.header.point_format_id):
             self.stream.seek(self.start_pos + self.header.start_of_waveform_data_packet_record)
             if self.header.global_encoding.are_waveform_flag_equal():
                 raise ValueError(
@@ -102,7 +102,7 @@ class LasReader:
         else:
             points = record.PackedPointRecord.from_stream(
                 self.stream,
-                self.header.point_data_format_id,
+                self.header.point_format_id,
                 self.header.point_count,
                 extra_dims
             )
@@ -121,7 +121,7 @@ class LasReader:
 
         points = record.PackedPointRecord.from_compressed_buffer(
             self.stream.read(size_of_point_data),
-            self.header.point_data_format_id,
+            self.header.point_format_id,
             self.header.point_count,
             laszip_vlr
         )

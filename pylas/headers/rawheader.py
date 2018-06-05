@@ -140,11 +140,11 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         out_stream.write(bytes(self))
 
     @property
-    def point_data_format_id(self):
+    def point_format_id(self):
         return compression.compressed_id_to_uncompressed(self._point_data_format_id)
 
-    @point_data_format_id.setter
-    def point_data_format_id(self, value):
+    @point_format_id.setter
+    def point_format_id(self, value):
         self._point_data_format_id = value
 
     @property

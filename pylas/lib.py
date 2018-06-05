@@ -74,7 +74,7 @@ def mmap_las(filename):
 
 
 def create_from_header(header):
-    points = record.PackedPointRecord.zeros(header.point_data_format_id, header.point_count)
+    points = record.PackedPointRecord.zeros(header.point_format_id, header.point_count)
     if header.version >= '1.4':
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)
@@ -125,7 +125,7 @@ def create_las(*, point_format=0, file_version=None):
         file_version = dims.min_file_version_for_point_format(point_format)
 
     header = headers.HeaderFactory.new(file_version)
-    header.point_data_format_id = point_format
+    header.point_format_id = point_format
 
     if file_version >= '1.4':
         return las14.LasData(header=header)
@@ -144,6 +144,8 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     >>> las.header.version
     '1.2'
     >>> las = convert(las, point_format_id=0)
+    >>> las.header.point_format_id
+    0
     >>> las.header.version
     '1.2'
 
@@ -154,6 +156,8 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     >>> las.header.version
     '1.2'
     >>> las = convert(las, point_format_id=6)
+    >>> las.header.point_format_id
+    6
     >>> las.header.version
     '1.4'
     >>> las = convert(las, point_format_id=0)
@@ -195,7 +199,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
 
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
-    header.point_data_format_id = point_format_id
+    header.point_format_id = point_format_id
 
     points = record.PackedPointRecord.from_point_record(
         source_las.points_data, point_format_id)

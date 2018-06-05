@@ -59,14 +59,14 @@ def test_change_format(las):
     las = pylas.convert(las, point_format_id=2)
     las = write_then_read_again(las)
     assert las.points_data.point_format_id == 2
-    assert las.header.point_data_format_id == 2
+    assert las.header.point_format_id == 2
     assert las.header.version == in_version
     assert dim_does_not_exists(las, 'gps_time')
 
     las = pylas.convert(las, point_format_id=1)
     las = write_then_read_again(las)
     assert las.points_data.point_format_id == 1
-    assert las.header.point_data_format_id == 1
+    assert las.header.point_format_id == 1
     assert las.header.version == in_version
     assert dim_does_not_exists(las, 'red')
     assert dim_does_not_exists(las, 'green')
@@ -75,7 +75,7 @@ def test_change_format(las):
     las = pylas.convert(las, point_format_id=0)
     las = write_then_read_again(las)
     assert las.points_data.point_format_id == 0
-    assert las.header.point_data_format_id == 0
+    assert las.header.point_format_id == 0
     assert las.header.version == in_version
     assert dim_does_not_exists(las, 'red')
     assert dim_does_not_exists(las, 'green')
@@ -86,7 +86,7 @@ def test_change_format(las):
     las = write_then_read_again(las)
     assert las.header.version == '1.4'
     assert las.points_data.point_format_id == 8
-    assert las.header.point_data_format_id == 8
+    assert las.header.point_format_id == 8
     assert dim_does_exists(las, 'red')
     assert dim_does_exists(las, 'green')
     assert dim_does_exists(las, 'blue')
@@ -96,7 +96,7 @@ def test_change_format(las):
     las = write_then_read_again(las)
     assert las.header.version == '1.4'
     assert las.points_data.point_format_id == 7
-    assert las.header.point_data_format_id == 7
+    assert las.header.point_format_id == 7
     assert dim_does_exists(las, 'red')
     assert dim_does_exists(las, 'green')
     assert dim_does_exists(las, 'blue')
@@ -106,7 +106,7 @@ def test_change_format(las):
     las = write_then_read_again(las)
     assert las.header.version == '1.4'
     assert las.points_data.point_format_id == 6
-    assert las.header.point_data_format_id == 6
+    assert las.header.point_format_id == 6
     assert dim_does_not_exists(las, 'red')
     assert dim_does_not_exists(las, 'green')
     assert dim_does_not_exists(las, 'blue')

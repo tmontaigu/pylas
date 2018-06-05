@@ -43,7 +43,7 @@ class LasMMAP(base.LasBase):
 
         self.points_data = record.PackedPointRecord.from_buffer(
             self.mmap,
-            self.header.point_data_format_id,
+            self.header.point_format_id,
             count=self.header.point_count,
             offset=self.header.offset_to_point_data,
             extra_dims=extra_dims

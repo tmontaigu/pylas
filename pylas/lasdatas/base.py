@@ -38,7 +38,7 @@ class LasBase(object):
 
     def __init__(self, *, header, vlrs=None, points=None):
         if points is None:
-            points = record.PackedPointRecord.empty(header.point_data_format_id)
+            points = record.PackedPointRecord.empty(header.point_format_id)
         self.__dict__['points_data'] = points
         self.header = header
         self.vlrs = vlrs if vlrs is not None else vlrlist.VLRList()
@@ -98,7 +98,7 @@ class LasBase(object):
                 new_point_record.point_format_id, self.header.version))
 
         self.points_data = new_point_record
-        self.header.point_data_format_id = self.points_data.point_format_id
+        self.header.point_format_id = self.points_data.point_format_id
 
     def __getattr__(self, item):
         """ Automatically called by Python when the attribute
@@ -135,7 +135,7 @@ class LasBase(object):
         self.points_data[key] = value
 
     def update_header(self):
-        self.header.point_data_format_id = self.points_data.point_format_id
+        self.header.point_format_id = self.points_data.point_format_id
         self.header.point_count = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
 
@@ -172,12 +172,12 @@ class LasBase(object):
             else:
                 raise NotImplementedError('Lazperf cannot compress LAS with extra bytes')
 
-            laz_vrl = create_laz_vlr(self.header.point_data_format_id)
+            laz_vrl = create_laz_vlr(self.header.point_format_id)
             self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
             self.header.offset_to_point_data = self.header.size + raw_vlrs.total_size_in_bytes()
-            self.header.point_data_format_id = uncompressed_id_to_compressed(self.header.point_data_format_id)
+            self.header.point_format_id = uncompressed_id_to_compressed(self.header.point_format_id)
             self.header.number_of_vlr = len(raw_vlrs)
 
             points_bytes = compress_buffer(
