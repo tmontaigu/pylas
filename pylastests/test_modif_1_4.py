@@ -7,7 +7,7 @@ import pylas
 from pylastests.test_common import test1_4_las
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def las():
     return pylas.read(test1_4_las)
 

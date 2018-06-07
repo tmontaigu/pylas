@@ -12,16 +12,16 @@ class LasData(LasBase):
 
     def update_header(self):
         super().update_header()
-        if len(self.vlrs.get('WktCoordinateSystemVlr')) == 1:
+        if len(self.vlrs.get("WktCoordinateSystemVlr")) == 1:
             self.header.global_encoding.wkt = 1
 
     def add_extra_dim(self, dim_name, dim_type):
-        name = dim_name.replace(' ', '_')
+        name = dim_name.replace(" ", "_")
         type_id = extradims.get_id_for_extra_dim_type(dim_type)
         extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode())
 
         try:
-            extra_bytes_vlr = self.vlrs.get('ExtraBytesVlr')[0]
+            extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
         except IndexError:
             extra_bytes_vlr = ExtraBytesVlr()
             self.vlrs.append(extra_bytes_vlr)
@@ -31,12 +31,16 @@ class LasData(LasBase):
 
     def write_to(self, out_stream, do_compress=False):
         if do_compress and self.points_data.point_format_id >= 6:
-            raise NotImplementedError('LazPerf cannot compress 1.4 files with point format >= 6')
+            raise NotImplementedError(
+                "LazPerf cannot compress 1.4 files with point format >= 6"
+            )
 
         start = out_stream.tell()
         self.header.start_of_waveform_data_packet_record = 0
 
-        if len(self.points_data) > ctypes_max_limit(self.header.__class__.legacy_point_count.size):
+        if len(self.points_data) > ctypes_max_limit(
+            self.header.__class__.legacy_point_count.size
+        ):
             self.header.legacy_point_count = 0
         else:
             self.header.legacy_point_count = len(self.points_data)

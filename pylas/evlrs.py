@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 
 class EVLRHeader(ctypes.LittleEndianStructure):
     _fields_ = [
-        ('_reserved', ctypes.c_uint16),
-        ('user_id', ctypes.c_char * 16),
-        ('record_id', ctypes.c_uint16),
-        ('record_length_after_header', ctypes.c_uint64),
-        ('description', ctypes.c_char * 32)
+        ("_reserved", ctypes.c_uint16),
+        ("user_id", ctypes.c_char * 16),
+        ("record_id", ctypes.c_uint16),
+        ("record_length_after_header", ctypes.c_uint64),
+        ("description", ctypes.c_char * 32),
     ]
 
 
@@ -22,7 +22,7 @@ EVLR_HEADER_SIZE = ctypes.sizeof(EVLRHeader)
 class RawEVLR:
     def __init__(self):
         self.header = EVLRHeader()
-        self._record_data = b''
+        self._record_data = b""
 
     @property
     def record_data(self):
@@ -36,8 +36,12 @@ class RawEVLR:
     @classmethod
     def read_from(cls, data_stream):
         raw_evlr = cls()
-        raw_evlr.header = EVLRHeader.from_buffer(bytearray(data_stream.read(EVLR_HEADER_SIZE)))
-        raw_evlr.record_data = data_stream.read(raw_evlr.header.record_length_after_header)
+        raw_evlr.header = EVLRHeader.from_buffer(
+            bytearray(data_stream.read(EVLR_HEADER_SIZE))
+        )
+        raw_evlr.record_data = data_stream.read(
+            raw_evlr.header.record_length_after_header
+        )
         return raw_evlr
 
     def size_in_bytes(self):
@@ -48,8 +52,10 @@ class RawEVLR:
         out.write(self.record_data)
 
     def __repr__(self):
-        return '<RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {})>'.format(
-            self.header.user_id, self.header.record_id, self.header.record_length_after_header
+        return "<RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {})>".format(
+            self.header.user_id,
+            self.header.record_id,
+            self.header.record_length_after_header,
         )
 
 
@@ -67,8 +73,8 @@ class RawEVLRList(vlrlist.RawVLRList):
         raw_vlrs = cls()
         for vlr in vlrs:
             raw = RawEVLR()
-            raw.header.user_id = vlr.user_id.encode('utf8')
-            raw.header.description = vlr.description.encode('utf8')
+            raw.header.user_id = vlr.user_id.encode("utf8")
+            raw.header.description = vlr.description.encode("utf8")
             raw.header.record_id = vlr.record_id
             raw.record_data = vlr.record_data_bytes()
             raw_vlrs.append(raw)
@@ -76,7 +82,6 @@ class RawEVLRList(vlrlist.RawVLRList):
 
 
 class EVLRList(vlrlist.VLRList):
-
     @classmethod
     def read_from(cls, data_stream, num_to_read):
         evlr_list = cls()

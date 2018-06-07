@@ -13,14 +13,18 @@ def test_number_of_points_return_is_updated(all_las_but_1_4):
     r = las.return_number
 
     for i in reversed(range(nb_slice)):
-        r[i * (nb_points // nb_slice): (i + 1) * (nb_points // nb_slice)] = i
+        r[i * (nb_points // nb_slice) : (i + 1) * (nb_points // nb_slice)] = i
 
     las.return_number = r
     las = test_common.write_then_read_again(las)
 
-    assert tuple(las.header.number_of_points_by_return[:nb_slice]) == (nb_points // nb_slice,) * nb_slice
+    assert (
+        tuple(las.header.number_of_points_by_return[:nb_slice])
+        == (nb_points // nb_slice,) * nb_slice
+    )
     assert tuple(las.header.number_of_points_by_return[nb_slice:]) == (0,) * (
-            len(las.header.number_of_points_by_return) - nb_slice)
+        len(las.header.number_of_points_by_return) - nb_slice
+    )
 
 
 def test_nb_points_return_1_4():
@@ -36,4 +40,6 @@ def test_nb_points_return_1_4():
     las.return_number = r
     las = test_common.write_then_read_again(las)
 
-    assert tuple(las.header.number_of_points_by_return) == ((1,) * 14) + (len(las.points_data) - 14,)
+    assert tuple(las.header.number_of_points_by_return) == ((1,) * 14) + (
+        len(las.points_data) - 14,
+    )

@@ -18,7 +18,14 @@ def file():
 def test_incompatible_data_type():
     las = pylas.create_las()
     dtype = np.dtype(
-        [('X', 'u4'), ('Y', 'u4'), ('Z', 'u4'), ('codification', 'u4'), ('intensity', 'i2')])
+        [
+            ("X", "u4"),
+            ("Y", "u4"),
+            ("Z", "u4"),
+            ("codification", "u4"),
+            ("intensity", "i2"),
+        ]
+    )
     with pytest.raises(pylas.errors.IncompatibleDataFormat):
         las.points = np.zeros(120, dtype=dtype)
 
@@ -41,7 +48,7 @@ def test_xyz():
 def test_wrong_version():
     for i in range(6, 8):
         with pytest.raises(ValueError):
-            _ = pylas.create_las(point_format=i, file_version='1.2')
+            _ = pylas.create_las(point_format=i, file_version="1.2")
 
 
 def test_good_version_is_used():
@@ -93,7 +100,9 @@ def test_create_fmt_0(file):
     new = write_then_read_again(new)
 
     for dim_name in dim_names_fmt_0:
-        assert np.allclose(new[dim_name], file[dim_name]), "{} not equal".format(dim_name)
+        assert np.allclose(new[dim_name], file[dim_name]), "{} not equal".format(
+            dim_name
+        )
 
 
 def test_create_fmt_1(file):
@@ -157,7 +166,7 @@ def test_create_fmt_3(file):
 
 def test_create_fmt_6(file1_4):
     new = pylas.create_las(point_format=6)
-    assert new.header.version == '1.4'
+    assert new.header.version == "1.4"
 
     dim_names_fmt_6 = pylas.point.dims.get_dtype_of_format_id(6).names
 
@@ -165,8 +174,12 @@ def test_create_fmt_6(file1_4):
         new[dim_name] = file1_4[dim_name]
 
     for dim_name in dim_names_fmt_6:
-        assert np.allclose(new[dim_name], file1_4[dim_name]), "{} not equal".format(dim_name)
+        assert np.allclose(new[dim_name], file1_4[dim_name]), "{} not equal".format(
+            dim_name
+        )
 
     new = write_then_read_again(new)
     for dim_name in dim_names_fmt_6:
-        assert np.allclose(new[dim_name], file1_4[dim_name]), "{} not equal".format(dim_name)
+        assert np.allclose(new[dim_name], file1_4[dim_name]), "{} not equal".format(
+            dim_name
+        )

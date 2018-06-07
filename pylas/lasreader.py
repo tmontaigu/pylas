@@ -16,9 +16,9 @@ def _raise_if_wrong_file_signature(stream):
     """ Reads the 4 first bytes of the stream to check that is LASF"""
     file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
     if file_sig != headers.LAS_FILE_SIGNATURE:
-        raise ValueError('File Signature ({}) is not {}'.format(
-            file_sig, headers.LAS_FILE_SIGNATURE
-        ))
+        raise ValueError(
+            "File Signature ({}) is not {}".format(file_sig, headers.LAS_FILE_SIGNATURE)
+        )
 
 
 class LasReader:
@@ -54,7 +54,9 @@ class LasReader:
         object
         """
         vlrs = self.read_vlrs()
-        self._warn_if_not_at_expected_pos(self.header.offset_to_point_data, "end of vlrs", "start of points")
+        self._warn_if_not_at_expected_pos(
+            self.header.offset_to_point_data, "end of vlrs", "start of points"
+        )
         self.stream.seek(self.start_pos + self.header.offset_to_point_data)
 
         try:
@@ -66,21 +68,30 @@ class LasReader:
             return self.read()
 
         if dims.format_has_waveform_packet(self.header.point_format_id):
-            self.stream.seek(self.start_pos + self.header.start_of_waveform_data_packet_record)
+            self.stream.seek(
+                self.start_pos + self.header.start_of_waveform_data_packet_record
+            )
             if self.header.global_encoding.are_waveform_flag_equal():
                 raise ValueError(
-                    'Incoherent values for internal and external waveform flags, both are {})'.format(
-                        'set' if self.header.global_encoding.waveform_internal else 'unset'
-                    ))
+                    "Incoherent values for internal and external waveform flags, both are {})".format(
+                        "set"
+                        if self.header.global_encoding.waveform_internal
+                        else "unset"
+                    )
+                )
             if self.header.global_encoding.waveform_internal:
                 # TODO: Find out what to do with these
                 _, _ = self._read_internal_waveform_packet()
             elif self.header.global_encoding.waveform_external:
-                logger.info("Waveform data is in an external file, you'll have to load it yourself")
+                logger.info(
+                    "Waveform data is in an external file, you'll have to load it yourself"
+                )
 
-        if self.header.version >= '1.4':
+        if self.header.version >= "1.4":
             evlrs = self.read_evlrs()
-            return las14.LasData(header=self.header, vlrs=vlrs, points=points, evlrs=evlrs)
+            return las14.LasData(
+                header=self.header, vlrs=vlrs, points=points, evlrs=evlrs
+            )
 
         return las12.LasData(header=self.header, vlrs=vlrs, points=points)
 
@@ -92,38 +103,41 @@ class LasReader:
         the vlrs are need to get the potential laszip vlr as well as the extra bytes vlr
         """
         try:
-            extra_dims = vlrs.get('ExtraBytesVlr')[0].type_of_extra_dims()
+            extra_dims = vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
         except IndexError:
             extra_dims = None
 
         if self.header.are_points_compressed:
-            laszip_vlr = vlrs.pop(vlrs.index('LasZipVlr'))
+            laszip_vlr = vlrs.pop(vlrs.index("LasZipVlr"))
             points = self._read_compressed_points_data(laszip_vlr)
         else:
             points = record.PackedPointRecord.from_stream(
                 self.stream,
                 self.header.point_format_id,
                 self.header.point_count,
-                extra_dims
+                extra_dims,
             )
         return points
 
     def _read_compressed_points_data(self, laszip_vlr):
         """ reads the compressed point record
         """
-        offset_to_chunk_table = struct.unpack('<q', self.stream.read(8))[0]
+        offset_to_chunk_table = struct.unpack("<q", self.stream.read(8))[0]
         size_of_point_data = offset_to_chunk_table - self.stream.tell()
 
         if offset_to_chunk_table <= 0:
-            logger.warning("Strange offset to chunk table: {}, ignoring it..".format(
-                offset_to_chunk_table))
+            logger.warning(
+                "Strange offset to chunk table: {}, ignoring it..".format(
+                    offset_to_chunk_table
+                )
+            )
             size_of_point_data = -1  # Read everything
 
         points = record.PackedPointRecord.from_compressed_buffer(
             self.stream.read(size_of_point_data),
             self.header.point_format_id,
             self.header.point_count,
-            laszip_vlr
+            laszip_vlr,
         )
         return points
 
@@ -136,8 +150,9 @@ class LasReader:
         b = bytearray(self.stream.read(rawvlr.VLR_HEADER_SIZE))
         waveform_header = rawvlr.RawVLRHeader.from_buffer(b)
         waveform_record = self.stream.read()
-        logger.debug("Read: {} MBytes of waveform_record".format(
-            len(waveform_record) / 10 ** 6))
+        logger.debug(
+            "Read: {} MBytes of waveform_record".format(len(waveform_record) / 10 ** 6)
+        )
 
         return waveform_header, waveform_record
 
@@ -152,7 +167,9 @@ class LasReader:
         """ Helper function to warn about unknown bytes found in the file"""
         diff = expected_pos - self.stream.tell()
         if diff != 0:
-            logger.warning("There are {} bytes between {} and {}".format(diff, end_of, start_of))
+            logger.warning(
+                "There are {} bytes between {} and {}".format(diff, end_of, start_of)
+            )
 
     def close(self):
         """ closes the file object used by the reader

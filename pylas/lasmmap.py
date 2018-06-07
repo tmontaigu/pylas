@@ -24,20 +24,20 @@ class LasMMAP(base.LasBase):
     """
 
     def __init__(self, filename):
-        fileref = open(filename, mode='r+b')
+        fileref = open(filename, mode="r+b")
         lasreader._raise_if_wrong_file_signature(fileref)
 
         m = mmap.mmap(fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
         header = headers.HeaderFactory.from_mmap(m)
         if header.are_points_compressed:
-            raise ValueError('Cannot mmap a compressed LAZ file')
+            raise ValueError("Cannot mmap a compressed LAZ file")
         super().__init__(header=header)
         self.fileref, self.mmap = fileref, m
         self.mmap.seek(self.header.size)
         self.vlrs = vlrlist.VLRList.read_from(self.mmap, self.header.number_of_vlr)
 
         try:
-            extra_dims = self.vlrs.get('ExtraBytesVlr')[0].type_of_extra_dims()
+            extra_dims = self.vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
         except IndexError:
             extra_dims = None
 
@@ -46,7 +46,7 @@ class LasMMAP(base.LasBase):
             self.header.point_format_id,
             count=self.header.point_count,
             offset=self.header.offset_to_point_data,
-            extra_dims=extra_dims
+            extra_dims=extra_dims,
         )
 
     def _write_vlrs(self):

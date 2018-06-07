@@ -2,19 +2,20 @@ import ctypes
 
 from .. import utils
 
-NULL_BYTE = b'\x00'
+NULL_BYTE = b"\x00"
 
 
 class RawVLRHeader(ctypes.LittleEndianStructure):
     """ Close representation of a VLR Header as it is written
     in the LAS file.
     """
+
     _fields_ = [
-        ('_reserved', ctypes.c_uint16),
-        ('user_id', ctypes.c_char * 16),
-        ('record_id', ctypes.c_uint16),
-        ('record_length_after_header', ctypes.c_uint16),
-        ('description', ctypes.c_char * 32)
+        ("_reserved", ctypes.c_uint16),
+        ("user_id", ctypes.c_char * 16),
+        ("record_id", ctypes.c_uint16),
+        ("record_length_after_header", ctypes.c_uint16),
+        ("description", ctypes.c_char * 32),
     ]
 
     @classmethod
@@ -32,7 +33,7 @@ class RawVLR:
 
     def __init__(self):
         self.header = RawVLRHeader()
-        self.record_data = b''
+        self.record_data = b""
 
     @property
     def record_data(self):
@@ -40,8 +41,12 @@ class RawVLR:
 
     @record_data.setter
     def record_data(self, value):
-        if len(value) > utils.ctypes_max_limit(RawVLRHeader.record_length_after_header.size):
-            raise OverflowError('VLR record data length ({}) exceeds maximum'.format(len(value)))
+        if len(value) > utils.ctypes_max_limit(
+            RawVLRHeader.record_length_after_header.size
+        ):
+            raise OverflowError(
+                "VLR record data length ({}) exceeds maximum".format(len(value))
+            )
         self.header.record_length_after_header = len(value)
         self._record_data = value
 
@@ -82,22 +87,24 @@ class RawVLR:
         return raw_vlr
 
     def __repr__(self):
-        return '<RawVLR(user_id: {}, record_id: {}, len: {})>'.format(
-            self.header.user_id, self.header.record_id, self.header.record_length_after_header
+        return "<RawVLR(user_id: {}, record_id: {}, len: {})>".format(
+            self.header.user_id,
+            self.header.record_id,
+            self.header.record_length_after_header,
         )
 
 
 class BaseVLR:
-    def __init__(self, user_id, record_id, description=''):
+    def __init__(self, user_id, record_id, description=""):
         self.user_id = user_id
         self.record_id = record_id
         self.description = description
 
 
 class VLR(BaseVLR):
-    def __init__(self, user_id, record_id, description=''):
+    def __init__(self, user_id, record_id, description=""):
         super().__init__(user_id, record_id, description=description)
-        self.record_data = b''
+        self.record_data = b""
 
     def record_data_bytes(self):
         return self.record_data
@@ -114,4 +121,5 @@ class VLR(BaseVLR):
 
     def __repr__(self):
         return "<{}(user_id: '{}', record_id: '{}', data len: '{}')>".format(
-            self.__class__.__name__, self.user_id, self.record_id, len(self.record_data))
+            self.__class__.__name__, self.user_id, self.record_id, len(self.record_data)
+        )

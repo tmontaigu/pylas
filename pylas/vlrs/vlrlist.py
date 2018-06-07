@@ -31,8 +31,8 @@ class RawVLRList:
         raw_vlrs = cls()
         for vlr in vlrs:
             raw = RawVLR()
-            raw.header.user_id = vlr.user_id.encode('utf8')
-            raw.header.description = vlr.description.encode('utf8')
+            raw.header.user_id = vlr.user_id.encode("utf8")
+            raw.header.description = vlr.description.encode("utf8")
             raw.header.record_id = vlr.record_id
             raw.record_data = vlr.record_data_bytes()
             raw_vlrs.append(raw)
@@ -64,7 +64,7 @@ class VLRList:
         """
         self.vlrs.extend(vlr_list)
 
-    def get_by_id(self, user_id='', record_ids=(None,)):
+    def get_by_id(self, user_id="", record_ids=(None,)):
         """ Function to get vlrs by user_id and/or record_ids
 
         Parameters
@@ -79,10 +79,18 @@ class VLRList:
         a List of vlrs matching the user_id and records_ids
 
         """
-        if user_id != '' and record_ids != (None,):
-            return [vlr for vlr in self.vlrs if vlr.user_id == user_id and vlr.record_id in record_ids]
+        if user_id != "" and record_ids != (None,):
+            return [
+                vlr
+                for vlr in self.vlrs
+                if vlr.user_id == user_id and vlr.record_id in record_ids
+            ]
         else:
-            return [vlr for vlr in self.vlrs if vlr.user_id == user_id or vlr.record_id in record_ids]
+            return [
+                vlr
+                for vlr in self.vlrs
+                if vlr.user_id == user_id or vlr.record_id in record_ids
+            ]
 
     def get(self, vlr_type):
         """ Returns the list of vlrs of the requested type
@@ -129,7 +137,7 @@ class VLRList:
             if v.__class__.__name__ == vlr_type:
                 return i
         else:
-            raise ValueError('{} is not in the VLR list'.format(vlr_type))
+            raise ValueError("{} is not in the VLR list".format(vlr_type))
 
     def __iter__(self):
         yield from iter(self.vlrs)

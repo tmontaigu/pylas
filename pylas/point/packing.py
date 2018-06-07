@@ -52,13 +52,14 @@ def pack(array, sub_field_array, mask, inplace=False):
     lsb = least_significant_bit(mask)
     max_value = int(mask >> lsb)
     if sub_field_array.max() > max_value:
-        raise OverflowError("value ({}) is greater than allowed (max: {})".format(
-            sub_field_array.max(), max_value
-        ))
+        raise OverflowError(
+            "value ({}) is greater than allowed (max: {})".format(
+                sub_field_array.max(), max_value
+            )
+        )
     if inplace:
         array[:] = array & ~mask
-        array[:] = array | ((sub_field_array << lsb) &
-                            mask).astype(array.dtype)
+        array[:] = array | ((sub_field_array << lsb) & mask).astype(array.dtype)
     else:
         array = array & ~mask
         return array | ((sub_field_array << lsb) & mask).astype(array.dtype)
@@ -79,8 +80,7 @@ def unpack_sub_fields(data, point_format_id):
     for dim_name in data.dtype.names:
         if dim_name in composed_dims:
             for sub_field in composed_dims[dim_name]:
-                point_record[sub_field.name] = unpack(
-                    data[dim_name], sub_field.mask)
+                point_record[sub_field.name] = unpack(data[dim_name], sub_field.mask)
         else:
             point_record[dim_name] = data[dim_name]
     return point_record
@@ -94,8 +94,7 @@ def repack_sub_fields(structured_array, point_format_id):
         A new structured array without the de-packed sub-fields
     """
     repacked_array = np.zeros_like(
-        structured_array,
-        get_dtype_of_format_id(point_format_id)
+        structured_array, get_dtype_of_format_id(point_format_id)
     )
     composed_dims = COMPOSED_FIELDS[point_format_id]
 
@@ -107,11 +106,14 @@ def repack_sub_fields(structured_array, point_format_id):
                         repacked_array[dim_name],
                         structured_array[sub_field.name],
                         sub_field.mask,
-                        inplace=True
+                        inplace=True,
                     )
                 except OverflowError as e:
-                    raise OverflowError("Error repacking {} into {}: {}".format(
-                        sub_field.name, dim_name, e))
+                    raise OverflowError(
+                        "Error repacking {} into {}: {}".format(
+                            sub_field.name, dim_name, e
+                        )
+                    )
         else:
             repacked_array[dim_name] = structured_array[dim_name]
     return repacked_array

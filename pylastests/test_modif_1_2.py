@@ -30,11 +30,11 @@ def test_classification_change(tmpdir, las, do_compress):
     las.classification = c
     assert np.allclose(c, las.classification)
 
-    out = tmpdir.join('tmp.las').open('wb')
+    out = tmpdir.join("tmp.las").open("wb")
     las.write_to(out, do_compress=do_compress)
     out.close()
 
-    out = tmpdir.join('tmp.las').open('rb')
+    out = tmpdir.join("tmp.las").open("rb")
     las = pylas.read(out)
 
     assert np.allclose(c, las.classification)
@@ -49,11 +49,11 @@ def test_synthetic_change(tmpdir, las, do_compress):
     las.synthetic = s
     assert np.allclose(s, las.synthetic)
 
-    out = tmpdir.join('tmp.las').open('wb')
+    out = tmpdir.join("tmp.las").open("wb")
     las.write_to(out, do_compress=do_compress)
     out.close()
 
-    out = tmpdir.join('tmp.las').open('rb')
+    out = tmpdir.join("tmp.las").open("rb")
     las = pylas.read(out)
 
     assert np.allclose(s, las.synthetic)
@@ -68,11 +68,11 @@ def test_key_point_change(tmpdir, las, do_compress):
     las.key_point = kp
     assert np.allclose(kp, las.key_point)
 
-    out = tmpdir.join('tmp.las').open('wb')
+    out = tmpdir.join("tmp.las").open("wb")
     las.write_to(out, do_compress=do_compress)
     out.close()
 
-    out = tmpdir.join('tmp.las').open('rb')
+    out = tmpdir.join("tmp.las").open("rb")
     las = pylas.read(out)
 
     assert np.allclose(kp, las.key_point)
@@ -87,11 +87,11 @@ def test_withheld_changes(tmpdir, las, do_compress):
     las.withheld = withheld
     assert np.allclose(withheld, las.withheld)
 
-    out = tmpdir.join('tmp.las').open('wb')
+    out = tmpdir.join("tmp.las").open("wb")
     las.write_to(out, do_compress)
     out.close()
 
-    out = tmpdir.join('tmp.las').open('rb')
+    out = tmpdir.join("tmp.las").open("rb")
     las = pylas.read(out)
 
     assert np.allclose(withheld, las.withheld)

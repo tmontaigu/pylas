@@ -42,7 +42,7 @@ def open_las(source, closefd=True):
 
     """
     if isinstance(source, str):
-        stream = open(source, mode='rb')
+        stream = open(source, mode="rb")
         if not closefd:
             raise ValueError("Cannot use closefd with filename")
     else:
@@ -75,7 +75,7 @@ def mmap_las(filename):
 
 def create_from_header(header):
     points = record.PackedPointRecord.zeros(header.point_format_id, header.point_count)
-    if header.version >= '1.4':
+    if header.version >= "1.4":
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)
 
@@ -127,7 +127,7 @@ def create_las(*, point_format=0, file_version=None):
     header = headers.HeaderFactory.new(file_version)
     header.point_format_id = point_format
 
-    if file_version >= '1.4':
+    if file_version >= "1.4":
         return las14.LasData(header=header)
     return las12.LasData(header=header)
 
@@ -190,10 +190,17 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     -------
         LasData
     """
-    point_format_id = source_las.points_data.point_format_id if point_format_id is None else point_format_id
+    point_format_id = (
+        source_las.points_data.point_format_id
+        if point_format_id is None
+        else point_format_id
+    )
 
     if file_version is None:
-        file_version = max(source_las.header.version, dims.min_file_version_for_point_format(point_format_id))
+        file_version = max(
+            source_las.header.version,
+            dims.min_file_version_for_point_format(point_format_id),
+        )
     else:
         file_version = str(file_version)
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
@@ -202,13 +209,16 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header.point_format_id = point_format_id
 
     points = record.PackedPointRecord.from_point_record(
-        source_las.points_data, point_format_id)
+        source_las.points_data, point_format_id
+    )
 
     try:
         evlrs = source_las.evlrs
     except ValueError:
         evlrs = []
 
-    if file_version >= '1.4':
-        return las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
+    if file_version >= "1.4":
+        return las14.LasData(
+            header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
+        )
     return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
