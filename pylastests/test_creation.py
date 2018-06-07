@@ -16,7 +16,7 @@ def file():
 
 
 def test_incompatible_data_type():
-    las = pylas.create_las()
+    las = pylas.create()
     dtype = np.dtype(
         [
             ("X", "u4"),
@@ -31,7 +31,7 @@ def test_incompatible_data_type():
 
 
 def test_xyz():
-    las = pylas.create_las()
+    las = pylas.create()
     shape = (150,)
     las.X = np.zeros(shape, dtype=np.int32)
     las.Y = np.ones(shape, dtype=np.int32)
@@ -48,18 +48,18 @@ def test_xyz():
 def test_wrong_version():
     for i in range(6, 8):
         with pytest.raises(ValueError):
-            _ = pylas.create_las(point_format=i, file_version="1.2")
+            _ = pylas.create(point_format=i, file_version="1.2")
 
 
 def test_good_version_is_used():
     for i in range(6, 8):
-        las = pylas.create_las(point_format=i)
+        las = pylas.create(point_format=i)
         assert las.header.version_major == 1
         assert las.header.version_minor == 4
 
 
 def test_extraction(file):
-    new = pylas.create_las(point_format=0)
+    new = pylas.create(point_format=0)
 
     assert file.points_data.point_format_id == 3
 
@@ -75,7 +75,7 @@ def test_extraction(file):
 
 
 def test_create_fmt_0(file):
-    new = pylas.create_las(point_format=0)
+    new = pylas.create(point_format=0)
 
     dim_names_fmt_0 = pylas.point.dims.get_dtype_of_format_id(0).names
 
@@ -106,7 +106,7 @@ def test_create_fmt_0(file):
 
 
 def test_create_fmt_1(file):
-    new = pylas.create_las(point_format=1)
+    new = pylas.create(point_format=1)
 
     with pytest.raises(ValueError):
         new.red = file.red
@@ -125,7 +125,7 @@ def test_create_fmt_1(file):
 
 
 def test_create_fmt_2(file):
-    new = pylas.create_las(point_format=2)
+    new = pylas.create(point_format=2)
 
     with pytest.raises(ValueError):
         new.gps_time = file.gps_time
@@ -145,7 +145,7 @@ def test_create_fmt_2(file):
 
 
 def test_create_fmt_3(file):
-    new = pylas.create_las(point_format=3)
+    new = pylas.create(point_format=3)
 
     new.red = file.red
     new.green = file.green
@@ -165,7 +165,7 @@ def test_create_fmt_3(file):
 
 
 def test_create_fmt_6(file1_4):
-    new = pylas.create_las(point_format=6)
+    new = pylas.create(point_format=6)
     assert new.header.version == "1.4"
 
     dim_names_fmt_6 = pylas.point.dims.get_dtype_of_format_id(6).names

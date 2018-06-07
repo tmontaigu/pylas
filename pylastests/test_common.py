@@ -16,9 +16,9 @@ extra_bytes_las = os.path.dirname(__file__) + "/extrabytes.las"
 extra_bytes_laz = os.path.dirname(__file__) + "/extra.laz"
 
 
-def write_then_read_again(las):
+def write_then_read_again(las, do_compress=False):
     out = io.BytesIO()
-    las.write(out)
+    las.write(out, do_compress=do_compress)
     out.seek(0)
     return pylas.read(out)
 

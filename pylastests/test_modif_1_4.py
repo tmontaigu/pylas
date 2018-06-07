@@ -1,10 +1,8 @@
-import io
-
 import numpy as np
 import pytest
 
 import pylas
-from pylastests.test_common import test1_4_las
+from pylastests.test_common import test1_4_las, write_then_read_again
 
 
 @pytest.fixture(scope="session")
@@ -12,28 +10,18 @@ def las():
     return pylas.read(test1_4_las)
 
 
-@pytest.fixture()
-def out():
-    return io.BytesIO()
-
-
-def test_classification(las, out):
+def test_classification(las):
     las.classification[:] = 234
     assert np.alltrue(las.classification == 234)
 
-    las.write(out)
-    out.seek(0)
+    res = write_then_read_again(las)
 
-    res = pylas.read(out)
     assert np.alltrue(las.classification == res.classification)
 
 
-def test_intensity(las, out):
+def test_intensity(las):
     las.intensity[:] = 89
     assert np.alltrue(las.intensity == 89)
+    res = write_then_read_again(las)
 
-    las.write(out)
-    out.seek(0)
-
-    res = pylas.read(out)
     assert np.alltrue(las.intensity == res.intensity)
