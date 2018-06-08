@@ -37,8 +37,7 @@ class LasReader:
         self.header = self.read_header()
 
     def read_header(self):
-        """ Reads the head of the las file, or if it has already been read,
-        returns it
+        """ Reads the head of the las file and returns it
         """
         self.stream.seek(self.start_pos)
         return headers.HeaderFactory().read_from_stream(self.stream)

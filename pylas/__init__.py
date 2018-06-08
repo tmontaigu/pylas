@@ -1,5 +1,5 @@
 from . import errors
-from .lib import convert, create_las
+from .lib import convert, create_from_header
 from .lib import create_las as create
 from .lib import open_las as open
 from .lib import read_las as read

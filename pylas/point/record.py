@@ -66,7 +66,7 @@ class PointRecord(ABC):
 
 class PackedPointRecord(PointRecord):
     """
-    In the PackedPointRecord, fields that are a combinations of many sub-fields (fields stored on les than a byte)
+    In the PackedPointRecord, fields that are a combinations of many sub-fields (fields stored on less than a byte)
     are still packed together and are only de-packed and re-packed when accessed.
 
     This uses of less memory than if the sub-fields were unpacked

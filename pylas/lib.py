@@ -31,9 +31,11 @@ def open_las(source, closefd=True):
     source : stream | str
         if source is a str it must be a filename
         a stream if a file object with the methods read, seek, tell
-    closefd: Whether the stream/file object shall be closed, this only work
-    when using open_las in a with statement. An exception is raised if
-    closefd is specified and the source is a filename
+
+    closefd: bool
+        Whether the stream/file object shall be closed, this only work
+        when using open_las in a with statement. An exception is raised if
+        closefd is specified and the source is a filename
 
 
     Returns
@@ -60,6 +62,11 @@ def read_las(source, closefd=True):
     source : {str | file_object}
         The source to read data from
 
+    closefd: {bool}
+            if True and the source is a stream, the function will close it
+            after it is done reading
+
+
     Returns
     -------
     pylas.lasdatas.base.LasBase
@@ -74,6 +81,16 @@ def mmap_las(filename):
 
 
 def create_from_header(header):
+    """ Creates a File from an existing header
+
+    Parameters
+    ----------
+    header : existing header to be used to create the file
+
+    Returns
+    -------
+    pylas.lasdatas.base.LasBase
+    """
     points = record.PackedPointRecord.zeros(header.point_format_id, header.point_count)
     if header.version >= "1.4":
         return las14.LasData(header=header, points=points)

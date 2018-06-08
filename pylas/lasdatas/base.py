@@ -88,6 +88,15 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
+        """ Setter for the points property,
+        Takes care of changing the point_format of the file
+        (as long as the point format of the new points it compatible with the file version)
+
+        Parameters
+        ----------
+        value: numpy.array of the new points
+
+        """
         new_point_record = record.PackedPointRecord(value)
         if not dims.is_point_fmt_compatible_with_version(
             new_point_record.point_format_id, self.header.version
@@ -99,7 +108,7 @@ class LasBase(object):
             )
 
         self.points_data = new_point_record
-        self.header.point_format_id = self.points_data.point_format_id
+        self.update_header()
 
     def __getattr__(self, item):
         """ Automatically called by Python when the attribute
