@@ -43,3 +43,16 @@ def test_nb_points_return_1_4():
     assert tuple(las.header.number_of_points_by_return) == ((1,) * 14) + (
         len(las.points_data) - 14,
     )
+
+
+def test_header_copy():
+    import copy
+    las = pylas.read(test_common.simple_las)
+    header_copy = copy.copy(las.header)
+
+    assert header_copy.point_format_id == las.header.point_format_id
+    assert header_copy.version == las.header.version
+
+    header_copy.point_format_id = 0
+    assert header_copy.point_format_id != las.header.point_format_id
+    assert header_copy.version == las.header.version

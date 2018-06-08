@@ -154,8 +154,19 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         self._point_data_format_id = value
 
     @property
+    def point_size(self):
+        return self.point_data_record_length
+
+    @point_size.setter
+    def point_size(self, value):
+        self.point_data_record_length = value
+
+    @property
     def are_points_compressed(self):
         return compression.is_point_format_compressed(self._point_data_format_id)
+
+    def __copy__(self):
+        return self.__class__.from_buffer_copy(bytes(self))
 
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)

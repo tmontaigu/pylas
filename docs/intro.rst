@@ -101,7 +101,7 @@ the same dimensions plus some additional dimensions:
 +----------------------+-----------+--------------+
 | Added dimensions     |   Type    |  Size (bit)  |
 +======================+===========+==============+
-| gps_time             |  Floating |       64     |
+| gps_time             |  Floating |      64      |
 +----------------------+-----------+--------------+
 
 
@@ -122,7 +122,7 @@ the same dimensions plus some additional dimensions:
 +----------------------+-----------+--------------+
 | Added dimensions     |   Type    |  Size (bit)  |
 +======================+===========+==============+
-| gps_time             |  Floating |       64     |
+| gps_time             |  Floating |      64      |
 +----------------------+-----------+--------------+
 | red                  |  unsigned |      16      |
 +----------------------+-----------+--------------+

@@ -1,6 +1,7 @@
 """ 'Entry point' of the library, Contains the various functions meant to be
 used directly by a user
 """
+import copy
 
 from . import headers
 from .lasdatas import las12, las14
@@ -81,7 +82,10 @@ def mmap_las(filename):
 
 
 def create_from_header(header):
-    """ Creates a File from an existing header
+    """ Creates a File from an existing header,
+    allocating the array of point according to the provided header.
+    The input header is copied.
+
 
     Parameters
     ----------
@@ -91,6 +95,7 @@ def create_from_header(header):
     -------
     pylas.lasdatas.base.LasBase
     """
+    header = copy.copy(header)
     points = record.PackedPointRecord.zeros(header.point_format_id, header.point_count)
     if header.version >= "1.4":
         return las14.LasData(header=header, points=points)
@@ -98,7 +103,7 @@ def create_from_header(header):
 
 
 def create_las(*, point_format=0, file_version=None):
-    """ Function to create a new las data object
+    """ Function to create a new empty las data object
 
     .. note::
 
