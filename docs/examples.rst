@@ -1,0 +1,44 @@
+==================
+Examples
+==================
+
+
+Filtering
+---------
+
+This example shows how you can extract points from a file and write them into a new one.
+We use the classification field to filter points, but this can work with the other fields.
+
+.. code-block:: python
+
+    import pylas
+
+    las = pylas.read('pylastests/simple.las')
+
+    new_file = pylas.create()
+    new_file.points = las.points[las.classification == 1]
+
+    new_file.write('extracted_points.las')
+
+
+
+Creating from scratch
+---------------------
+
+This example shows how you can create a new LAS file from scratch.
+
+.. code-block:: python
+
+    import pylas
+    import numpy as np
+
+    las = pylas.create()
+
+    array = np.linspace(0.0, 15.0, 10000)
+    las.x = array
+    las.y = array
+    las.z = array
+
+    las.write('diagonal.las')
+
+

@@ -49,6 +49,7 @@ User Guide
     intro
     installation
     basic
+    examples
 
 API Documentation
 =================

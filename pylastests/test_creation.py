@@ -66,6 +66,7 @@ def test_extraction(file):
     # automatic promotion of point format
     new.points = file.points[file.classification == 2]
     assert new.points_data.point_format_id == 3
+    assert new.header.point_format_id == 3
 
     assert len(new.points) == sum(file.classification == 2)
     assert np.alltrue(new.classification == 2)
