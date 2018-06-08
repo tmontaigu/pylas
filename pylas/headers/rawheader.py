@@ -2,6 +2,7 @@ import ctypes
 import datetime
 import enum
 import logging
+import uuid
 
 from .. import compression
 from .. import errors
@@ -50,10 +51,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         ("file_signature", ctypes.c_char * 4),
         ("file_source_id", ctypes.c_uint16),
         ("global_encoding", GlobalEncoding),
-        ("guid_data_1", ctypes.c_uint32),
-        ("guid_data_2", ctypes.c_uint16),
-        ("guid_data_3", ctypes.c_uint16),
-        ("guid_data_4", ctypes.c_uint8 * 8),
+        ("uuid_bytes", ctypes.c_ubyte * 16),
         ("version_major", ctypes.c_uint8),
         ("version_minor", ctypes.c_uint8),
         ("system_identifier", ctypes.c_char * 32),
@@ -160,6 +158,14 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     @point_size.setter
     def point_size(self, value):
         self.point_data_record_length = value
+
+    @property
+    def uuid(self):
+        return uuid.UUID(bytes_le=bytes(self.uuid_bytes))
+
+    @uuid.setter
+    def uuid(self, new_uuid):
+        self.uuid_bytes = (ctypes.c_ubyte * 16)(*new_uuid.bytes_le)
 
     @property
     def are_points_compressed(self):

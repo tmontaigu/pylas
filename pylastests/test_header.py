@@ -47,6 +47,7 @@ def test_nb_points_return_1_4():
 
 def test_header_copy():
     import copy
+
     las = pylas.read(test_common.simple_las)
     header_copy = copy.copy(las.header)
 
@@ -56,3 +57,13 @@ def test_header_copy():
     header_copy.point_format_id = 0
     assert header_copy.point_format_id != las.header.point_format_id
     assert header_copy.version == las.header.version
+
+
+def test_set_uuid():
+    import uuid
+
+    las = pylas.read(test_common.simple_las)
+    u = uuid.uuid4()
+    las.header.uuid = u
+    las = test_common.write_then_read_again(las)
+    assert las.header.uuid == u
