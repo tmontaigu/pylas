@@ -93,9 +93,9 @@ def repack_sub_fields(structured_array, point_format_id):
     Returns:
         A new structured array without the de-packed sub-fields
     """
-    repacked_array = np.zeros_like(
-        structured_array, get_dtype_of_format_id(point_format_id)
-    )
+    extra_dims = get_extra_dimensions_spec(structured_array.dtype, point_format_id)
+    dtype = get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
+    repacked_array = np.zeros_like(structured_array, dtype)
     composed_dims = COMPOSED_FIELDS[point_format_id]
 
     for dim_name in repacked_array.dtype.names:
