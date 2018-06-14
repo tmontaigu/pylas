@@ -23,7 +23,7 @@ Example
 
     # Open data to inspect header and then read
     with pylas.open('filename.las') as f:
-        if f.header.number_of_point_records < 10 ** 8:
+        if f.header.point_count < 10 ** 8:
             las = f.read()
     print(las.vlrs)
 
