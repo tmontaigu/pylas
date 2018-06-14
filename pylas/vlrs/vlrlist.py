@@ -65,7 +65,23 @@ class VLRList:
         self.vlrs.extend(vlr_list)
 
     def get_by_id(self, user_id="", record_ids=(None,)):
-        """ Function to get vlrs by user_id and/or record_ids
+        """ Function to get vlrs by user_id and/or record_ids.
+        Always returns a list even if only one vlr matches the user_id and record_id
+
+        >>> import pylas
+        >>> from pylas.vlrs.known import ExtraBytesVlr, WktCoordinateSystemVlr
+        >>> las = pylas.read("pylastests/extrabytes.las")
+        >>> las.vlrs
+        [<ExtraBytesVlr(extra bytes structs: 5)>]
+        >>> las.vlrs.get(WktCoordinateSystemVlr.official_user_id())
+        []
+        >>> las.vlrs.get(WktCoordinateSystemVlr.official_user_id())[0]
+        Traceback (most recent call last):
+        IndexError: list index out of range
+        >>> las.vlrs.get_by_id(ExtraBytesVlr.official_user_id())
+        [<ExtraBytesVlr(extra bytes structs: 5)>]
+        >>> las.vlrs.get_by_id(ExtraBytesVlr.official_user_id())[0]
+        <ExtraBytesVlr(extra bytes structs: 5)>
 
         Parameters
         ----------
@@ -94,6 +110,22 @@ class VLRList:
 
     def get(self, vlr_type):
         """ Returns the list of vlrs of the requested type
+        Always returns a list even if there is only one VLR of type vlr_type.
+
+        >>> import pylas
+        >>> las = pylas.read("pylastests/extrabytes.las")
+        >>> las.vlrs
+        [<ExtraBytesVlr(extra bytes structs: 5)>]
+        >>> las.vlrs.get("WktCoordinateSystemVlr")
+        []
+        >>> las.vlrs.get("WktCoordinateSystemVlr")[0]
+        Traceback (most recent call last):
+        IndexError: list index out of range
+        >>> las.vlrs.get('ExtraBytesVlr')
+        [<ExtraBytesVlr(extra bytes structs: 5)>]
+        >>> las.vlrs.get('ExtraBytesVlr')[0]
+        <ExtraBytesVlr(extra bytes structs: 5)>
+
 
         Parameters
         ----------

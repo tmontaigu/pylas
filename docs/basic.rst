@@ -51,3 +51,22 @@ You obtain this type of object by using one of the function above,
 use its method :meth:`pylas.lasdatas.base.LasBase.write` to write to a file or a stream.
 
 
+
+Manipulating VLRs
+=================
+
+To access the VLRs stored in a file, simply access the `vlr` member of the las object.
+
+.. code:: python
+
+    las = pylas.read('somefile.las')
+    vlr_list = las.vlrs
+
+    # or
+
+    with pylas.open('somefile.las') as f:
+        vlr_list = f.read_vlrs()
+
+
+To retrieve a particular vlr from the list there are 2 ways: :meth:`pylas.vlrs.vlrlist.VLRList.get` and
+:meth:`pylas.vlrs.vlrlist.VLRList.get_by_id`
