@@ -1,12 +1,11 @@
 from setuptools import setup, find_packages
-import pylas
 
 with open("README.rst") as f:
     readme = f.read()
 
 setup(
     name="pylas",
-    version=pylas.__version__,
+    version="0.1.3",
     description="Las/Laz reading and writing in python",
     long_description=readme,
     url="https://github.com/tmontaigu/pylas",
