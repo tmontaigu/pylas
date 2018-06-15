@@ -7,6 +7,13 @@ logger = logging.getLogger(__name__)
 
 
 class RawVLRList:
+    """ A RawVLRList is like a VLR list but it should only
+    hold RawVLRs.
+
+    This class is meant to make it easier to write VLRS the the file and know in advance
+    the size in bytes taken by all the VLRs combined
+
+    """
     def __init__(self, iterable=None):
         if iterable is not None:
             self.vlrs = list(iterable)
@@ -23,11 +30,31 @@ class RawVLRList:
         return sum(v.size_in_bytes() for v in self.vlrs)
 
     def write_to(self, out_stream):
+        """ Writes all the raw vlrs contained in list to
+        the out_stream
+
+        Parameters
+        ----------
+        out_stream: io.RawIOBase
+            The stream where vlrs will be written to
+
+        """
         for vlr in self.vlrs:
             vlr.write_to(out_stream)
 
     @classmethod
     def from_list(cls, vlrs):
+        """ Construct a RawVLR list from a list of vlrs
+
+        Parameters
+        ----------
+        vlrs: iterable of VLR
+
+        Returns
+        -------
+        RawVLRList
+
+        """
         raw_vlrs = cls()
         for vlr in vlrs:
             raw = RawVLR()
@@ -51,7 +78,7 @@ class VLRList:
 
         Parameters
         ----------
-        vlr: RawVlR | KnownVlr
+        vlr: RawVlR or VLR or KnownVlr
 
         Returns
         -------
@@ -86,13 +113,14 @@ class VLRList:
         Parameters
         ----------
         user_id: str, optional
-            the user id
-        record_ids: Iterable if int, optional
-            THe record ids of the vlr(s) you wish to get
+                 the user id
+        record_ids: iterable of int, optional
+                    THe record ids of the vlr(s) you wish to get
 
         Returns
         -------
-        a List of vlrs matching the user_id and records_ids
+        :py:class:`list`
+            a list of vlrs matching the user_id and records_ids
 
         """
         if user_id != "" and record_ids != (None,):
@@ -129,7 +157,8 @@ class VLRList:
 
         Parameters
         ----------
-        vlr_type: str, the class name of the vlr
+        vlr_type: str
+                  the class name of the vlr
 
         Returns
         -------
@@ -145,11 +174,13 @@ class VLRList:
 
         Parameters
         ----------
-        vlr_type: str, the class name of the vlr
+        vlr_type: str
+                  the class name of the vlr
 
         Returns
         -------
-        a List of vlrs matching the user_id and records_ids
+        list
+            a List of vlrs matching the user_id and records_ids
 
         """
         kept_vlrs, extracted_vlrs = [], []
@@ -193,8 +224,10 @@ class VLRList:
 
         Parameters
         ----------
-        data_stream : stream to read from
-        num_to_read : number of vlrs to be read
+        data_stream : io.BytesIO
+                      stream to read from
+        num_to_read : int
+                      number of vlrs to be read
 
         Returns
         -------

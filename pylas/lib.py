@@ -15,21 +15,27 @@ USE_UNPACKED = False
 def open_las(source, closefd=True):
     """ Opens and reads the header of the las content in the source
 
-    .. code:: python
+        >>> with open_las('pylastests/simple.las') as f:
+        ...     print(f.header.point_format_id)
+        3
 
-        f = open('pylastests/simple.las', mode='rb')
-        with open(f, closefd=False) as flas:
-            print(flas.header)
-        f.closed == False
 
-        f = open('pylastests/simple.las', mode='rb')
-        with open(f) as flas:
-            las = flas.read()
-        f.closed == True
+        >>> f = open('pylastests/simple.las', mode='rb')
+        >>> with open_las(f, closefd=False) as flas:
+        ...     print(flas.header)
+        <LasHeader(1.2)>
+        >>> f.closed
+        False
+
+        >>> f = open('pylastests/simple.las', mode='rb')
+        >>> with open_las(f) as flas:
+        ...    las = flas.read()
+        >>> f.closed
+        True
 
     Parameters
     ----------
-    source : stream | str
+    source : str or io.BytesIO
         if source is a str it must be a filename
         a stream if a file object with the methods read, seek, tell
 
@@ -58,12 +64,16 @@ def read_las(source, closefd=True):
 
     Reads the whole file in memory.
 
+    >>> las = read_las("pylastests/simple.las")
+    >>> las.classification
+    array([1, 1, 1, ..., 1, 1, 1], dtype=uint8)
+
     Parameters
     ----------
-    source : {str | file_object}
+    source : str or io.BytesIO
         The source to read data from
 
-    closefd: {bool}
+    closefd: bool
             if True and the source is a stream, the function will close it
             after it is done reading
 
@@ -102,7 +112,7 @@ def create_from_header(header):
     return las12.LasData(header=header, points=points)
 
 
-def create_las(*, point_format=0, file_version=None):
+def create_las(*, point_format_id=0, file_version=None):
     """ Function to create a new empty las data object
 
     .. note::
@@ -110,7 +120,7 @@ def create_las(*, point_format=0, file_version=None):
         If you provide both point_format and file_version
         an exception will be raised if they are not compatible
 
-    >>> las = create_las(point_format=6, file_version="1.2")
+    >>> las = create_las(point_format_id=6,file_version="1.2")
     Traceback (most recent call last):
      ...
     ValueError: Point format 6 is not compatible with file version 1.2
@@ -119,19 +129,20 @@ def create_las(*, point_format=0, file_version=None):
     If you provide only the point_format the file_version will automatically
     selected for you.
 
-    >>> las = create_las(point_format=0)
+    >>> las = create_las(point_format_id=0)
     >>> las.header.version == '1.2'
     True
 
-    >>> las = create_las(point_format=6)
+    >>> las = create_las(point_format_id=6)
     >>> las.header.version == '1.4'
     True
 
 
     Parameters
     ----------
-    point_format : int, optional, default=0
-        The point format you want the resulting las to have
+    point_format_id: int
+        The point format you want the created file to have
+
     file_version: str, optional, default=None
         The las version you want the created las to have
 
@@ -142,12 +153,12 @@ def create_las(*, point_format=0, file_version=None):
 
     """
     if file_version is not None:
-        dims.raise_if_version_not_compatible_with_fmt(point_format, file_version)
+        dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
     else:
-        file_version = dims.min_file_version_for_point_format(point_format)
+        file_version = dims.min_file_version_for_point_format(point_format_id)
 
     header = headers.HeaderFactory.new(file_version)
-    header.point_format_id = point_format
+    header.point_format_id = point_format_id
 
     if file_version >= "1.4":
         return las14.LasData(header=header)
@@ -197,10 +208,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     Parameters
     ----------
-    source_las : {LasData}
+    source_las : pylas.lasdatas.base.LasBase
         The source data to be converted
 
-    point_format_id : {int}, optional
+    point_format_id : int, optional
         The new point format id (the default is None, which won't change the source format id)
 
     file_version : str, optional,
@@ -210,13 +221,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     Returns
     -------
-        LasData
+        pylas.lasdatas.base.LasBase
     """
-    point_format_id = (
-        source_las.points_data.point_format_id
-        if point_format_id is None
-        else point_format_id
-    )
+    if point_format_id is None:
+        point_format_id = source_las.points_data.point_format_id
 
     if file_version is None:
         file_version = max(

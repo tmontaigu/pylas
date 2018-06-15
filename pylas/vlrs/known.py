@@ -21,19 +21,49 @@ class KnownVLR:
     @staticmethod
     @abstractmethod
     def official_user_id():
+        """ Shall return the official user_id as described in the documentation
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def official_record_ids():
+        """ Shall return the official record_id for the VLR
+
+        .. note::
+
+            Even if the VLR has one record_id, the return type must be a tuple
+
+        Returns
+        -------
+        tuple of int
+            The record_ids this VLR type can have
+        """
         pass
 
     @abstractmethod
     def record_data_bytes(self):
+        """ Shall return the bytes corresponding to the record_data part of the VLR
+        as they should be written in the file.
+
+        Returns
+        -------
+        bytes
+            The bytes of the vlr's record_data
+
+        """
         pass
 
     @abstractmethod
     def parse_record_data(self, record_data):
+        """ Shall parse the given record_data into a user-friendlier structure
+
+        Parameters
+        ----------
+        record_data: bytes
+            The record_data bytes read from the file
+
+        """
         pass
 
     @classmethod

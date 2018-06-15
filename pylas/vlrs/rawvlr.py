@@ -28,7 +28,8 @@ VLR_HEADER_SIZE = ctypes.sizeof(RawVLRHeader)
 
 class RawVLR:
     """ As close as possible to the underlying data
-    No parsing of the record_data is made
+    No parsing of the record_data is made,
+    every piece of data are still bytes.
     """
 
     def __init__(self):

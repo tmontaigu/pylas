@@ -15,7 +15,7 @@ def point_format_to_dtype(point_format, dimensions):
 
     Parameters:
     ----------
-    point_format : tuple of str
+    point_format : iterable of str
         The dimensions names of the point format
     dimensions : dict
         The dictionary of dimensions
@@ -251,11 +251,11 @@ def get_dtype_of_format_id(point_format_id, extra_dims=None, unpacked=False):
     
     Parameters:
     ----------
-    point_format_id : {int}
+    point_format_id : int
         The point format id
-    extra_dims : {List[(str, str)]}, optional
+    extra_dims : List[(str, str)], optional
         List of extra dims  (the default is None, which won't add extra dims)
-    unpacked : {bool}, optional
+    unpacked : bool, optional
         If True the resulting numpy.dtype will contain bitfields unpacked
     
     Raises
@@ -286,7 +286,7 @@ def get_sub_fields_of_fmt_id(point_format_id):
     
     Parameters:
     ----------
-    point_format_id : {int}
+    point_format_id : int
         The point format id
     Returns
     -------
@@ -310,7 +310,7 @@ def np_dtype_to_point_format(dtype, unpacked=False):
     ----------
     dtype : numpy.dtype
         The input dtype
-    unpacked : {bool}, optional
+    unpacked : bool, optional
         [description] (the default is False, which [default_description])
 
     Raises
