@@ -94,17 +94,19 @@ class PackedPointRecord(PointRecord):
             else point_format_id
         )
         self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(self.point_format_id)
-        self.dimensions_names = set(
-            dims.get_dtype_of_format_id(self.point_format_id, unpacked=True).names
+        self.dimensions_names = dims.get_dtype_of_format_id(
+            self.point_format_id, unpacked=True
+        ).names
+
+    @property
+    def extra_dimensions_names(self):
+        return tuple(
+            dims.get_extra_dimensions_names(self.array.dtype, self.point_format_id)
         )
 
-        standard_dims = self.dimensions_names.copy()
-        standard_dims.update(
-            dims.get_dtype_of_format_id(self.point_format_id, unpacked=False).names
-        )
-        self.extra_dimensions_names = set(self.array.dtype.names).difference(
-            standard_dims
-        )
+    @property
+    def all_dimensions_names(self):
+        return frozenset(self.array.dtype.names + tuple(self.sub_fields_dict.keys()))
 
     @property
     def point_size(self):

@@ -28,7 +28,7 @@ def test_extra_dim_spec():
 
     found_extra_dims_spec = pylas.point.dims.get_extra_dimensions_spec(dtype, 0)
 
-    assert found_extra_dims_spec == extra_dims_specs
+    assert extra_dims_specs == found_extra_dims_spec
 
 
 def test_extra_names(extrab_las):
@@ -50,6 +50,11 @@ def test_add_extra_bytes(las1_4):
     las1_4.test_array[:, 1] = 2.2
     las1_4.test_array[:, 2] = 333.6
 
+    assert np.alltrue(las1_4.points_data['test_dim'] == 150)
+    assert np.allclose(las1_4.points_data['test_array'][:, 0], 1.1)
+    assert np.allclose(las1_4.points_data['test_array'][:, 1], 2.2)
+    assert np.allclose(las1_4.points_data['test_array'][:, 2], 333.6)
+
     las1_4 = write_then_read_again(las1_4)
 
     assert np.alltrue(las1_4.test_dim == 150)
@@ -58,15 +63,25 @@ def test_add_extra_bytes(las1_4):
     assert np.allclose(las1_4.test_array[:, 2], 333.6)
 
 
+def test_extra_bytes_well_saved(extrab_las):
+    extrab_las.Time = np.zeros_like(extrab_las.Time)
+
+    assert np.alltrue(extrab_las.points_data['Time'] == 0)
+
+    extrab_las = write_then_read_again(extrab_las)
+
+    assert np.alltrue(extrab_las.Time == 0)
+
+
 def test_extra_dimensions_names_property():
     simple = pylas.read(simple_las)
-    assert simple.points_data.extra_dimensions_names == set()
+    assert simple.points_data.extra_dimensions_names == ()
 
     extra = pylas.read(extra_bytes_las)
-    assert extra.points_data.extra_dimensions_names == {
+    assert extra.points_data.extra_dimensions_names == (
         "Colors",
-        "Intensity",
-        "Flags",
         "Reserved",
+        "Flags",
+        "Intensity",
         "Time",
-    }
+    )

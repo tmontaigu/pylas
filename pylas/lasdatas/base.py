@@ -128,7 +128,7 @@ class LasBase(object):
         Again we use this to forward the call the the points record
         But this time checking if the key is actually a dimension name
         """
-        if key in dims.DIMENSIONS or key in self.points_data.dimensions_names:
+        if key in dims.DIMENSIONS or key in self.points_data.all_dimensions_names:
             self.points_data[key] = value
         else:
             super().__setattr__(key, value)

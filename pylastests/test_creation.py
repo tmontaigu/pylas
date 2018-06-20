@@ -47,7 +47,7 @@ def test_xyz():
 
 def test_wrong_version():
     for i in range(6, 8):
-        with pytest.raises(ValueError):
+        with pytest.raises(pylas.errors.PylasError):
             _ = pylas.create(point_format_id=i, file_version="1.2")
 
 
