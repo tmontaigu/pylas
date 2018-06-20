@@ -19,7 +19,7 @@ try:
 
     HAS_LAZPERF = True
     # we should capture ModuleNotRoundError but it's a python3.6 exception type
-    # and ReadTheDocs does use 3.5
+    # and ReadTheDocs uses 3.5
 except:
     HAS_LAZPERF = False
 
@@ -67,10 +67,12 @@ def create_laz_vlr(point_format_id):
     raise_if_no_lazperf()
     record_schema = lazperf.RecordSchema()
 
-    if "gps_time" in POINT_FORMAT_DIMENSIONS[point_format_id]:
+    point_format_dimensions = POINT_FORMAT_DIMENSIONS[point_format_id]
+
+    if "gps_time" in point_format_dimensions:
         record_schema.add_gps_time()
 
-    if "red" in POINT_FORMAT_DIMENSIONS[point_format_id]:
+    if "red" in point_format_dimensions:
         record_schema.add_rgb()
 
     return lazperf.LazVLR(record_schema)
@@ -90,10 +92,10 @@ def _pass_through_laszip(stream, action="decompress"):
     laszip_names = ("laszip", "laszip.exe", "laszip-cli", "laszip-cli.exe")
 
     for binary in laszip_names:
-        in_path = [
+        in_path = (
             os.path.isfile(os.path.join(x, binary))
             for x in os.environ["PATH"].split(os.pathsep)
-        ]
+        )
         if any(in_path):
             laszip_binary = binary
             break
