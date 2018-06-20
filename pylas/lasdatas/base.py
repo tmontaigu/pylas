@@ -126,7 +126,13 @@ class LasBase(object):
     def __setattr__(self, key, value):
         """ This is called on every access to an attribute of the instance.
         Again we use this to forward the call the the points record
+
         But this time checking if the key is actually a dimension name
+        so that an error is raised if the user tries to set a valid
+        LAS dimension even if it is not present in the field.
+        eg: user tries to set the red field of a file with point format 0:
+        an error is raised
+
         """
         if key in dims.DIMENSIONS or key in self.points_data.all_dimensions_names:
             self.points_data[key] = value
