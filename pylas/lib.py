@@ -123,7 +123,7 @@ def create_las(*, point_format_id=0, file_version=None):
     >>> las = create_las(point_format_id=6,file_version="1.2")
     Traceback (most recent call last):
      ...
-    ValueError: Point format 6 is not compatible with file version 1.2
+    pylas.errors.PylasError: Point format 6 is not compatible with file version 1.2
 
 
     If you provide only the point_format the file_version will automatically
@@ -204,7 +204,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     >>> convert(las, point_format_id=6, file_version='1.2')
     Traceback (most recent call last):
      ...
-    ValueError: Point format 6 is not compatible with file version 1.2
+    pylas.errors.PylasError: Point format 6 is not compatible with file version 1.2
 
     Parameters
     ----------
