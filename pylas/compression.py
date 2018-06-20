@@ -88,7 +88,7 @@ def compress_buffer(uncompressed_buffer, record_schema, offset):
     return compressed
 
 
-def _pass_through_laszip(stream, action="decompress"):
+def find_laszip_executable():
     laszip_names = ("laszip", "laszip.exe", "laszip-cli", "laszip-cli.exe")
 
     for binary in laszip_names:
@@ -97,9 +97,15 @@ def _pass_through_laszip(stream, action="decompress"):
             for x in os.environ["PATH"].split(os.pathsep)
         )
         if any(in_path):
-            laszip_binary = binary
-            break
+            return binary
+
     else:
+        return None
+
+
+def _pass_through_laszip(stream, action="decompress"):
+    laszip_binary = find_laszip_executable()
+    if laszip_binary is None:
         raise FileNotFoundError("Could not find laszip executable")
 
     if action == "decompress":
