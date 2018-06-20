@@ -2,21 +2,25 @@
 """
 
 
-class UnknownExtraType(Exception):
+class PylasError(Exception):
     pass
 
 
-class PointFormatNotSupported(Exception):
+class UnknownExtraType(PylasError):
     pass
 
 
-class FileVersionNotSupported(Exception):
+class PointFormatNotSupported(PylasError):
     pass
 
 
-class LazPerfNotFound(Exception):
+class FileVersionNotSupported(PylasError):
     pass
 
 
-class IncompatibleDataFormat(Exception):
+class LazPerfNotFound(PylasError):
+    pass
+
+
+class IncompatibleDataFormat(PylasError):
     pass

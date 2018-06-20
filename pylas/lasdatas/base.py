@@ -1,5 +1,6 @@
 import numpy as np
 
+
 from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
 from ..point import record, dims
 from ..vlrs import known, vlrlist
@@ -98,15 +99,9 @@ class LasBase(object):
 
         """
         new_point_record = record.PackedPointRecord(value)
-        if not dims.is_point_fmt_compatible_with_version(
+        dims.raise_if_version_not_compatible_with_fmt(
             new_point_record.point_format_id, self.header.version
-        ):
-            raise ValueError(
-                "Point format {} is not compatible with version {}".format(
-                    new_point_record.point_format_id, self.header.version
-                )
-            )
-
+        )
         self.points_data = new_point_record
         self.update_header()
 

@@ -3,6 +3,7 @@ the mapping between dimension names and their type, mapping between point format
 compatible file version
 """
 
+import itertools
 from collections import namedtuple
 
 import numpy as np
@@ -237,10 +238,10 @@ POINT_FORMATS_DTYPE = _build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMEN
 # This Dict maps point_format_ids to their dimensions names
 ALL_POINT_FORMATS_DIMENSIONS = {**POINT_FORMAT_DIMENSIONS}
 # This Dict maps point_format_ids to their numpy.dtype
-# the dtype corresponds to the unpacked data
+# the dtype corresponds to the de packed data
 ALL_POINT_FORMATS_DTYPE = {**POINT_FORMATS_DTYPE}
 # This Dict maps point_format_ids to their numpy.dtype
-# the dtype corresponds to the de packed data
+# the dtype corresponds to the unpacked data
 UNPACKED_POINT_FORMATS_DTYPES = _build_unpacked_point_formats_dtypes(
     POINT_FORMAT_DIMENSIONS, COMPOSED_FIELDS, DIMENSIONS
 )
@@ -397,23 +398,36 @@ def is_point_fmt_compatible_with_version(point_format_id, file_version):
 
 def raise_if_version_not_compatible_with_fmt(point_format_id, file_version):
     if not is_point_fmt_compatible_with_version(point_format_id, file_version):
-        raise ValueError(
+        raise errors.PylasError(
             "Point format {} is not compatible with file version {}".format(
                 point_format_id, file_version
             )
         )
 
 
-def is_official_dimension(dimension_name, point_fmt):
+def is_official_dimension_name(dimension_name, point_fmt):
     official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
     return dimension_name in official_names_for_fmt
 
 
-def get_extra_dimensions_spec(np_dtype, point_format_id):
-    extra_dims_names = [
-        name
-        for name in np_dtype.names
-        if not is_official_dimension(name, point_format_id)
-        and name not in COMPOSED_FIELDS[point_format_id]
+def are_official_dimensions_names(dimension_names, point_fmt):
+    official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
+    official_names_for_fmt.update(COMPOSED_FIELDS[point_fmt])
+    is_official = [
+        True if name in official_names_for_fmt else False for name in dimension_names
     ]
-    return [(name, np_dtype[name]) for name in extra_dims_names]
+    return is_official
+
+
+def get_extra_dimensions_names(np_dtype, point_format_id):
+    return itertools.compress(
+        np_dtype.names,
+        [not b for b in are_official_dimensions_names(np_dtype.names, point_format_id)],
+    )
+
+
+def get_extra_dimensions_spec(np_dtype, point_format_id):
+    return [
+        (name, np_dtype[name])
+        for name in get_extra_dimensions_names(np_dtype, point_format_id)
+    ]

@@ -16,7 +16,7 @@ def _raise_if_wrong_file_signature(stream):
     """ Reads the 4 first bytes of the stream to check that is LASF"""
     file_sig = stream.read(len(headers.LAS_FILE_SIGNATURE))
     if file_sig != headers.LAS_FILE_SIGNATURE:
-        raise ValueError(
+        raise errors.PylasError(
             "File Signature ({}) is not {}".format(file_sig, headers.LAS_FILE_SIGNATURE)
         )
 
@@ -71,7 +71,7 @@ class LasReader:
                 self.start_pos + self.header.start_of_waveform_data_packet_record
             )
             if self.header.global_encoding.are_waveform_flag_equal():
-                raise ValueError(
+                raise errors.PylasError(
                     "Incoherent values for internal and external waveform flags, both are {})".format(
                         "set"
                         if self.header.global_encoding.waveform_internal

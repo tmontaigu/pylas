@@ -351,13 +351,11 @@ class GeoKeyDirectoryVlr(BaseVLR, KnownVLR):
         record_data = bytearray(record_data)
         header_data = record_data[: ctypes.sizeof(GeoKeysHeaderStructs)]
         self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
-        self.geo_keys, keys_data = (
-            [],
-            record_data[ctypes.sizeof(GeoKeysHeaderStructs) :],
-        )
+        self.geo_keys = []
+        keys_data = record_data[GeoKeysHeaderStructs.size():]
         num_keys = len(
-            record_data[ctypes.sizeof(GeoKeysHeaderStructs) :]
-        ) // ctypes.sizeof(GeoKeyEntryStruct)
+            record_data[GeoKeysHeaderStructs.size() :]
+        ) // GeoKeyEntryStruct.size()
         if num_keys != self.geo_keys_header.number_of_keys:
             # print("Mismatch num keys")
             self.geo_keys_header.number_of_keys = num_keys

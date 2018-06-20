@@ -24,6 +24,9 @@ class RawVLRHeader(ctypes.LittleEndianStructure):
 
 
 VLR_HEADER_SIZE = ctypes.sizeof(RawVLRHeader)
+MAX_VLR_RECORD_DATA_LEN = utils.ctypes_max_limit(
+    RawVLRHeader.record_length_after_header.size
+)
 
 
 class RawVLR:
@@ -42,11 +45,11 @@ class RawVLR:
 
     @record_data.setter
     def record_data(self, value):
-        if len(value) > utils.ctypes_max_limit(
-            RawVLRHeader.record_length_after_header.size
-        ):
+        if len(value) > MAX_VLR_RECORD_DATA_LEN:
             raise OverflowError(
-                "VLR record data length ({}) exceeds maximum".format(len(value))
+                "VLR record data length ({}) exceeds maximum ({})".format(
+                    len(value), MAX_VLR_RECORD_DATA_LEN
+                )
             )
         self.header.record_length_after_header = len(value)
         self._record_data = value
