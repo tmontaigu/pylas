@@ -8,6 +8,7 @@ Another way of reading LAS/LAZ in Python.
     :alt: Documentation Status
 
 
+.. image:: https://travis-ci.org/tmontaigu/pylas.svg?branch=master
 
 Example
 -------
