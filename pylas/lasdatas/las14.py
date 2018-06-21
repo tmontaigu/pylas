@@ -15,10 +15,10 @@ class LasData(LasBase):
         if len(self.vlrs.get("WktCoordinateSystemVlr")) == 1:
             self.header.global_encoding.wkt = 1
 
-    def add_extra_dim(self, dim_name, dim_type):
-        name = dim_name.replace(" ", "_")
-        type_id = extradims.get_id_for_extra_dim_type(dim_type)
-        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode())
+    def add_extra_dim(self, name, type, description=''):
+        name = name.replace(" ", "_")
+        type_id = extradims.get_id_for_extra_dim_type(type)
+        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode(), description=description.encode())
 
         try:
             extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
@@ -27,7 +27,7 @@ class LasData(LasBase):
             self.vlrs.append(extra_bytes_vlr)
         finally:
             extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
-            self.points_data.add_extra_dims([(name, dim_type)])
+            self.points_data.add_extra_dims([(name, type)])
 
     def write_to(self, out_stream, do_compress=False):
         if do_compress and self.points_data.point_format_id >= 6:

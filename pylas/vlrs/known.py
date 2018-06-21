@@ -200,6 +200,11 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
     def size():
         return ctypes.sizeof(ExtraBytesStruct)
 
+    def __repr__(self):
+        return "<ExtraBytesStruct({}, {}, {})>".format(
+            *self.type_tuple(), self.description
+        )
+
 
 class ExtraBytesVlr(BaseVLR, KnownVLR):
     def __init__(self):

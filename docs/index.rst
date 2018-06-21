@@ -50,6 +50,7 @@ User Guide
     installation
     basic
     examples
+    lessbasic
 
 API Documentation
 =================
