@@ -93,6 +93,8 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def point_count(self):
+        """ Returns the number of points in the file
+        """
         return self.legacy_point_count
 
     @point_count.setter
@@ -115,6 +117,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def version(self):
+        """ Return the file version as a str"""
         return "{}.{}".format(self.version_major, self.version_minor)
 
     @version.setter
@@ -128,6 +131,13 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def date(self):
+        """ Returns the creation date stored in the las file
+
+        Returns
+        -------
+        datetime.date
+
+        """
         try:
             return datetime.date(self.creation_year, 1, 1) + datetime.timedelta(
                 self.creation_day_of_year - 1
@@ -149,10 +159,14 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @point_format_id.setter
     def point_format_id(self, value):
+        """ Returns the point format id of the points
+        """
         self._point_data_format_id = value
 
     @property
     def point_size(self):
+        """ Returns the number of bits each point takes
+        """
         return self.point_data_record_length
 
     @point_size.setter
@@ -169,6 +183,8 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def are_points_compressed(self):
+        """ Returns True if the point_format_id indicates that the points are stored compressed
+        """
         return compression.is_point_format_compressed(self._point_data_format_id)
 
 
@@ -212,23 +228,56 @@ class RawHeader1_4(RawHeader1_3):
 
 
 class HeaderFactory:
-    version_to_header = {
+    """ Factory to create a new header by specifying the version.
+    This Factory also handles converting headers between different
+    versions.
+    """
+    _version_to_header = {
         "1.1": RawHeader1_1,
         "1.2": RawHeader1_2,
         "1.3": RawHeader1_3,
         "1.4": RawHeader1_4,
     }
-    offset_to_major_version = RawHeader1_1.version_major.offset
+    _offset_to_major_version = RawHeader1_1.version_major.offset
 
     @classmethod
     def header_class_for_version(cls, version):
+        """
+        >>> HeaderFactory.header_class_for_version(2.0)
+        Traceback (most recent call last):
+         ...
+        pylas.errors.FileVersionNotSupported: 2.0
+
+        >>> HeaderFactory.header_class_for_version(1.2)
+        <class 'pylas.headers.rawheader.RawHeader1_2'>
+
+        >>> header_class = HeaderFactory.header_class_for_version(1.4)
+        >>> header_class()
+        <LasHeader(1.4)>
+
+        """
         try:
-            return cls.version_to_header[str(version)]
+            return cls._version_to_header[str(version)]
         except KeyError:
             raise errors.FileVersionNotSupported(version)
 
     @classmethod
     def new(cls, version):
+        """ Returns a new instance of a header.
+
+        Parameters
+        ----------
+        version : float or str
+            The header version
+
+
+        >>> HeaderFactory.new(1.4)
+        <LasHeader(1.4)>
+
+        >>> HeaderFactory.new('1.2')
+        <LasHeader(1.2)>
+
+        """
         return cls.header_class_for_version(version)()
 
     @classmethod
@@ -246,8 +295,21 @@ class HeaderFactory:
 
     @classmethod
     def peek_file_version(cls, stream):
+        """ seeks to the position of the las version header fields
+        in the stream and returns it as a str
+
+        Parameters
+        ----------
+        stream io.BytesIO
+
+        Returns
+        -------
+        str
+            file version read from the stream
+
+        """
         old_pos = stream.tell()
-        stream.seek(cls.offset_to_major_version)
+        stream.seek(cls._offset_to_major_version)
         major = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), "little")
         minor = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), "little")
         stream.seek(old_pos)
@@ -255,12 +317,33 @@ class HeaderFactory:
 
     @classmethod
     def convert_header(cls, old_header, new_version):
+        """ Converts a header to a another version
+
+        Parameters
+        ----------
+        old_header: the old header instance
+        new_version: float or str
+
+        Returns
+        -------
+        The converted header
+
+
+        >>> old_header = HeaderFactory.new(1.2)
+        >>> HeaderFactory.convert_header(old_header, 1.4)
+        <LasHeader(1.4)>
+
+        >>> old_header = HeaderFactory.new('1.4')
+        >>> HeaderFactory.convert_header(old_header, '1.2')
+        <LasHeader(1.2)>
+
+        """
         new_header_class = cls.header_class_for_version(new_version)
 
         b = bytearray(old_header)
         b += b"\x00" * (ctypes.sizeof(new_header_class) - len(b))
         new_header = new_header_class.from_buffer(b)
-        new_header.version = new_version
+        new_header.version = str(new_version)
 
         return new_header
 

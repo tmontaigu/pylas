@@ -51,6 +51,27 @@ You obtain this type of object by using one of the function above,
 use its method :meth:`pylas.lasdatas.base.LasBase.write` to write to a file or a stream.
 
 
+Accessing the file header
+=========================
+
+You can access the header of a las file you read or opened by retrieving the 'header' attribute:
+
+.. code-block:: python
+
+    las = pylas.read('somefile.las')
+    header = las.header
+    print("Point count: {}".format(header.point_count))
+
+
+    # or
+
+    with pylas.open('somefile.las') as f:
+        header = f.header
+
+    print("Point count: {}".format(header.point_count))
+
+
+you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_1` and its sub-classes.
 
 Manipulating VLRs
 =================

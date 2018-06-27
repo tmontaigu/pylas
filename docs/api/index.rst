@@ -21,4 +21,5 @@ Submodules
    pylas.evlrs
    pylas.errors
    pylas.compression
+   pylas.headers
 
