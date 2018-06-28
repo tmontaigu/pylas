@@ -56,19 +56,18 @@ Accessing the file header
 
 You can access the header of a las file you read or opened by retrieving the 'header' attribute:
 
-.. code-block:: python
+>>> import pylas
+>>> las = pylas.read('pylastests/simple.las')
+>>> las.header
+<LasHeader(1.2)>
+>>> las.header.point_count
+1065
 
-    las = pylas.read('somefile.las')
-    header = las.header
-    print("Point count: {}".format(header.point_count))
 
+>>> with pylas.open('pylastests/simple.las') as f:
+...     f.header.point_count
+1065
 
-    # or
-
-    with pylas.open('somefile.las') as f:
-        header = f.header
-
-    print("Point count: {}".format(header.point_count))
 
 
 you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_1` and its sub-classes.
@@ -78,15 +77,14 @@ Manipulating VLRs
 
 To access the VLRs stored in a file, simply access the `vlr` member of the las object.
 
-.. code:: python
+>>> las = pylas.read('pylastests/extrabytes.las')
+>>> las.vlrs
+[<ExtraBytesVlr(extra bytes structs: 5)>]
 
-    las = pylas.read('somefile.las')
-    vlr_list = las.vlrs
-
-    # or
-
-    with pylas.open('somefile.las') as f:
-        vlr_list = f.read_vlrs()
+>>> with pylas.open('pylastests/extrabytes.las') as f:
+...     vlr_list = f.read_vlrs()
+>>> vlr_list
+[<ExtraBytesVlr(extra bytes structs: 5)>]
 
 
 To retrieve a particular vlr from the list there are 2 ways: :meth:`pylas.vlrs.vlrlist.VLRList.get` and
