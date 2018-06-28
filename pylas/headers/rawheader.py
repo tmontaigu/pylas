@@ -117,7 +117,14 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def version(self):
-        """ Return the file version as a str"""
+        """
+        .. DANGER::
+            You should not use this directly if you want to change/convert
+            the header version as this function does not change the underlying
+            size of bytes buffer.
+            See :meth:`HeaderFactory.convert_header` to convert headers
+
+        """
         return "{}.{}".format(self.version_major, self.version_minor)
 
     @version.setter
