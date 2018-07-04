@@ -9,6 +9,10 @@ import numpy as np
 
 from . import dims, packing
 from ..compression import decompress_buffer
+from .. import errors
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PointRecord(ABC):
@@ -211,7 +215,36 @@ class PackedPointRecord(PointRecord):
             point_format_id, extra_dims=extra_dims
         )
         point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
-        data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
+        expected_bytes_len = count * points_dtype.itemsize
+
+        try:
+            data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
+        except ValueError:
+            if len(point_data_buffer) % points_dtype.itemsize != 0:
+                missing_bytes_len = expected_bytes_len - len(point_data_buffer)
+                raise errors.PylasError(
+                    "The file does not contain enough bytes to store the expected number of points\n"
+                    "expected {} bytes, read {} bytes ({} bytes missing == {} points) and it cannot be corrected\n"
+                    "{} (bytes) / {} (point_size) = {} (points)".format(
+                        expected_bytes_len,
+                        len(point_data_buffer),
+                        missing_bytes_len,
+                        missing_bytes_len / points_dtype.itemsize,
+                        len(point_data_buffer),
+                        points_dtype.itemsize,
+                        len(point_data_buffer) / points_dtype.itemsize,
+                    )
+                )
+            else:
+                actual_count = len(point_data_buffer) // points_dtype.itemsize
+                logger.warning(
+                    "Expected {} points, there are {} ({} missing)".format(
+                        count, actual_count, count - actual_count
+                    )
+                )
+                data = np.frombuffer(
+                    point_data_buffer, dtype=points_dtype, count=actual_count
+                )
 
         return cls(data, point_format_id)
 
