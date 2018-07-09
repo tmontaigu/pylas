@@ -3,19 +3,19 @@ Las PointRecords are represented using Numpy's structured arrays,
 The PointRecord classes provide a few extra things to manage these arrays
 in the context of Las point data
 """
+import logging
 from abc import ABC, abstractclassmethod, abstractmethod
 
 import numpy as np
 
 from . import dims, packing
-from ..compression import decompress_buffer
 from .. import errors
-import logging
+from ..compression import decompress_buffer
 
 logger = logging.getLogger(__name__)
 
 
-class PointRecord(ABC):
+class IPointRecord(ABC):
     """ Wraps the numpy structured array contained the points data
     """
 
@@ -68,6 +68,26 @@ class PointRecord(ABC):
         pass
 
 
+class PointRecord(IPointRecord):
+    def __init__(self, data, point_format_id):
+        self.array = data
+        self.point_format_id = point_format_id
+
+    def __getitem__(self, item):
+        return self.array[item]
+
+    def __setitem__(self, key, value):
+        if len(value) > len(self.array):
+            self.array = np.append(
+                self.array,
+                np.zeros(len(value) - len(self.array), dtype=self.array.dtype),
+            )
+        self.array[key] = value
+
+    def __len__(self):
+        return self.array.shape[0]
+
+
 class PackedPointRecord(PointRecord):
     """
     In the PackedPointRecord, fields that are a combinations of many sub-fields (fields stored on less than a byte)
@@ -91,12 +111,9 @@ class PackedPointRecord(PointRecord):
     """
 
     def __init__(self, data, point_format_id=None):
-        self.array = data
-        self.point_format_id = (
-            dims.np_dtype_to_point_format(data.dtype)
-            if point_format_id is None
-            else point_format_id
-        )
+        if point_format_id is None:
+            point_format_id = dims.np_dtype_to_point_format(data.dtype)
+        super().__init__(data, point_format_id)
         self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(self.point_format_id)
         self.dimensions_names = dims.get_dtype_of_format_id(
             self.point_format_id, unpacked=True
@@ -175,11 +192,6 @@ class PackedPointRecord(PointRecord):
         except KeyError:
             self.array[key] = value
 
-    def __len__(self):
-        """ Returns the number of points
-        """
-        return self.array.shape[0]
-
     def __repr__(self):
         return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
             self.point_format_id, len(self), self.actual_point_size
@@ -237,7 +249,7 @@ class PackedPointRecord(PointRecord):
                 )
             else:
                 actual_count = len(point_data_buffer) // points_dtype.itemsize
-                logger.warning(
+                logger.critical(
                     "Expected {} points, there are {} ({} missing)".format(
                         count, actual_count, count - actual_count
                     )
@@ -304,6 +316,9 @@ class PackedPointRecord(PointRecord):
         """
         return cls.zeros(point_format_id, point_count=0)
 
+    def to_unpacked(self):
+        return unpack_point_record(self)
+
 
 class UnpackedPointRecord(PointRecord):
     """
@@ -314,12 +329,9 @@ class UnpackedPointRecord(PointRecord):
     """
 
     def __init__(self, data, point_fmt_id=None):
-        self.array = data
-        self.point_format_id = (
-            dims.np_dtype_to_point_format(data.dtype, unpacked=True)
-            if point_fmt_id is None
-            else point_fmt_id
-        )
+        if point_fmt_id is None:
+            point_fmt_id = dims.np_dtype_to_point_format(data.dtype, unpacked=True)
+        super().__init__(data, point_fmt_id)
 
     # TODO fix when there are extra dims
     @property
@@ -338,20 +350,6 @@ class UnpackedPointRecord(PointRecord):
 
     def write_to(self, out):
         out.write(self.repack_sub_fields().tobytes())
-
-    def __getitem__(self, item):
-        return self.array[item]
-
-    def __setitem__(self, key, value):
-        if len(value) > len(self.array):
-            self.array = np.append(
-                self.array,
-                np.zeros(len(value) - len(self.array), dtype=self.array.dtype),
-            )
-        self.array[key] = value
-
-    def __len__(self):
-        return self.array.shape[0]
 
     def to_point_format(self, new_point_format):
         new_dtype = dims.get_dtype_of_format_id(new_point_format, unpacked=True)
@@ -396,3 +394,20 @@ class UnpackedPointRecord(PointRecord):
             0, dtype=dims.get_dtype_of_format_id(point_format_id, unpacked=True)
         )
         return cls(data, point_format_id)
+
+    def to_packed(self):
+        return pack_point_record(self)
+
+
+def unpack_point_record(packed_point_record):
+    array = packing.unpack_sub_fields(
+        packed_point_record.array, packed_point_record.point_format_id
+    )
+    return UnpackedPointRecord(array, packed_point_record.point_format_id)
+
+
+def pack_point_record(unpacked_point_record):
+    array = packing.repack_sub_fields(
+        unpacked_point_record.array, unpacked_point_record.point_format_id
+    )
+    return PackedPointRecord(array, unpacked_point_record.point_format_id)
