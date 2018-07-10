@@ -291,13 +291,17 @@ class PackedPointRecord(PointRecord):
 
     @classmethod
     def from_compressed_buffer(
-        cls, compressed_buffer, point_format_id, count, laszip_vlr
+        cls, compressed_buffer, point_format_id, count, laszip_vlr, extra_dims=None
     ):
         """  Construct the point record by reading and decompressing the points data from
         the input buffer
         """
+        point_dtype = dims.get_dtype_of_format_id(point_format_id)
+        if extra_dims is not None:
+            point_dtype = dims.dtype_append(point_dtype, extra_dims)
+
         uncompressed = decompress_buffer(
-            compressed_buffer, point_format_id, count, laszip_vlr
+            compressed_buffer, point_dtype, count, laszip_vlr
         )
         return cls(uncompressed, point_format_id)
 
