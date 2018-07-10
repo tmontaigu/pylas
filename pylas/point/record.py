@@ -4,7 +4,7 @@ The PointRecord classes provide a few extra things to manage these arrays
 in the context of Las point data
 """
 import logging
-from abc import ABC, abstractclassmethod, abstractmethod
+from abc import ABC, abstractmethod
 
 import numpy as np
 
@@ -13,6 +13,24 @@ from .. import errors
 from ..compression import decompress_buffer
 
 logger = logging.getLogger(__name__)
+
+
+def raise_not_enough_bytes_error(
+    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+):
+    raise errors.PylasError(
+        "The file does not contain enough bytes to store the expected number of points\n"
+        "expected {} bytes, read {} bytes ({} bytes missing == {} points) and it cannot be corrected\n"
+        "{} (bytes) / {} (point_size) = {} (points)".format(
+            expected_bytes_len,
+            point_data_buffer_len,
+            missing_bytes_len,
+            missing_bytes_len / points_dtype.itemsize,
+            point_data_buffer_len,
+            points_dtype.itemsize,
+            point_data_buffer_len / points_dtype.itemsize,
+        )
+    )
 
 
 class IPointRecord(ABC):
@@ -53,17 +71,20 @@ class IPointRecord(ABC):
     def write_to(self, out):
         pass
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
         pass
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def from_compressed_buffer(
         cls, compressed_buffer, point_format_id, count, laszip_vlr
     ):
         pass
 
-    @abstractclassmethod
+    @classmethod
+    @abstractmethod
     def empty(cls, point_format_id):
         pass
 
@@ -72,17 +93,75 @@ class PointRecord(IPointRecord):
     def __init__(self, data, point_format_id):
         self.array = data
         self.point_format_id = point_format_id
+        self.dimensions_names = dims.get_dtype_of_format_id(
+            self.point_format_id, unpacked=True
+        ).names
+
+    @property
+    def extra_dimensions_names(self):
+        return tuple(
+            dims.get_extra_dimensions_names(self.array.dtype, self.point_format_id)
+        )
+
+    @property
+    def actual_point_size(self):
+        """ Returns the point size in bytes taken by each points of the record
+
+        Returns
+        -------
+        int
+            The point size in byte
+
+        """
+        return self.array.dtype.itemsize
+
+    @classmethod
+    def from_point_record(cls, other_point_record, new_point_format):
+        """  Construct a new PackedPointRecord from an existing one with the ability to change
+        to point format while doing so
+        """
+        array = np.zeros_like(
+            other_point_record.array,
+            dtype=dims.get_dtype_of_format_id(new_point_format),
+        )
+        new_record = cls(array, new_point_format)
+        new_record.copy_fields_from(other_point_record)
+        return new_record
+
+    def copy_fields_from(self, other_record):
+        """ Tries to copy the values of the current dimensions from other_record
+        """
+        for dim_name in self.dimensions_names:
+            try:
+                self[dim_name] = other_record[dim_name]
+            except ValueError:
+                pass
+
+    def add_extra_dims(self, type_tuples):
+        dtype_with_extra_dims = dims.dtype_append(self.array.dtype, type_tuples)
+        old_array = self.array
+        self.array = np.zeros_like(old_array, dtype=dtype_with_extra_dims)
+        self.copy_fields_from(old_array)
+
+    def raw_bytes(self):
+        return self.array.tobytes()
 
     def __getitem__(self, item):
         return self.array[item]
 
     def __setitem__(self, key, value):
+        self._append_zeros_if_too_small(value)
+        self.array[key] = value
+
+    def _append_zeros_if_too_small(self, value):
+        """ Appends zeros to the points stored if the value we are trying to
+        fit is bigger
+        """
         if len(value) > len(self.array):
             self.array = np.append(
                 self.array,
                 np.zeros(len(value) - len(self.array), dtype=self.array.dtype),
             )
-        self.array[key] = value
 
     def __len__(self):
         return self.array.shape[0]
@@ -115,15 +194,6 @@ class PackedPointRecord(PointRecord):
             point_format_id = dims.np_dtype_to_point_format(data.dtype)
         super().__init__(data, point_format_id)
         self.sub_fields_dict = dims.get_sub_fields_of_fmt_id(self.point_format_id)
-        self.dimensions_names = dims.get_dtype_of_format_id(
-            self.point_format_id, unpacked=True
-        ).names
-
-    @property
-    def extra_dimensions_names(self):
-        return tuple(
-            dims.get_extra_dimensions_names(self.array.dtype, self.point_format_id)
-        )
 
     @property
     def all_dimensions_names(self):
@@ -140,146 +210,6 @@ class PackedPointRecord(PointRecord):
 
         """
         return self.array.dtype.itemsize
-
-    @property
-    def actual_point_size(self):
-        """ Returns the point size in bytes taken by each points of the record
-
-        Returns
-        -------
-        int
-            The point size in byte
-
-        """
-        return self.point_size
-
-    def add_extra_dims(self, type_tuples):
-        dtype_with_extra_dims = dims.dtype_append(self.array.dtype, type_tuples)
-        old_array = self.array
-        self.array = np.zeros_like(old_array, dtype=dtype_with_extra_dims)
-        self.copy_fields_from(old_array)
-
-    def raw_bytes(self):
-        return self.array.tobytes()
-
-    def write_to(self, out):
-        out.write(self.raw_bytes())
-
-    def __getitem__(self, item):
-        """ Gives access to the underlying numpy array
-        Unpack the dimension if item is the name a sub-field
-        """
-        try:
-            composed_dim, sub_field = self.sub_fields_dict[item]
-            return packing.unpack(
-                self.array[composed_dim], sub_field.mask, dtype=sub_field.type
-            )
-        except KeyError:
-            return self.array[item]
-
-    def __setitem__(self, key, value):
-        """ Sets elements in the array
-        Appends points to all dims when setting an existing dimension to a bigger array
-        """
-        if len(value) > len(self.array):
-            self.array = np.append(
-                self.array,
-                np.zeros(len(value) - len(self.array), dtype=self.array.dtype),
-            )
-        try:
-            composed_dim, sub_field = self.sub_fields_dict[key]
-            packing.pack(self.array[composed_dim], value, sub_field.mask, inplace=True)
-        except KeyError:
-            self.array[key] = value
-
-    def __repr__(self):
-        return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
-            self.point_format_id, len(self), self.actual_point_size
-        )
-
-    def copy_fields_from(self, other_record):
-        """ Tries to copy the values of the current dimensions from other_record
-        """
-        for dim_name in self.dimensions_names:
-            try:
-                self[dim_name] = other_record[dim_name]
-            except ValueError:
-                pass
-
-    @classmethod
-    def from_point_record(cls, other_point_record, new_point_format):
-        """  Construct a new PackedPointRecord from an existing one with the ability to change
-        to point format while doing so
-        """
-        array = np.zeros_like(
-            other_point_record.array,
-            dtype=dims.get_dtype_of_format_id(new_point_format),
-        )
-        new_record = cls(array, new_point_format)
-        new_record.copy_fields_from(other_point_record)
-        return new_record
-
-    @classmethod
-    def from_stream(cls, stream, point_format_id, count, extra_dims=None):
-        """ Construct the point record by reading the bytes from the stream
-        """
-        points_dtype = dims.get_dtype_of_format_id(
-            point_format_id, extra_dims=extra_dims
-        )
-        point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
-        expected_bytes_len = count * points_dtype.itemsize
-
-        try:
-            data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
-        except ValueError:
-            if len(point_data_buffer) % points_dtype.itemsize != 0:
-                missing_bytes_len = expected_bytes_len - len(point_data_buffer)
-                raise errors.PylasError(
-                    "The file does not contain enough bytes to store the expected number of points\n"
-                    "expected {} bytes, read {} bytes ({} bytes missing == {} points) and it cannot be corrected\n"
-                    "{} (bytes) / {} (point_size) = {} (points)".format(
-                        expected_bytes_len,
-                        len(point_data_buffer),
-                        missing_bytes_len,
-                        missing_bytes_len / points_dtype.itemsize,
-                        len(point_data_buffer),
-                        points_dtype.itemsize,
-                        len(point_data_buffer) / points_dtype.itemsize,
-                    )
-                )
-            else:
-                actual_count = len(point_data_buffer) // points_dtype.itemsize
-                logger.critical(
-                    "Expected {} points, there are {} ({} missing)".format(
-                        count, actual_count, count - actual_count
-                    )
-                )
-                data = np.frombuffer(
-                    point_data_buffer, dtype=points_dtype, count=actual_count
-                )
-
-        return cls(data, point_format_id)
-
-    @classmethod
-    def from_buffer(cls, buffer, point_format_id, count, offset, extra_dims=None):
-        points_dtype = dims.get_dtype_of_format_id(
-            point_format_id, extra_dims=extra_dims
-        )
-        data = np.frombuffer(buffer, dtype=points_dtype, offset=offset, count=count)
-
-        return cls(data, point_format_id)
-
-    @classmethod
-    def from_compressed_buffer(
-        cls, compressed_buffer, point_format_id, count, laszip_vlr
-    ):
-        """  Construct the point record by reading and decompressing the points data from
-        the input buffer
-        """
-        uncompressed = decompress_buffer(
-            compressed_buffer, point_format_id, count, laszip_vlr
-        )
-        return cls(uncompressed, point_format_id)
 
     @classmethod
     def zeros(cls, point_format_id, point_count):
@@ -316,8 +246,96 @@ class PackedPointRecord(PointRecord):
         """
         return cls.zeros(point_format_id, point_count=0)
 
+    @classmethod
+    def from_stream(cls, stream, point_format_id, count, extra_dims=None):
+        """ Construct the point record by reading the points from the stream
+        """
+        points_dtype = dims.get_dtype_of_format_id(
+            point_format_id, extra_dims=extra_dims
+        )
+        point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
+
+        try:
+            data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
+        except ValueError:
+            expected_bytes_len = count * points_dtype.itemsize
+            if len(point_data_buffer) % points_dtype.itemsize != 0:
+                missing_bytes_len = expected_bytes_len - len(point_data_buffer)
+                raise_not_enough_bytes_error(
+                    expected_bytes_len,
+                    missing_bytes_len,
+                    len(point_data_buffer),
+                    points_dtype,
+                )
+            else:
+                actual_count = len(point_data_buffer) // points_dtype.itemsize
+                logger.critical(
+                    "Expected {} points, there are {} ({} missing)".format(
+                        count, actual_count, count - actual_count
+                    )
+                )
+                data = np.frombuffer(
+                    point_data_buffer, dtype=points_dtype, count=actual_count
+                )
+
+        return cls(data, point_format_id)
+
+    @classmethod
+    def from_buffer(cls, buffer, point_format_id, count, offset=0, extra_dims=None):
+        points_dtype = dims.get_dtype_of_format_id(
+            point_format_id, extra_dims=extra_dims
+        )
+        data = np.frombuffer(buffer, dtype=points_dtype, offset=offset, count=count)
+
+        return cls(data, point_format_id)
+
+    @classmethod
+    def from_compressed_buffer(
+        cls, compressed_buffer, point_format_id, count, laszip_vlr
+    ):
+        """  Construct the point record by reading and decompressing the points data from
+        the input buffer
+        """
+        uncompressed = decompress_buffer(
+            compressed_buffer, point_format_id, count, laszip_vlr
+        )
+        return cls(uncompressed, point_format_id)
+
+    def write_to(self, out):
+        """ Writes the points to the output stream"""
+        out.write(self.raw_bytes())
+
     def to_unpacked(self):
-        return unpack_point_record(self)
+        array = packing.unpack_sub_fields(self.array, self.point_format_id)
+        return UnpackedPointRecord(array, self.point_format_id)
+
+    def __getitem__(self, item):
+        """ Gives access to the underlying numpy array
+        Unpack the dimension if item is the name a sub-field
+        """
+        try:
+            composed_dim, sub_field = self.sub_fields_dict[item]
+            return packing.unpack(
+                self.array[composed_dim], sub_field.mask, dtype=sub_field.type
+            )
+        except KeyError:
+            return self.array[item]
+
+    def __setitem__(self, key, value):
+        """ Sets elements in the array
+        Appends points to all dims when setting an existing dimension to a bigger array
+        """
+        self._append_zeros_if_too_small(value)
+        try:
+            composed_dim, sub_field = self.sub_fields_dict[key]
+            packing.pack(self.array[composed_dim], value, sub_field.mask, inplace=True)
+        except KeyError:
+            self.array[key] = value
+
+    def __repr__(self):
+        return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
+            self.point_format_id, len(self), self.actual_point_size
+        )
 
 
 class UnpackedPointRecord(PointRecord):
@@ -338,55 +356,22 @@ class UnpackedPointRecord(PointRecord):
     def point_size(self):
         return dims.get_dtype_of_format_id(self.point_format_id).itemsize
 
-    @property
-    def actual_point_size(self):
-        return self.array.dtype.itemsize
-
-    def raw_bytes(self):
-        return self.array.tobytes()
-
-    def repack_sub_fields(self):
-        return packing.repack_sub_fields(self.array, self.point_format_id)
-
     def write_to(self, out):
-        out.write(self.repack_sub_fields().tobytes())
-
-    def to_point_format(self, new_point_format):
-        new_dtype = dims.get_dtype_of_format_id(new_point_format, unpacked=True)
-        new_data = np.zeros_like(self.array, dtype=new_dtype)
-
-        for dim_name in self.array.dtype.names:
-            try:
-                new_data[dim_name] = self.array[dim_name]
-            except ValueError:
-                pass
-        self.array = new_data
-        self.point_format_id = new_point_format
+        out.write(self.to_packed().raw_bytes())
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
-        points_dtype = dims.get_dtype_of_format_id(
-            point_format_id, extra_dims=extra_dims
-        )
-        point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
-        data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
-
-        point_record = packing.unpack_sub_fields(data, point_format_id)
-
-        return cls(point_record, point_format_id)
+        return UnpackedPointRecord.from_stream(
+            stream, point_format_id, count, extra_dims=extra_dims
+        ).to_unpacked()
 
     @classmethod
     def from_compressed_buffer(
-        cls, compressed_stream, point_format_id, count, laszip_vlr
+        cls, compressed_buffer, point_format_id, count, laszip_vlr
     ):
-        uncompressed = decompress_buffer(
-            compressed_stream, point_format_id, count, laszip_vlr
-        )
-        uncompressed.flags.writeable = True
-
-        point_record = packing.unpack_sub_fields(uncompressed, point_format_id)
-
-        return cls(point_record, point_format_id)
+        return PackedPointRecord.from_compressed_buffer(
+            compressed_buffer, point_format_id, count, laszip_vlr
+        ).to_unpacked()
 
     @classmethod
     def empty(cls, point_format_id):
@@ -396,18 +381,5 @@ class UnpackedPointRecord(PointRecord):
         return cls(data, point_format_id)
 
     def to_packed(self):
-        return pack_point_record(self)
-
-
-def unpack_point_record(packed_point_record):
-    array = packing.unpack_sub_fields(
-        packed_point_record.array, packed_point_record.point_format_id
-    )
-    return UnpackedPointRecord(array, packed_point_record.point_format_id)
-
-
-def pack_point_record(unpacked_point_record):
-    array = packing.repack_sub_fields(
-        unpacked_point_record.array, unpacked_point_record.point_format_id
-    )
-    return PackedPointRecord(array, unpacked_point_record.point_format_id)
+        array = packing.repack_sub_fields(self.array, self.point_format_id)
+        return PackedPointRecord(array, self.point_format_id)
