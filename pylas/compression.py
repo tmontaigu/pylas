@@ -27,6 +27,8 @@ except:
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
         raise LazPerfNotFound("Cannot manipulate laz data")
+    elif lazperf.__version__ < '1.3.0':
+        raise LazPerfNotFound("Version >= 1.3.0 required, you have {}".format(lazperf.__version__))
 
 
 def is_point_format_compressed(point_format_id):

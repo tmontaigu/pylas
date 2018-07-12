@@ -5,7 +5,7 @@ with open("README.rst") as f:
 
 setup(
     name="pylas",
-    version="0.1.5",
+    version="0.2.0",
     description="Las/Laz reading and writing in python",
     long_description=readme,
     url="https://github.com/tmontaigu/pylas",
@@ -18,3 +18,4 @@ setup(
     packages=find_packages(exclude=("pylastests",)),
     zip_safe=False,
 )
+

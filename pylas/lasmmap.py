@@ -7,6 +7,8 @@ from .vlrs import vlrlist
 
 from . import lasreader
 
+WHOLE_FILE = 0
+
 
 class LasMMAP(base.LasBase):
     """ Memory map a LAS file.
@@ -27,7 +29,7 @@ class LasMMAP(base.LasBase):
         fileref = open(filename, mode="r+b")
         lasreader._raise_if_wrong_file_signature(fileref)
 
-        m = mmap.mmap(fileref.fileno(), length=0, access=mmap.ACCESS_WRITE)
+        m = mmap.mmap(fileref.fileno(), length=WHOLE_FILE, access=mmap.ACCESS_WRITE)
         header = headers.HeaderFactory.from_mmap(m)
         if header.are_points_compressed:
             raise ValueError("Cannot mmap a compressed LAZ file")
