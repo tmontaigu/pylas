@@ -15,10 +15,12 @@ class LasData(LasBase):
         if len(self.vlrs.get("WktCoordinateSystemVlr")) == 1:
             self.header.global_encoding.wkt = 1
 
-    def add_extra_dim(self, name, type, description=''):
+    def add_extra_dim(self, name, type, description=""):
         name = name.replace(" ", "_")
         type_id = extradims.get_id_for_extra_dim_type(type)
-        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode(), description=description.encode())
+        extra_byte = ExtraBytesStruct(
+            data_type=type_id, name=name.encode(), description=description.encode()
+        )
 
         try:
             extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]

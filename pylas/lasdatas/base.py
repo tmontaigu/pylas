@@ -176,16 +176,7 @@ class LasBase(object):
         self.update_header()
 
         if do_compress:
-            try:
-                _ = self.vlrs.index("ExtraBytesVlr")
-            except ValueError:
-                pass
-            else:
-                raise NotImplementedError(
-                    "Lazperf cannot compress LAS with extra bytes"
-                )
-
-            laz_vrl = create_laz_vlr(self.header.point_format_id)
+            laz_vrl = create_laz_vlr(self.points_data)
             self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 

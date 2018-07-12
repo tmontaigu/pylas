@@ -108,7 +108,7 @@ class LasReader:
 
         if self.header.are_points_compressed:
             laszip_vlr = vlrs.pop(vlrs.index("LasZipVlr"))
-            points = self._read_compressed_points_data(laszip_vlr)
+            points = self._read_compressed_points_data(laszip_vlr, extra_dims)
         else:
             points = record.PackedPointRecord.from_stream(
                 self.stream,
@@ -118,7 +118,7 @@ class LasReader:
             )
         return points
 
-    def _read_compressed_points_data(self, laszip_vlr):
+    def _read_compressed_points_data(self, laszip_vlr, extra_dims):
         """ reads the compressed point record
         """
         offset_to_chunk_table = struct.unpack("<q", self.stream.read(8))[0]
@@ -137,6 +137,7 @@ class LasReader:
             self.header.point_format_id,
             self.header.point_count,
             laszip_vlr,
+            extra_dims=extra_dims
         )
         return points
 
