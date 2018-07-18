@@ -3,6 +3,7 @@
 
  A KnownVLR is a VLR that we know how to parse its record_data
 """
+import abc
 import ctypes
 from abc import abstractmethod
 
@@ -10,7 +11,7 @@ from .rawvlr import NULL_BYTE, BaseVLR, VLR
 from ..extradims import get_type_for_extra_dim
 
 
-class IKnownVLR:
+class IKnownVLR(abc.ABC):
     """ Interface that any KnownVLR must implement.
     A KnownVLR is a VLR for which we know how to parse its record_data
 

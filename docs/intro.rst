@@ -1,6 +1,6 @@
-============
-Introduction
-============
+====================
+What is a LAS file ?
+====================
 
 LAS is a public file format meant to exchange 3D point data, mostly used to exchange lidar point clouds.
 LAZ is a **lossless** compression of the LAS format.
@@ -15,16 +15,21 @@ LAS files are organized in 3 main parts:
 2) VLRs
 3) Point Records
 
+Header
+------
 
 The header contains information about the data such as its version, the point format (which tells the different
 dimensions stored for each points).
 
+See :ref:`accessing_header`
 
 VLRs
 ----
 
 After the header, LAS files may contain VLRs (Variable Length Record).
-VLRs are meant to store additional information such as the SRS, description on extra dimensions added to the points.
+VLRs are meant to store additional information such as the SRS (Spatial Reference System),
+description on extra dimensions added to the points.
+
 VLRs are divided in two parts:
 
 1) header
@@ -32,14 +37,13 @@ VLRs are divided in two parts:
 
 The payload is limited to 65,535 bytes (Because in the header, the length of the payload is stored on a uint16).
 
-The last chunk of data (and the biggest one) contains the point records. In a LAS file, points are stored sequentially.
+See :ref:`manipulating_vlrs`
 
-Version 1.4 of the LAS specification added a last block following the point records: EVLRs (Extended Variable
-Length Record) which are the same thing as VLRs but they can carry a higher payload (length of the payload is stored
-on a uint64)
+
 
 Point Records
 -------------
+The last chunk of data (and the biggest one) contains the point records. In a LAS file, points are stored sequentially.
 
 The point records holds the point cloud data the LAS Spec specifies 10 point formats.
 A point format describe the dimensions stored for each point in the record.
@@ -60,7 +64,25 @@ and LAS file version.
 The names written in the tables below are the one you will have to use in
 your code.
 
-* Point Format 0 *
+.. note::
+
+    The dimensions 'X', 'Y', 'Z' are signed integers without the scale and
+    offset applied. To access the coordinates as doubles simply use 'x', 'y' , 'z'
+
+    >>> import pylas
+    >>> las = pylas.read('pylastests/simple.las')
+    >>> las.X.dtype
+    dtype('int32')
+    >>> las.X
+    array([63701224, 63689633, 63678474, ..., 63750167, 63743327, 63734285])
+    >>> las.x.dtype
+    dtype('float64')
+    >>> las.x
+    array([637012.24, 636896.33, 636784.74, ..., 637501.67, 637433.27,
+           637342.85])
+
+
+* Point Format 0
 
 +----------------------+-----------+--------------+
 | Dimensions           |   Type    |  Size (bit)  |
@@ -186,3 +208,9 @@ the same dimensions plus some additional dimensions:
 | z_t                        | floating  |      32      |
 +----------------------------+-----------+--------------+
 
+EVLRs
+-----
+
+Version 1.4 of the LAS specification added a last block following the point records: EVLRs (Extended Variable
+Length Record) which are the same thing as VLRs but they can carry a higher payload (length of the payload is stored
+on a uint64)

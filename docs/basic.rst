@@ -50,6 +50,7 @@ To be able to write a las file you will need a :class:`pylas.lasdatas.base.LasBa
 You obtain this type of object by using one of the function above,
 use its method :meth:`pylas.lasdatas.base.LasBase.write` to write to a file or a stream.
 
+.. _accessing_header:
 
 Accessing the file header
 =========================
@@ -71,6 +72,8 @@ You can access the header of a las file you read or opened by retrieving the 'he
 
 
 you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_1` and its sub-classes.
+
+.. _manipulating_vlrs:
 
 Manipulating VLRs
 =================

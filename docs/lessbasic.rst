@@ -58,10 +58,86 @@ and an array field of 3 doubles for each points.
 
 
 
-
 .. note::
 
     As the specification of the ExtraBytesVlr appeared in the 1.4 LAS Spec, pylas restrict the ability to
     add new dimensions to file with version >= 1.4 even if it would be totally possible to define new dimension
     on older versions.
     (Maybe this should change?)
+
+Custom VLRs
+===========
+
+Provided you have a valid user_id and record_id (meaning that they are not taken by a VLR described in the LAS specification)
+You can add you own VLRs to a file
+
+Fast & Easy way
+---------------
+
+The fastest and easiest way to add your custom VLR to a file is to create a :class:`pylas.vlrs.rawvlr.VLR`,
+set its record_data (which must be bytes) and add it to the VLR list.
+
+
+>>> import pylas
+>>> vlr = pylas.vlrs.VLR(user_id='A UserId', record_id=1, description='Example VLR')
+>>> vlr
+<VLR(user_id: 'A UserId', record_id: '1', data len: 0)>
+>>> vlr.record_data = b'somebytes'
+>>> vlr
+<VLR(user_id: 'A UserId', record_id: '1', data len: 9)>
+>>> las = pylas.create()
+>>> las.vlrs
+[]
+>>> las.vlrs.append(vlr)
+>>> las.vlrs
+[<VLR(user_id: 'A UserId', record_id: '1', data len: 9)>]
+
+
+Complete & Harder way
+---------------------
+
+While the way shown above is quick & easy it might not be perfect for complex VLRs.
+Also when reading a file that has custom VLR, pylas won't be able to automatically parse its data
+into a better structure, so you will have to find the VLR in the vlrs list and parse it yourself
+one pylas is done.
+
+One way to automate this task is to create your own Custom VLR Class that extends
+:class:`pylas.vlrs.BaseKnownVLR` by implementing the missing methods pylas
+will be able to automatically parse the VLR when reading the file & write it when saving the file.
+
+>>> class CustomVLR(pylas.vlrs.BaseKnownVLR):
+...     def __init__(self):
+...         super().__init__()
+...         self.numbers = []
+...
+...     @staticmethod
+...     def official_user_id():
+...         return "CustomId"
+...
+...     @staticmethod
+...     def official_record_ids():
+...         return 1,
+...
+...     def record_data_bytes(self):
+...         return bytes(self.numbers)
+...
+...     def parse_record_data(self, record_data):
+...         self.numbers = [b for b in record_data]
+...
+...     def __repr__(self):
+...         return "<MyCustomVLR>"
+
+>>> cvlr = CustomVLR()
+>>> cvlr.numbers
+[]
+>>> cvlr.numbers = [1,2, 3]
+>>> las = pylas.create()
+>>> las.vlrs.append(cvlr)
+>>> las.vlrs
+[<MyCustomVLR>]
+>>> las = pylas.lib.write_then_read_again(las)
+>>> las.vlrs
+[<MyCustomVLR>]
+>>> las.vlrs[0].numbers
+[1, 2, 3]
+

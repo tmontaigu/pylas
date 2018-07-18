@@ -124,6 +124,6 @@ class VLR(BaseVLR):
         return vlr
 
     def __repr__(self):
-        return "<{}(user_id: '{}', record_id: '{}', data len: '{}')>".format(
+        return "<{}(user_id: '{}', record_id: '{}', data len: {})>".format(
             self.__class__.__name__, self.user_id, self.record_id, len(self.record_data)
         )

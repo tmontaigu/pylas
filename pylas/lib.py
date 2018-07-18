@@ -2,6 +2,7 @@
 used directly by a user
 """
 import copy
+import io
 
 from . import headers
 from .lasdatas import las12, las14
@@ -54,6 +55,8 @@ def open_las(source, closefd=True):
         stream = open(source, mode="rb")
         if not closefd:
             raise ValueError("Cannot use closefd with filename")
+    elif isinstance(source, bytes):
+        stream = io.BytesIO(source)
     else:
         stream = source
     return LasReader(stream, closefd=closefd)
@@ -252,3 +255,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
             header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
         )
     return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+
+
+def write_then_read_again(las, do_compress=False):
+    out = io.BytesIO()
+    las.write(out, do_compress=do_compress)
+    out.seek(0)
+    return read_las(out)
