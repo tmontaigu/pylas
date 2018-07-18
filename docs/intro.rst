@@ -73,13 +73,8 @@ your code.
     >>> las = pylas.read('pylastests/simple.las')
     >>> las.X.dtype
     dtype('int32')
-    >>> las.X
-    array([63701224, 63689633, 63678474, ..., 63750167, 63743327, 63734285])
     >>> las.x.dtype
     dtype('float64')
-    >>> las.x
-    array([637012.24, 636896.33, 636784.74, ..., 637501.67, 637433.27,
-           637342.85])
 
 
 * Point Format 0
