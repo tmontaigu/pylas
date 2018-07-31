@@ -2,6 +2,7 @@ import ctypes
 import datetime
 import enum
 import logging
+import numpy as np
 import uuid
 
 from .. import compression
@@ -194,6 +195,29 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         """
         return compression.is_point_format_compressed(self._point_data_format_id)
 
+    @property
+    def mins(self):
+        """ Returns de minimum values of x, y, z as a numpy array
+        """
+        return np.array([self.x_min, self.y_min, self.z_min])
+
+    @mins.setter
+    def mins(self, value):
+        """ Sets de minimum values of x, y, z as a numpy array
+        """
+        self.x_min, self.y_min, self._z_min = value
+
+    @property
+    def maxs(self):
+        """ Returns de maximum values of x, y, z as a numpy array
+        """
+        return np.array([self.x_max, self.y_max, self.z_max])
+
+    @maxs.setter
+    def maxs(self, value):
+        """ Sets de maximum values of x, y, z as a numpy array
+        """
+        self.x_max, self.y_max, self._z_max = value
 
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)
