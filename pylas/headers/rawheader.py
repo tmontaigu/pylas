@@ -2,8 +2,9 @@ import ctypes
 import datetime
 import enum
 import logging
-import numpy as np
 import uuid
+
+import numpy as np
 
 from .. import compression
 from .. import errors
@@ -218,6 +219,22 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         """ Sets de maximum values of x, y, z as a numpy array
         """
         self.x_max, self.y_max, self._z_max = value
+
+    @property
+    def scales(self):
+        return np.array([self.x_scale, self.y_scale, self.z_scale])
+
+    @scales.setter
+    def scales(self, value):
+        self.x_scale, self.y_scale, self.z_scale = value
+
+    @property
+    def offsets(self):
+        return np.array([self.x_offset, self.y_offset, self.z_offset])
+
+    @offsets.setter
+    def offsets(self, value):
+        self.x_offsets, self.y_offsets, self.z_offsets = value
 
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)
