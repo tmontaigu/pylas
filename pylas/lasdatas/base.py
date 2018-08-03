@@ -196,7 +196,7 @@ class LasBase(object):
 
         else:
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
-            self.header.number_of_vlr = len(self.vlrs)
+            self.header.number_of_vlr = len(raw_vlrs)
             self.header.offset_to_point_data = (
                 self.header.size + raw_vlrs.total_size_in_bytes()
             )
@@ -212,7 +212,7 @@ class LasBase(object):
     def _raise_if_not_expected_pos(stream, expected_pos):
         if not stream.tell() == expected_pos:
             raise RuntimeError(
-                "Writing, expected to at pos {} but stream is at pos {}".format(
+                "Writing, expected to be at pos {} but stream is at pos {}".format(
                     expected_pos, stream.tell()
                 )
             )
