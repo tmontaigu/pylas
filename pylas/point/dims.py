@@ -2,8 +2,7 @@
 the mapping between dimension names and their type, mapping between point format and
 compatible file version
 """
-
-import itertools
+import operator
 from collections import namedtuple
 
 import numpy as np
@@ -411,6 +410,20 @@ def is_official_dimension_name(dimension_name, point_fmt):
 
 
 def are_official_dimensions_names(dimension_names, point_fmt):
+    """ Tells which dimension_names are official or not for the given point
+    format
+
+    Parameters
+    ----------
+    dimension_names: Iterable of str, the dimensions_names
+    point_fmt: int, the point format
+
+    Returns
+    -------
+    list of boolean
+        boolean that tells which name are official
+
+    """
     official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
     official_names_for_fmt.update(COMPOSED_FIELDS[point_fmt])
     is_official = [
@@ -420,10 +433,13 @@ def are_official_dimensions_names(dimension_names, point_fmt):
 
 
 def get_extra_dimensions_names(np_dtype, point_format_id):
-    return itertools.compress(
-        np_dtype.names,
-        [not b for b in are_official_dimensions_names(np_dtype.names, point_format_id)],
-    )
+    are_official = are_official_dimensions_names(np_dtype.names, point_format_id)
+
+    return [
+        name
+        for (name, is_official) in zip(np_dtype.names, are_official)
+        if not is_official
+    ]
 
 
 def get_extra_dimensions_spec(np_dtype, point_format_id):

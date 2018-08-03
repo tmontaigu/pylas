@@ -99,6 +99,8 @@ class PointRecord(IPointRecord):
 
     @property
     def extra_dimensions_names(self):
+        """ Returns the names of extra-dimensions contained in the PointRecord
+        """
         return tuple(
             dims.get_extra_dimensions_names(self.array.dtype, self.point_format_id)
         )
@@ -197,6 +199,9 @@ class PackedPointRecord(PointRecord):
 
     @property
     def all_dimensions_names(self):
+        """ Returns all the dimensions names, including the names of sub_fields
+        and their corresponding packed fields
+        """
         return frozenset(self.array.dtype.names + tuple(self.sub_fields_dict.keys()))
 
     @property

@@ -467,9 +467,9 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
     "LAS is not using the “ESRI WKT”
     """
 
-    def __init__(self):
+    def __init__(self, wkt_string=""):
         super().__init__(description="OGC Transformation Record")
-        self.string = ""
+        self.string = wkt_string
 
     def _encode_string(self):
         return self.string.encode("utf-8") + NULL_BYTE
