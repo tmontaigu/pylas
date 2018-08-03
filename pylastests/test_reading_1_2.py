@@ -1,11 +1,10 @@
-import io
 import os
 
 import numpy as np
 import pytest
 
 import pylas
-from pylastests.test_common import simple_las, simple_laz
+from pylastests.test_common import simple_las, simple_laz, write_then_read_again
 
 
 @pytest.fixture(params=[simple_las, simple_laz], scope="session")
@@ -178,20 +177,12 @@ def test_blue(read_simple):
 
 
 def test_read_write_read(read_simple):
-    out = io.BytesIO()
-    read_simple.write(out)
-    out.seek(0)
-
-    _ = pylas.read(out)
+    _ = write_then_read_again(read_simple)
 
 
 # TODO factorize with test above
 def test_read_write_read_laz(read_simple):
-    out = io.BytesIO()
-    read_simple.write(out, do_compress=True)
-    out.seek(0)
-
-    _ = pylas.read(out)
+    _ = write_then_read_again(read_simple, do_compress=True)
 
 
 def test_decompression_is_same_as_uncompressed():
