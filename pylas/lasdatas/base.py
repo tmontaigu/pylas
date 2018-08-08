@@ -1,9 +1,11 @@
 import numpy as np
-
+import logging
 
 from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
 from ..point import record, dims
 from ..vlrs import known, vlrlist
+
+logger = logging.getLogger(__name__)
 
 
 def scale_dimension(array_dim, scale, offset):
@@ -175,13 +177,18 @@ class LasBase(object):
 
         self.update_header()
 
+        if self.vlrs.get('ExtraBytesVlr') and not self.points_data.extra_dimensions_names:
+            logger.error("Las contains an ExtraBytesVlr, but no extra bytes were found in the point_record, "
+                         "removing the vlr")
+            self.vlrs.extract('ExtraBytesVlr')
+
         if do_compress:
             laz_vrl = create_laz_vlr(self.points_data)
             self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
             self.header.offset_to_point_data = (
-                self.header.size + raw_vlrs.total_size_in_bytes()
+                    self.header.size + raw_vlrs.total_size_in_bytes()
             )
             self.header.point_format_id = uncompressed_id_to_compressed(
                 self.header.point_format_id
@@ -198,7 +205,7 @@ class LasBase(object):
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
             self.header.number_of_vlr = len(raw_vlrs)
             self.header.offset_to_point_data = (
-                self.header.size + raw_vlrs.total_size_in_bytes()
+                    self.header.size + raw_vlrs.total_size_in_bytes()
             )
             points_bytes = self.points_data.raw_bytes()
 
