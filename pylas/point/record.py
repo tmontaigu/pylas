@@ -91,18 +91,16 @@ class IPointRecord(ABC):
 
 
 class PointRecord(IPointRecord):
-    def __init__(self, data, point_format_id):
+    def __init__(self, data, point_format):
         self.array = data
-        self.point_format_id = point_format_id
-        self.dimensions_names = point_format_id.unpacked_dtype.names
+        self.point_format = point_format
+        self.dimensions_names = point_format.unpacked_dtype.names
 
     @property
     def extra_dimensions_names(self):
         """ Returns the names of extra-dimensions contained in the PointRecord
         """
-        return tuple(
-            dims.get_extra_dimensions_names(self.array.dtype, int(self.point_format_id))
-        )
+        return self.point_format.extra_dimension_names
 
     @property
     def actual_point_size(self):
@@ -139,9 +137,9 @@ class PointRecord(IPointRecord):
                 pass
 
     def add_extra_dims(self, type_tuples):
-        dtype_with_extra_dims = dims.dtype_append(self.array.dtype, type_tuples)
+        self.point_format.extra_dims.extend(type_tuples)
         old_array = self.array
-        self.array = np.zeros_like(old_array, dtype=dtype_with_extra_dims)
+        self.array = np.zeros_like(old_array, dtype=self.point_format.dtype)
         self.copy_fields_from(old_array)
 
     def raw_bytes(self):
@@ -178,12 +176,13 @@ class PackedPointRecord(PointRecord):
     However some operations on sub-fields require extra steps:
 
     >>> #return number is a sub-field
-    >>> packed_point_record = PackedPointRecord.zeros(0, 10)
+    >>> from pylas import PointFormat
+    >>> packed_point_record = PackedPointRecord.zeros(PointFormat(0), 10)
     >>> packed_point_record['return_number'][:] = 1
     >>> np.alltrue(packed_point_record == 1)
     False
 
-    >>> packed_point_record = PackedPointRecord.zeros(0, 10)
+    >>> packed_point_record = PackedPointRecord.zeros(PointFormat(0), 10)
     >>> rn = packed_point_record['return_number']
     >>> rn[:] = 1
     >>> packed_point_record['return_number'] = rn
@@ -191,11 +190,11 @@ class PackedPointRecord(PointRecord):
     True
     """
 
-    def __init__(self, data, point_format_id=None):
-        if point_format_id is None:
-            point_format_id = PointFormat(dims.np_dtype_to_point_format(data.dtype))
-        super().__init__(data, point_format_id)
-        self.sub_fields_dict = point_format_id.sub_fields
+    def __init__(self, data, point_format=None):
+        if point_format is None:
+            point_format = PointFormat(dims.np_dtype_to_point_format(data.dtype))
+        super().__init__(data, point_format)
+        self.sub_fields_dict = point_format.sub_fields
 
     @property
     def all_dimensions_names(self):
@@ -217,7 +216,7 @@ class PackedPointRecord(PointRecord):
         return self.array.dtype.itemsize
 
     @classmethod
-    def zeros(cls, point_format_id, point_count):
+    def zeros(cls, point_format, point_count):
         """ Creates a new point record with all dimensions initialized to zero
 
         Parameters
@@ -232,16 +231,16 @@ class PackedPointRecord(PointRecord):
         PackedPointRecord
 
         """
-        data = np.zeros(point_count, dtype=dims.get_dtype_of_format_id(point_format_id))
-        return cls(data, PointFormat(point_format_id))
+        data = np.zeros(point_count, point_format.dtype)
+        return cls(data, point_format)
 
     @classmethod
-    def empty(cls, point_format_id):
+    def empty(cls, point_format):
         """ Creates an empty point record.
 
         Parameters
         ----------
-        point_format_id: int
+        point_format: pylas.PointFormat
             The point format id the point record should have
 
         Returns
@@ -249,7 +248,7 @@ class PackedPointRecord(PointRecord):
         PackedPointRecord
 
         """
-        return cls.zeros(int(point_format_id), point_count=0)
+        return cls.zeros(point_format, point_count=0)
 
     @classmethod
     def from_stream(cls, stream, point_format, count):
@@ -284,13 +283,11 @@ class PackedPointRecord(PointRecord):
         return cls(data, point_format)
 
     @classmethod
-    def from_buffer(cls, buffer, point_format_id, count, offset=0, extra_dims=None):
-        points_dtype = dims.get_dtype_of_format_id(
-            point_format_id, extra_dims=extra_dims
-        )
+    def from_buffer(cls, buffer, point_format, count, offset=0):
+        points_dtype = point_format.dtype
         data = np.frombuffer(buffer, dtype=points_dtype, offset=offset, count=count)
 
-        return cls(data, point_format_id)
+        return cls(data, point_format)
 
     @classmethod
     def from_compressed_buffer(
@@ -310,8 +307,8 @@ class PackedPointRecord(PointRecord):
         out.write(self.raw_bytes())
 
     def to_unpacked(self):
-        array = packing.unpack_sub_fields(self.array, self.point_format_id)
-        return UnpackedPointRecord(array, self.point_format_id)
+        array = packing.unpack_sub_fields(self.array, self.point_format)
+        return UnpackedPointRecord(array, self.point_format)
 
     def __getitem__(self, item):
         """ Gives access to the underlying numpy array
@@ -338,7 +335,7 @@ class PackedPointRecord(PointRecord):
 
     def __repr__(self):
         return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
-            self.point_format_id, len(self), self.actual_point_size
+            self.point_format, len(self), self.actual_point_size
         )
 
 
@@ -358,7 +355,7 @@ class UnpackedPointRecord(PointRecord):
     # TODO fix when there are extra dims
     @property
     def point_size(self):
-        return dims.get_dtype_of_format_id(self.point_format_id).itemsize
+        return self.point_format.dtype.itemsize
 
     def write_to(self, out):
         out.write(self.to_packed().raw_bytes())
@@ -378,12 +375,12 @@ class UnpackedPointRecord(PointRecord):
         ).to_unpacked()
 
     @classmethod
-    def empty(cls, point_format_id):
+    def empty(cls, point_format):
         data = np.zeros(
-            0, dtype=dims.get_dtype_of_format_id(point_format_id, unpacked=True)
+            0, dtype=point_format.dtype
         )
-        return cls(data, point_format_id)
+        return cls(data, point_format)
 
     def to_packed(self):
-        array = packing.repack_sub_fields(self.array, self.point_format_id)
-        return PackedPointRecord(array, self.point_format_id)
+        array = packing.repack_sub_fields(self.array, self.point_format)
+        return PackedPointRecord(array, self.point_format)

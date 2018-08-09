@@ -67,7 +67,7 @@ def create_laz_vlr(points_record):
     raise_if_no_lazperf()
     record_schema = lazperf.RecordSchema()
 
-    if points_record.point_format_id.id >= 6:
+    if points_record.point_format.id >= 6:
         raise PylasError("Can't compress points with format it >= 6")
     record_schema.add_point()
 
@@ -77,7 +77,7 @@ def create_laz_vlr(points_record):
     if "red" in points_record.dimensions_names:
         record_schema.add_rgb()
 
-    num_extra_bytes = points_record.point_format_id.num_extra_bytes
+    num_extra_bytes = points_record.point_format.num_extra_bytes
     if num_extra_bytes > 0:
         record_schema.add_extra_bytes(num_extra_bytes)
     elif num_extra_bytes < 0:

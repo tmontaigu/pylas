@@ -5,6 +5,8 @@ from .. import errors
 class PointFormat:
     def __init__(self, point_format_id, extra_dims=None):
         self.id = point_format_id
+        if extra_dims is None:
+            extra_dims = []
         self.extra_dims = extra_dims
 
     @property
@@ -37,14 +39,10 @@ class PointFormat:
 
     @property
     def extra_dimension_names(self):
-        if self.extra_dims is None:
-            return []
         return [extd[0] for extd in self.extra_dims]
 
     @property
     def num_extra_bytes(self):
-        if self.extra_dims is None:
-            return 0
         return sum(extra_dim[1] for extra_dim in self.extra_dims)
 
     @property
@@ -72,3 +70,19 @@ class PointFormat:
 
     def __repr__(self):
         return "<PointFormat({})>".format(self.id)
+
+
+def lost_dimensions(point_fmt_in, point_fmt_out):
+    """  Returns a list of the names of the dimensions that will be lost
+    when converting from point_fmt_in to point_fmt_out
+    """
+
+    unpacked_dims_in = PointFormat(point_fmt_in).dtype
+    unpacked_dims_out = PointFormat(point_fmt_out).dtype
+
+    out_dims = unpacked_dims_out.fields
+    completely_lost = []
+    for dim_name in unpacked_dims_in.names:
+        if dim_name not in out_dims:
+            completely_lost.append(dim_name)
+    return completely_lost

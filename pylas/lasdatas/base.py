@@ -3,6 +3,7 @@ import logging
 
 from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
 from ..point import record, dims
+from ..point.format import PointFormat
 from ..vlrs import known, vlrlist
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class LasBase(object):
 
     def __init__(self, *, header, vlrs=None, points=None):
         if points is None:
-            points = record.PackedPointRecord.empty(header.point_format_id)
+            points = record.PackedPointRecord.empty(PointFormat(header.point_format_id))
         self.__dict__["points_data"] = points
         self.header = header
         self.vlrs = vlrs if vlrs is not None else vlrlist.VLRList()
@@ -102,7 +103,7 @@ class LasBase(object):
         """
         new_point_record = record.PackedPointRecord(value)
         dims.raise_if_version_not_compatible_with_fmt(
-            new_point_record.point_format_id.id, self.header.version
+            new_point_record.point_format.id, self.header.version
         )
         self.points_data = new_point_record
         self.update_header()
@@ -148,7 +149,7 @@ class LasBase(object):
         self.points_data[key] = value
 
     def update_header(self):
-        self.header.point_format_id = self.points_data.point_format_id
+        self.header.point_format_id = self.points_data.point_format
         self.header.point_count = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
 
@@ -283,7 +284,7 @@ class LasBase(object):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(
             self.header.version_major,
             self.header.version_minor,
-            self.points_data.point_format_id,
+            self.points_data.point_format,
             len(self.points_data),
             len(self.vlrs),
         )

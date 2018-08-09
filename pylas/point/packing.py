@@ -2,8 +2,6 @@
 """
 import numpy as np
 
-from .dims import get_dtype_of_format_id, COMPOSED_FIELDS, get_extra_dimensions_spec
-
 
 def least_significant_bit(val):
     """ Return the least significant bit
@@ -65,16 +63,15 @@ def pack(array, sub_field_array, mask, inplace=False):
         return array | ((sub_field_array << lsb) & mask).astype(array.dtype)
 
 
-def unpack_sub_fields(data, point_format_id):
+def unpack_sub_fields(data, point_format):
     """ Unpack all the composed fields of the structured_array into their corresponding
     sub-fields
 
     Returns:
         A new structured array with the sub-fields de-packed
     """
-    composed_dims = COMPOSED_FIELDS[point_format_id]
-    extra_dims = get_extra_dimensions_spec(data.dtype, point_format_id)
-    dtype = get_dtype_of_format_id(point_format_id, extra_dims, unpacked=True)
+    composed_dims = point_format.composed_fields
+    dtype = point_format.dtype
     point_record = np.zeros_like(data, dtype)
 
     for dim_name in data.dtype.names:
@@ -86,17 +83,16 @@ def unpack_sub_fields(data, point_format_id):
     return point_record
 
 
-def repack_sub_fields(structured_array, point_format_id):
+def repack_sub_fields(structured_array, point_format):
     """ Repack all the sub-fields of the structured_array into their corresponding
     composed fields
 
     Returns:
         A new structured array without the de-packed sub-fields
     """
-    extra_dims = get_extra_dimensions_spec(structured_array.dtype, point_format_id)
-    dtype = get_dtype_of_format_id(point_format_id, extra_dims=extra_dims)
+    dtype = point_format.dtype
+    composed_dims = point_format.composed_fields
     repacked_array = np.zeros_like(structured_array, dtype)
-    composed_dims = COMPOSED_FIELDS[point_format_id]
 
     for dim_name in repacked_array.dtype.names:
         if dim_name in composed_dims:
