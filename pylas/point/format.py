@@ -36,11 +36,24 @@ class PointFormat:
         return sub_fields_dict
 
     @property
+    def extra_dimension_names(self):
+        if self.extra_dims is None:
+            return []
+        return [extd[0] for extd in self.extra_dims]
+
+    @property
+    def num_extra_bytes(self):
+        if self.extra_dims is None:
+            return 0
+        return sum(extra_dim[1] for extra_dim in self.extra_dims)
+
+    @property
     def has_waveform_packet(self):
         dimensions = set(self.dimension_names)
         return all(name in dimensions for name in dims.WAVEFORM_FIELDS_NAMES)
 
-    def _access_dict(self, d, key):
+    @staticmethod
+    def _access_dict(d, key):
         try:
             return d[key]
         except KeyError as e:
@@ -54,8 +67,8 @@ class PointFormat:
     def __int__(self):
         return self.id
 
-    def __str__(self):
-        return str(self.id)
+    # def __str__(self):
+    #     return str(self.id)
 
     def __repr__(self):
         return "<PointFormat({})>".format(self.id)

@@ -102,7 +102,7 @@ class LasBase(object):
         """
         new_point_record = record.PackedPointRecord(value)
         dims.raise_if_version_not_compatible_with_fmt(
-            new_point_record.point_format_id, self.header.version
+            new_point_record.point_format_id.id, self.header.version
         )
         self.points_data = new_point_record
         self.update_header()

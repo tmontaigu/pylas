@@ -11,6 +11,7 @@ from .lasdatas import las12, las14
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .point import dims, record
+from .point.format import PointFormat
 
 USE_UNPACKED = False
 
@@ -246,8 +247,9 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
+    point_format = PointFormat(point_format_id)
     points = record.PackedPointRecord.from_point_record(
-        source_las.points_data, point_format_id
+        source_las.points_data, point_format
     )
 
     try:

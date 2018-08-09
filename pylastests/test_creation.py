@@ -61,11 +61,11 @@ def test_good_version_is_used():
 def test_extraction(file):
     new = pylas.create(point_format_id=0)
 
-    assert file.points_data.point_format_id == 3
+    assert file.points_data.point_format_id.id == 3
 
     # automatic promotion of point format
     new.points = file.points[file.classification == 2]
-    assert new.points_data.point_format_id == 3
+    assert new.points_data.point_format_id.id == 3
     assert new.header.point_format_id == 3
 
     assert len(new.points) == sum(file.classification == 2)
