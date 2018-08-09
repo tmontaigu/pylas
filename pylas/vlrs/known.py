@@ -71,6 +71,7 @@ class IKnownVLR(abc.ABC):
 class BaseKnownVLR(BaseVLR, IKnownVLR):
     """ Base Class to factorize common code between the different type of Known VLRs
     """
+
     def __init__(self, record_id=None, description=""):
         super().__init__(
             self.official_user_id(),
@@ -135,7 +136,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
         for i in range(len(record_data) // ctypes.sizeof(ClassificationLookupStruct)):
             self.lookups.append(
                 ClassificationLookupStruct.from_buffer_copy(
-                    record_data[self._lookup_size * i: self._lookup_size * (i + 1)]
+                    record_data[self._lookup_size * i : self._lookup_size * (i + 1)]
                 )
             )
 
@@ -155,6 +156,7 @@ class LasZipVlr(BaseKnownVLR):
     """ Contains the informations needed by laszip & lazperf
     to compress the point records.
     """
+
     def __init__(self, data):
         super().__init__(description="http://laszip.org")
         self.record_data = data
@@ -229,7 +231,7 @@ class ExtraBytesVlr(BaseKnownVLR):
         self.extra_bytes_structs = [None] * num_extra_bytes_structs
         for i in range(num_extra_bytes_structs):
             self.extra_bytes_structs[i] = ExtraBytesStruct.from_buffer_copy(
-                data[ExtraBytesStruct.size() * i: ExtraBytesStruct.size() * (i + 1)]
+                data[ExtraBytesStruct.size() * i : ExtraBytesStruct.size() * (i + 1)]
             )
 
     def record_data_bytes(self):
@@ -356,9 +358,9 @@ class GeoKeyDirectoryVlr(BaseKnownVLR):
         header_data = record_data[: ctypes.sizeof(GeoKeysHeaderStructs)]
         self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
         self.geo_keys = []
-        keys_data = record_data[GeoKeysHeaderStructs.size():]
+        keys_data = record_data[GeoKeysHeaderStructs.size() :]
         num_keys = (
-                len(record_data[GeoKeysHeaderStructs.size():]) // GeoKeyEntryStruct.size()
+            len(record_data[GeoKeysHeaderStructs.size() :]) // GeoKeyEntryStruct.size()
         )
         if num_keys != self.geo_keys_header.number_of_keys:
             # print("Mismatch num keys")
@@ -366,8 +368,8 @@ class GeoKeyDirectoryVlr(BaseKnownVLR):
 
         for i in range(self.geo_keys_header.number_of_keys):
             data = keys_data[
-                   (i * GeoKeyEntryStruct.size()): (i + 1) * GeoKeyEntryStruct.size()
-                   ]
+                (i * GeoKeyEntryStruct.size()) : (i + 1) * GeoKeyEntryStruct.size()
+            ]
             self.geo_keys.append(GeoKeyEntryStruct.from_buffer(data))
 
     def record_data_bytes(self):
@@ -400,7 +402,7 @@ class GeoDoubleParamsVlr(BaseKnownVLR):
         record_data = bytearray(record_data)
         num_doubles = len(record_data) // sizeof_double
         for i in range(num_doubles):
-            b = record_data[i * sizeof_double: (i + 1) * sizeof_double]
+            b = record_data[i * sizeof_double : (i + 1) * sizeof_double]
             self.doubles.append(ctypes.c_double.from_buffer(b))
 
     def record_data_bytes(self):
@@ -501,8 +503,8 @@ def vlr_factory(raw_vlr):
     known_vlrs = BaseKnownVLR.__subclasses__()
     for known_vlr in known_vlrs:
         if (
-                known_vlr.official_user_id() == user_id
-                and raw_vlr.header.record_id in known_vlr.official_record_ids()
+            known_vlr.official_user_id() == user_id
+            and raw_vlr.header.record_id in known_vlr.official_record_ids()
         ):
             return known_vlr.from_raw(raw_vlr)
     else:

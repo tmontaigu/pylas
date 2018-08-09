@@ -5,7 +5,7 @@ import struct
 from . import headers, errors, evlrs
 from .compression import laszip_decompress
 from .lasdatas import las14, las12
-from .point import dims, record
+from .point import record, PointFormat
 from .vlrs import rawvlr
 from .vlrs.vlrlist import VLRList
 
@@ -66,7 +66,7 @@ class LasReader:
             self.__init__(io.BytesIO(laszip_decompress(self.stream)))
             return self.read()
 
-        if dims.format_has_waveform_packet(self.header.point_format_id):
+        if points.point_format.has_waveform_packet:
             self.stream.seek(
                 self.start_pos + self.header.start_of_waveform_data_packet_record
             )
@@ -106,19 +106,17 @@ class LasReader:
         except IndexError:
             extra_dims = None
 
+        point_format = PointFormat(self.header.point_format_id, extra_dims=extra_dims)
         if self.header.are_points_compressed:
             laszip_vlr = vlrs.pop(vlrs.index("LasZipVlr"))
-            points = self._read_compressed_points_data(laszip_vlr, extra_dims)
+            points = self._read_compressed_points_data(laszip_vlr, point_format)
         else:
             points = record.PackedPointRecord.from_stream(
-                self.stream,
-                self.header.point_format_id,
-                self.header.point_count,
-                extra_dims,
+                self.stream, point_format, self.header.point_count
             )
         return points
 
-    def _read_compressed_points_data(self, laszip_vlr, extra_dims):
+    def _read_compressed_points_data(self, laszip_vlr, point_format):
         """ reads the compressed point record
         """
         offset_to_chunk_table = struct.unpack("<q", self.stream.read(8))[0]
@@ -134,10 +132,9 @@ class LasReader:
 
         points = record.PackedPointRecord.from_compressed_buffer(
             self.stream.read(size_of_point_data),
-            self.header.point_format_id,
+            point_format,
             self.header.point_count,
             laszip_vlr,
-            extra_dims=extra_dims
         )
         return points
 

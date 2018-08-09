@@ -10,7 +10,7 @@ from . import headers, utils
 from .lasdatas import las12, las14
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
-from .point import dims, record
+from .point import dims, record, PointFormat
 
 USE_UNPACKED = False
 
@@ -114,7 +114,7 @@ def create_from_header(header):
     pylas.lasdatas.base.LasBase
     """
     header = copy.copy(header)
-    points = record.PackedPointRecord.zeros(header.point_format_id, header.point_count)
+    points = record.PackedPointRecord.zeros(PointFormat(header.point_format_id), header.point_count)
     if header.version >= "1.4":
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)
@@ -232,7 +232,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         pylas.lasdatas.base.LasBase
     """
     if point_format_id is None:
-        point_format_id = source_las.points_data.point_format_id
+        point_format_id = source_las.points_data.point_format
 
     if file_version is None:
         file_version = max(
@@ -246,20 +246,25 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
+    point_format = PointFormat(point_format_id, source_las.points_data.point_format.extra_dims)
     points = record.PackedPointRecord.from_point_record(
-        source_las.points_data, point_format_id
+        source_las.points_data, point_format
     )
 
-    try:
-        evlrs = source_las.evlrs
-    except ValueError:
-        evlrs = []
-
     if file_version >= "1.4":
-        return las14.LasData(
+        try:
+            evlrs = source_las.evlrs
+        except ValueError:
+            evlrs = []
+
+        las = las14.LasData(
             header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
         )
-    return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+    else:
+        las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+
+    las.vlrs = copy.deepcopy(source_las.vlrs)
+    return las
 
 
 def merge_las(*las_files):
@@ -285,7 +290,7 @@ def merge_las(*las_files):
         raise ValueError("No files to merge")
 
     if not utils.files_have_same_dtype(las_files):
-        raise ValueError('All files must have the same point format')
+        raise ValueError("All files must have the same point format")
 
     header = las_files[0].header
     num_pts_merged = sum(len(las.points) for las in las_files)

@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 import pylas
+from pylas import PointFormat
 from pylastests.test_common import write_then_read_again, simple_las, test1_4_las
 
 
@@ -61,11 +62,11 @@ def test_good_version_is_used():
 def test_extraction(file):
     new = pylas.create(point_format_id=0)
 
-    assert file.points_data.point_format_id == 3
+    assert file.points_data.point_format.id == 3
 
     # automatic promotion of point format
     new.points = file.points[file.classification == 2]
-    assert new.points_data.point_format_id == 3
+    assert new.points_data.point_format.id == 3
     assert new.header.point_format_id == 3
 
     assert len(new.points) == sum(file.classification == 2)
@@ -78,7 +79,7 @@ def test_extraction(file):
 def test_create_fmt_0(file):
     new = pylas.create(point_format_id=0)
 
-    dim_names_fmt_0 = pylas.point.dims.get_dtype_of_format_id(0).names
+    dim_names_fmt_0 = PointFormat(0).dimension_names
 
     for dim_name in dim_names_fmt_0:
         new[dim_name] = file[dim_name]
@@ -169,7 +170,7 @@ def test_create_fmt_6(file1_4):
     new = pylas.create(point_format_id=6)
     assert new.header.version == "1.4"
 
-    dim_names_fmt_6 = pylas.point.dims.get_dtype_of_format_id(6).names
+    dim_names_fmt_6 = PointFormat(6).dtype.names
 
     for dim_name in dim_names_fmt_6:
         new[dim_name] = file1_4[dim_name]

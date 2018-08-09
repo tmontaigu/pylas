@@ -2,7 +2,6 @@
 the mapping between dimension names and their type, mapping between point format and
 compatible file version
 """
-import operator
 from collections import namedtuple
 
 import numpy as np
@@ -10,7 +9,7 @@ import numpy as np
 from .. import errors
 
 
-def point_format_to_dtype(point_format, dimensions):
+def _point_format_to_dtype(point_format, dimensions):
     """ build the numpy.dtype for a point format
 
     Parameters:
@@ -27,12 +26,6 @@ def point_format_to_dtype(point_format, dimensions):
     return np.dtype([dimensions[dim_name] for dim_name in point_format])
 
 
-def size_of_point_format(point_format_id):
-    """ Returns the size in bytes of a point format
-    """
-    return get_dtype_of_format_id(point_format_id).itemsize
-
-
 def dtype_append(dtype, extra_dims_tuples):
     """ Append a dimensions to an existing dtype
     """
@@ -47,7 +40,7 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
     you want to access them
     """
     return {
-        fmt_id: point_format_to_dtype(point_fmt, dimensions_dict)
+        fmt_id: _point_format_to_dtype(point_fmt, dimensions_dict)
         for fmt_id, point_fmt in point_format_dimensions.items()
     }
 
@@ -246,61 +239,6 @@ UNPACKED_POINT_FORMATS_DTYPES = _build_unpacked_point_formats_dtypes(
 )
 
 
-def get_dtype_of_format_id(point_format_id, extra_dims=None, unpacked=False):
-    """ Returns the numpy.dtype of the point_format_id
-    
-    Parameters:
-    ----------
-    point_format_id : int
-        The point format id
-    extra_dims : List[(str, str)], optional
-        List of extra dims  (the default is None, which won't add extra dims)
-    unpacked : bool, optional
-        If True the resulting numpy.dtype will contain bitfields unpacked
-    
-    Raises
-    ------
-    errors.PointFormatNotSupported
-        If point format is not Supported
-    
-    Returns
-    -------
-    numpy.dtype
-        The dtype of the point format, to be used un a numpy.ndarray
-    """
-
-    fmt_dtypes = (
-        ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
-    )
-    try:
-        points_dtype = fmt_dtypes[point_format_id]
-    except KeyError as e:
-        raise errors.PointFormatNotSupported(point_format_id) from e
-    if extra_dims is not None:
-        return dtype_append(points_dtype, extra_dims)
-    return points_dtype
-
-
-def get_sub_fields_of_fmt_id(point_format_id):
-    """ Returns the sub fields of a point format
-    
-    Parameters:
-    ----------
-    point_format_id : int
-        The point format id
-    Returns
-    -------
-        
-    """
-
-    composed_dims = COMPOSED_FIELDS[point_format_id]
-    sub_fields_dict = {}
-    for composed_dim_name, sub_fields in composed_dims.items():
-        for sub_field in sub_fields:
-            sub_fields_dict[sub_field.name] = (composed_dim_name, sub_field)
-    return sub_fields_dict
-
-
 def np_dtype_to_point_format(dtype, unpacked=False):
     """ Tries to find a matching point format id for the input numpy dtype
     To match, the input dtype has to be 100% equal to a point format dtype
@@ -354,38 +292,6 @@ def supported_point_formats():
     return set(POINT_FORMAT_DIMENSIONS.keys())
 
 
-def format_has_waveform_packet(point_format_id):
-    """ Returns true if the point_format_id contains the waveform packet
-    """
-    try:
-        dim_names = set(ALL_POINT_FORMATS_DIMENSIONS[point_format_id])
-    except KeyError:
-        raise errors.PointFormatNotSupported(point_format_id)
-    for name in WAVEFORM_FIELDS_NAMES:
-        if name not in dim_names:
-            return False
-    else:
-        return True
-
-
-# TODO lost precision (ie 8bit fields to -> 5 bit field)
-# but it's a bit harder
-def lost_dimensions(point_fmt_in, point_fmt_out):
-    """  Returns a list of the names of the dimensions that will be lost
-    when converting from point_fmt_in to point_fmt_out
-    """
-
-    unpacked_dims_in = get_dtype_of_format_id(point_fmt_in, unpacked=True)
-    unpacked_dims_out = get_dtype_of_format_id(point_fmt_out, unpacked=True)
-
-    out_dims = unpacked_dims_out.fields
-    completely_lost = []
-    for dim_name in unpacked_dims_in.names:
-        if dim_name not in out_dims:
-            completely_lost.append(dim_name)
-    return completely_lost
-
-
 def is_point_fmt_compatible_with_version(point_format_id, file_version):
     """  Returns true if the file version support the point_format_id
     """
@@ -402,48 +308,3 @@ def raise_if_version_not_compatible_with_fmt(point_format_id, file_version):
                 point_format_id, file_version
             )
         )
-
-
-def is_official_dimension_name(dimension_name, point_fmt):
-    official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
-    return dimension_name in official_names_for_fmt
-
-
-def are_official_dimensions_names(dimension_names, point_fmt):
-    """ Tells which dimension_names are official or not for the given point
-    format
-
-    Parameters
-    ----------
-    dimension_names: Iterable of str, the dimensions_names
-    point_fmt: int, the point format
-
-    Returns
-    -------
-    list of boolean
-        boolean that tells which name are official
-
-    """
-    official_names_for_fmt = set(get_dtype_of_format_id(point_fmt, unpacked=True).names)
-    official_names_for_fmt.update(COMPOSED_FIELDS[point_fmt])
-    is_official = [
-        True if name in official_names_for_fmt else False for name in dimension_names
-    ]
-    return is_official
-
-
-def get_extra_dimensions_names(np_dtype, point_format_id):
-    are_official = are_official_dimensions_names(np_dtype.names, point_format_id)
-
-    return [
-        name
-        for (name, is_official) in zip(np_dtype.names, are_official)
-        if not is_official
-    ]
-
-
-def get_extra_dimensions_spec(np_dtype, point_format_id):
-    return [
-        (name, np_dtype[name])
-        for name in get_extra_dimensions_names(np_dtype, point_format_id)
-    ]

@@ -10,7 +10,6 @@ import subprocess
 import numpy as np
 
 from .errors import LazPerfNotFound, PylasError
-from .point.dims import get_dtype_of_format_id
 
 HAS_LAZPERF = False
 
@@ -27,8 +26,10 @@ except:
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
         raise LazPerfNotFound("Cannot manipulate laz data")
-    elif lazperf.__version__ < '1.3.0':
-        raise LazPerfNotFound("Version >= 1.3.0 required, you have {}".format(lazperf.__version__))
+    elif lazperf.__version__ < "1.3.0":
+        raise LazPerfNotFound(
+            "Version >= 1.3.0 required, you have {}".format(lazperf.__version__)
+        )
 
 
 def is_point_format_compressed(point_format_id):
@@ -53,7 +54,9 @@ def decompress_buffer(compressed_buffer, points_dtype, point_count, laszip_vlr):
     point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
     vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
-    decompressor = lazperf.VLRDecompressor(point_compressed, points_dtype.itemsize, vlr_data)
+    decompressor = lazperf.VLRDecompressor(
+        point_compressed, points_dtype.itemsize, vlr_data
+    )
 
     point_uncompressed = decompressor.decompress_points(point_count)
 
@@ -68,7 +71,7 @@ def create_laz_vlr(points_record):
     raise_if_no_lazperf()
     record_schema = lazperf.RecordSchema()
 
-    if points_record.point_format_id >= 6:
+    if points_record.point_format.id >= 6:
         raise PylasError("Can't compress points with format it >= 6")
     record_schema.add_point()
 
@@ -78,13 +81,13 @@ def create_laz_vlr(points_record):
     if "red" in points_record.dimensions_names:
         record_schema.add_rgb()
 
-    official_dtype = get_dtype_of_format_id(points_record.point_format_id)
-
-    num_extra_bytes = points_record.array.dtype.itemsize - official_dtype.itemsize
+    num_extra_bytes = points_record.point_format.num_extra_bytes
     if num_extra_bytes > 0:
         record_schema.add_extra_bytes(num_extra_bytes)
     elif num_extra_bytes < 0:
-        raise PylasError("Incoherent number of extra bytes ({})".format(num_extra_bytes))
+        raise PylasError(
+            "Incoherent number of extra bytes ({})".format(num_extra_bytes)
+        )
 
     return lazperf.LazVLR(record_schema)
 

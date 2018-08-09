@@ -3,7 +3,6 @@ import pytest
 
 import pylas
 from pylas.compression import find_laszip_executable
-
 from pylastests.test_common import (
     test1_4_las,
     extra_bytes_las,
@@ -27,16 +26,6 @@ def extrab_las(request):
 @pytest.fixture()
 def las1_4():
     return pylas.read(test1_4_las)
-
-
-def test_extra_dim_spec():
-    extra_dims_specs = [("codification", "u4")]
-    dtype = pylas.point.dims.get_dtype_of_format_id(0)
-    dtype = pylas.point.dims.dtype_append(dtype, extra_dims_specs)
-
-    found_extra_dims_spec = pylas.point.dims.get_extra_dimensions_spec(dtype, 0)
-
-    assert extra_dims_specs == found_extra_dims_spec
 
 
 def test_extra_names(extrab_las):
@@ -83,13 +72,23 @@ def test_extra_bytes_well_saved(extrab_las):
 
 def test_extra_dimensions_names_property():
     simple = pylas.read(simple_las)
-    assert simple.points_data.extra_dimensions_names == ()
+    assert simple.points_data.extra_dimensions_names == []
 
     extra = pylas.read(extra_bytes_las)
-    assert extra.points_data.extra_dimensions_names == (
+    expected_names = [
         "Colors",
         "Reserved",
         "Flags",
         "Intensity",
         "Time",
-    )
+    ]
+    assert expected_names == extra.points_data.extra_dimensions_names
+
+
+def test_conversion_keeps_eb(extrab_las):
+    eb_0 = pylas.convert(extrab_las, point_format_id=0)
+
+    assert eb_0.points_data.extra_dimensions_names == extrab_las.points_data.extra_dimensions_names
+
+    for name in eb_0.points_data.extra_dimensions_names:
+        assert np.allclose(eb_0[name], extrab_las[name])

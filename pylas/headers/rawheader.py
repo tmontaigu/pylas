@@ -286,6 +286,7 @@ class HeaderFactory:
     This Factory also handles converting headers between different
     versions.
     """
+
     _version_to_header = {
         "1.1": RawHeader1_1,
         "1.2": RawHeader1_2,

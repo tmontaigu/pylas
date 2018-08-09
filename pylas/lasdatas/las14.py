@@ -32,7 +32,7 @@ class LasData(LasBase):
             self.points_data.add_extra_dims([(name, type)])
 
     def write_to(self, out_stream, do_compress=False):
-        if do_compress and self.points_data.point_format_id >= 6:
+        if do_compress and self.points_data.point_format >= 6:
             raise NotImplementedError(
                 "LazPerf cannot compress 1.4 files with point format >= 6"
             )
