@@ -10,8 +10,7 @@ from . import headers, utils
 from .lasdatas import las12, las14
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
-from .point import dims, record
-from .point.format import PointFormat
+from .point import dims, record, PointFormat
 
 USE_UNPACKED = False
 
@@ -115,7 +114,7 @@ def create_from_header(header):
     pylas.lasdatas.base.LasBase
     """
     header = copy.copy(header)
-    points = record.PackedPointRecord.zeros(header.point_format_id, header.point_count)
+    points = record.PackedPointRecord.zeros(PointFormat(header.point_format_id), header.point_count)
     if header.version >= "1.4":
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)

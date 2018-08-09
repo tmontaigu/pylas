@@ -11,13 +11,13 @@ import numpy as np
 from . import dims, packing
 from .. import errors
 from ..compression import decompress_buffer
-from ..point.format import PointFormat
+from ..point import PointFormat
 
 logger = logging.getLogger(__name__)
 
 
 def raise_not_enough_bytes_error(
-    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ):
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -80,7 +80,7 @@ class IPointRecord(ABC):
     @classmethod
     @abstractmethod
     def from_compressed_buffer(
-        cls, compressed_buffer, point_format_id, count, laszip_vlr
+            cls, compressed_buffer, point_format_id, count, laszip_vlr
     ):
         pass
 
@@ -362,7 +362,7 @@ class UnpackedPointRecord(PointRecord):
 
     @classmethod
     def from_compressed_buffer(
-        cls, compressed_buffer, point_format_id, count, laszip_vlr
+            cls, compressed_buffer, point_format_id, count, laszip_vlr
     ):
         return PackedPointRecord.from_compressed_buffer(
             compressed_buffer, point_format_id, count, laszip_vlr

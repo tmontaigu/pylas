@@ -2,11 +2,10 @@ import io
 import logging
 import struct
 
-from .point.format import PointFormat
 from . import headers, errors, evlrs
 from .compression import laszip_decompress
 from .lasdatas import las14, las12
-from .point import dims, record
+from .point import record, PointFormat
 from .vlrs import rawvlr
 from .vlrs.vlrlist import VLRList
 

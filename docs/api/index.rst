@@ -22,4 +22,5 @@ Submodules
    pylas.errors
    pylas.compression
    pylas.headers
+   pylas.point.format
 

@@ -3,8 +3,7 @@ import mmap
 from . import headers
 from . import lasreader
 from .lasdatas import base
-from .point import record
-from .point.format import PointFormat
+from .point import PointFormat, record
 from .vlrs import vlrlist
 
 WHOLE_FILE = 0
