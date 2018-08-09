@@ -246,21 +246,25 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
-    point_format = PointFormat(point_format_id)
+    point_format = PointFormat(point_format_id, source_las.points_data.point_format.extra_dims)
     points = record.PackedPointRecord.from_point_record(
         source_las.points_data, point_format
     )
 
-    try:
-        evlrs = source_las.evlrs
-    except ValueError:
-        evlrs = []
-
     if file_version >= "1.4":
-        return las14.LasData(
+        try:
+            evlrs = source_las.evlrs
+        except ValueError:
+            evlrs = []
+
+        las = las14.LasData(
             header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
         )
-    return las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+    else:
+        las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+
+    las.vlrs = copy.deepcopy(source_las.vlrs)
+    return las
 
 
 def merge_las(*las_files):
