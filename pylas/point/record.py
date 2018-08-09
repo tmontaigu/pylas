@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def raise_not_enough_bytes_error(
-        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ):
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -80,7 +80,7 @@ class IPointRecord(ABC):
     @classmethod
     @abstractmethod
     def from_compressed_buffer(
-            cls, compressed_buffer, point_format_id, count, laszip_vlr
+        cls, compressed_buffer, point_format_id, count, laszip_vlr
     ):
         pass
 
@@ -119,10 +119,7 @@ class PointRecord(IPointRecord):
         """  Construct a new PackedPointRecord from an existing one with the ability to change
         to point format while doing so
         """
-        array = np.zeros_like(
-            other_point_record.array,
-            dtype=new_point_format.dtype
-        )
+        array = np.zeros_like(other_point_record.array, dtype=new_point_format.dtype)
         new_record = cls(array, new_point_format)
         new_record.copy_fields_from(other_point_record)
         return new_record
@@ -159,8 +156,7 @@ class PointRecord(IPointRecord):
         size_diff = len(value) - len(self.array)
         if size_diff:
             self.array = np.append(
-                self.array,
-                np.zeros(size_diff, dtype=self.array.dtype),
+                self.array, np.zeros(size_diff, dtype=self.array.dtype)
             )
 
     def __len__(self):
@@ -290,9 +286,7 @@ class PackedPointRecord(PointRecord):
         return cls(data, point_format)
 
     @classmethod
-    def from_compressed_buffer(
-            cls, compressed_buffer, point_format, count, laszip_vlr
-    ):
+    def from_compressed_buffer(cls, compressed_buffer, point_format, count, laszip_vlr):
         """  Construct the point record by reading and decompressing the points data from
         the input buffer
         """
@@ -368,7 +362,7 @@ class UnpackedPointRecord(PointRecord):
 
     @classmethod
     def from_compressed_buffer(
-            cls, compressed_buffer, point_format_id, count, laszip_vlr
+        cls, compressed_buffer, point_format_id, count, laszip_vlr
     ):
         return PackedPointRecord.from_compressed_buffer(
             compressed_buffer, point_format_id, count, laszip_vlr
@@ -376,9 +370,7 @@ class UnpackedPointRecord(PointRecord):
 
     @classmethod
     def empty(cls, point_format):
-        data = np.zeros(
-            0, dtype=point_format.dtype
-        )
+        data = np.zeros(0, dtype=point_format.dtype)
         return cls(data, point_format)
 
     def to_packed(self):

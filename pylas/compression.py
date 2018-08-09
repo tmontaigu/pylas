@@ -26,8 +26,10 @@ except:
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
         raise LazPerfNotFound("Cannot manipulate laz data")
-    elif lazperf.__version__ < '1.3.0':
-        raise LazPerfNotFound("Version >= 1.3.0 required, you have {}".format(lazperf.__version__))
+    elif lazperf.__version__ < "1.3.0":
+        raise LazPerfNotFound(
+            "Version >= 1.3.0 required, you have {}".format(lazperf.__version__)
+        )
 
 
 def is_point_format_compressed(point_format_id):
@@ -52,7 +54,9 @@ def decompress_buffer(compressed_buffer, points_dtype, point_count, laszip_vlr):
     point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
     vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
-    decompressor = lazperf.VLRDecompressor(point_compressed, points_dtype.itemsize, vlr_data)
+    decompressor = lazperf.VLRDecompressor(
+        point_compressed, points_dtype.itemsize, vlr_data
+    )
 
     point_uncompressed = decompressor.decompress_points(point_count)
 
@@ -81,7 +85,9 @@ def create_laz_vlr(points_record):
     if num_extra_bytes > 0:
         record_schema.add_extra_bytes(num_extra_bytes)
     elif num_extra_bytes < 0:
-        raise PylasError("Incoherent number of extra bytes ({})".format(num_extra_bytes))
+        raise PylasError(
+            "Incoherent number of extra bytes ({})".format(num_extra_bytes)
+        )
 
     return lazperf.LazVLR(record_schema)
 

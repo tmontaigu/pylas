@@ -14,6 +14,7 @@ class RawVLRList:
     the size in bytes taken by all the VLRs combined
 
     """
+
     def __init__(self, iterable=None):
         if iterable is not None:
             self.vlrs = list(iterable)

@@ -11,7 +11,7 @@ class PointFormat:
 
     @property
     def dimension_names(self):
-        return self._access_dict(dims.ALL_POINT_FORMATS_DIMENSIONS, self.id)
+        return self.unpacked_dtype.names
 
     @property
     def dtype(self):

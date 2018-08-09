@@ -113,9 +113,7 @@ class LasReader:
             points = self._read_compressed_points_data(laszip_vlr, point_format)
         else:
             points = record.PackedPointRecord.from_stream(
-                self.stream,
-                point_format,
-                self.header.point_count,
+                self.stream, point_format, self.header.point_count
             )
         return points
 

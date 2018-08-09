@@ -287,7 +287,7 @@ def merge_las(*las_files):
         raise ValueError("No files to merge")
 
     if not utils.files_have_same_dtype(las_files):
-        raise ValueError('All files must have the same point format')
+        raise ValueError("All files must have the same point format")
 
     header = las_files[0].header
     num_pts_merged = sum(len(las.points) for las in las_files)

@@ -96,7 +96,9 @@ def repack_sub_fields(structured_array, point_format):
 
     for dim_name in repacked_array.dtype.names:
         if dim_name in composed_dims:
-            _repack_composed_dim(dim_name, composed_dims[dim_name], repacked_array, structured_array)
+            _repack_composed_dim(
+                dim_name, composed_dims[dim_name], repacked_array, structured_array
+            )
         else:
             repacked_array[dim_name] = structured_array[dim_name]
     return repacked_array
@@ -129,7 +131,5 @@ def _repack_composed_dim(dim_name, sub_fields, repacked_array, structured_array)
             )
         except OverflowError as e:
             raise OverflowError(
-                "Error repacking {} into {}: {}".format(
-                    sub_field.name, dim_name, e
-                )
+                "Error repacking {} into {}: {}".format(sub_field.name, dim_name, e)
             )

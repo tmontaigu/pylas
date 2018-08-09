@@ -46,7 +46,7 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
 
 
 def _build_unpacked_point_formats_dtypes(
-        point_formats_dimensions, composed_fields_dict, dimensions_dict
+    point_formats_dimensions, composed_fields_dict, dimensions_dict
 ):
     """ Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are unpacked and can be accessed directly
