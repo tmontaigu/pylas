@@ -156,11 +156,10 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @date.setter
     def date(self, date):
+        """ Returns the date of file creation as a python date object
+        """
         self.creation_year = date.year
         self.creation_day_of_year = date.timetuple().tm_yday
-
-    def write_to(self, out_stream):
-        out_stream.write(bytes(self))
 
     @property
     def point_format_id(self):
@@ -222,6 +221,8 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def scales(self):
+        """ Returns the scaling values of x, y, z as a numpy array
+        """
         return np.array([self.x_scale, self.y_scale, self.z_scale])
 
     @scales.setter
@@ -230,11 +231,16 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def offsets(self):
+        """ Returns the offsets values of x, y, z as a numpy array
+        """
         return np.array([self.x_offset, self.y_offset, self.z_offset])
 
     @offsets.setter
     def offsets(self, value):
         self.x_offsets, self.y_offsets, self.z_offsets = value
+
+    def write_to(self, out_stream):
+        out_stream.write(bytes(self))
 
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)

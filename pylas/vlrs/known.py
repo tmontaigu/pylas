@@ -1,4 +1,4 @@
-""" The definition of the VLR Header, VLR, and VRL List as well as all the KnownVLR
+""" The definition of the VLR Header, VLR, the KnownVLRs
  are in this module.
 
  A KnownVLR is a VLR that we know how to parse its record_data
@@ -152,6 +152,9 @@ class ClassificationLookupVlr(BaseKnownVLR):
 
 
 class LasZipVlr(BaseKnownVLR):
+    """ Contains the informations needed by laszip & lazperf
+    to compress the point records.
+    """
     def __init__(self, data):
         super().__init__(description="http://laszip.org")
         self.record_data = data
@@ -490,6 +493,10 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
 
 
 def vlr_factory(raw_vlr):
+    """ Given a raw_vlr tries to find its corresponding KnownVLR class
+    that can parse its data.
+    If no KnownVLR implementation is found, returns a VLR (record_data will still be bytes)
+    """
     user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
     known_vlrs = BaseKnownVLR.__subclasses__()
     for known_vlr in known_vlrs:

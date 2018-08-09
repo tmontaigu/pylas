@@ -100,20 +100,40 @@ def repack_sub_fields(structured_array, point_format_id):
 
     for dim_name in repacked_array.dtype.names:
         if dim_name in composed_dims:
-            for sub_field in composed_dims[dim_name]:
-                try:
-                    pack(
-                        repacked_array[dim_name],
-                        structured_array[sub_field.name],
-                        sub_field.mask,
-                        inplace=True,
-                    )
-                except OverflowError as e:
-                    raise OverflowError(
-                        "Error repacking {} into {}: {}".format(
-                            sub_field.name, dim_name, e
-                        )
-                    )
+            _repack_composed_dim(dim_name, composed_dims[dim_name], repacked_array, structured_array)
         else:
             repacked_array[dim_name] = structured_array[dim_name]
     return repacked_array
+
+
+def _repack_composed_dim(dim_name, sub_fields, repacked_array, structured_array):
+    """ Repack the fields of a composed dimension together
+
+    Parameters
+    ----------
+    sub_fields: list of SubField, the sub fields of the dimension
+    dim_name: name of the composed dimension
+    repacked_array: structured array in which the composed_dim will be repacked
+    structured_array: structured array from which sub fields are taken
+
+    Raises
+    ------
+
+    OverflowError if the values in any of the sub fields are greater than
+    allowed
+
+    """
+    for sub_field in sub_fields:
+        try:
+            pack(
+                repacked_array[dim_name],
+                structured_array[sub_field.name],
+                sub_field.mask,
+                inplace=True,
+            )
+        except OverflowError as e:
+            raise OverflowError(
+                "Error repacking {} into {}: {}".format(
+                    sub_field.name, dim_name, e
+                )
+            )

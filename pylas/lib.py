@@ -67,7 +67,7 @@ def open_las(source, closefd=True):
 def read_las(source, closefd=True):
     """ Entry point for reading las data in pylas
 
-    Reads the whole file in memory.
+    Reads the whole file into memory.
 
     >>> las = read_las("pylastests/simple.las")
     >>> las.classification
@@ -93,6 +93,9 @@ def read_las(source, closefd=True):
 
 
 def mmap_las(filename):
+    """ MMap a file, much like laspy did, very experimental
+    not well tested
+    """
     return LasMMAP(filename)
 
 
@@ -312,6 +315,11 @@ def merge_las(*las_files):
 
 
 def write_then_read_again(las, do_compress=False):
+    """ writes the given las into memory using BytesIO and 
+    reads it again, returning the newly read file.
+
+    Mostly used for testing purposes, without having to write to disk
+    """
     out = io.BytesIO()
     las.write(out, do_compress=do_compress)
     out.seek(0)
