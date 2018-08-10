@@ -71,7 +71,7 @@ def unpack_sub_fields(data, point_format):
         A new structured array with the sub-fields de-packed
     """
     composed_dims = point_format.composed_fields
-    dtype = point_format.dtype
+    dtype = point_format.unpacked_dtype
     point_record = np.zeros_like(data, dtype)
 
     for dim_name in data.dtype.names:
