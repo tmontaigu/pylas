@@ -26,14 +26,6 @@ def _point_format_to_dtype(point_format, dimensions):
     return np.dtype([dimensions[dim_name] for dim_name in point_format])
 
 
-def dtype_append(dtype, extra_dims_tuples):
-    """ Append a dimensions to an existing dtype
-    """
-    descr = dtype.descr
-    descr.extend(extra_dims_tuples)
-    return np.dtype(descr)
-
-
 def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
     """ Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are still packed, and need to be unpacked each time
@@ -46,7 +38,7 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
 
 
 def _build_unpacked_point_formats_dtypes(
-    point_formats_dimensions, composed_fields_dict, dimensions_dict
+        point_formats_dimensions, composed_fields_dict, dimensions_dict
 ):
     """ Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are unpacked and can be accessed directly

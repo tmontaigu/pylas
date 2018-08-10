@@ -1,3 +1,5 @@
+import numpy as np
+
 from . import dims
 from .. import errors
 
@@ -118,7 +120,9 @@ class PointFormat:
 
     def _dtype_add_extra_dims(self, dtype):
         if self.extra_dims:
-            dtype = dims.dtype_append(dtype, self.extra_dims)
+            descr = dtype.descr
+            descr.extend(self.extra_dims)
+            dtype = np.dtype(descr)
         return dtype
 
     def __eq__(self, other):

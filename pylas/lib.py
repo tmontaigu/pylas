@@ -263,7 +263,6 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     else:
         las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
-    las.vlrs = copy.deepcopy(source_las.vlrs)
     return las
 
 
