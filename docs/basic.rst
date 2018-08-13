@@ -73,6 +73,52 @@ You can access the header of a las file you read or opened by retrieving the 'he
 
 you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_1` and its sub-classes.
 
+
+Accessing Points Records
+========================
+
+To access point records unsing the dimension name, you have 2 options:
+
+1) regular attribute access using the `las.dimension_name` syntax
+2) dict-like attribute access `las[dimension_name]`.
+
+>>> import numpy as np
+>>> las = pylas.read('pylastests/simple.las')
+>>> np.all(las.user_data == las['user_data'])
+True
+
+However if you wish to retrieve the x, y, z coordinates with scale and offset applied
+your only option is the first method.
+
+>>> las.x.max()
+638982.55
+
+The dimensions available in a file are dictated by the point format id.
+The tables in the introduction section contains the list of dimensions for each of the
+point format.
+To get the point format of a file you have to access it through the points_data member:
+
+>>> point_format = las.points_data.point_format
+>>> point_format
+<PointFormat(3)>
+>>> point_format.id
+3
+
+If you don't want to rember the dimensions for each point format,
+you can access the list of available dimensions in the file you read just like that:
+
+>>> point_format.dimension_names
+('X', 'Y', 'Z', 'intensity', 'return_number', 'number_of_returns', 'scan_direction_flag', 'edge_of_flight_line', 'classification', 'synthetic', 'key_point', 'withheld', 'scan_angle_rank', 'user_data', 'point_source_id', 'gps_time', 'red', 'green', 'blue')
+
+This gives you all the dimension names, including extra dimensions if any.
+If you with to get only the extra dimension names the point format can give them to you:
+
+>>> point_format.extra_dimension_names
+[]
+>>> las = pylas.read('pylastests/extra.laz')
+>>> las.points_data.point_format.extra_dimension_names
+['Colors', 'Reserved', 'Flags', 'Intensity', 'Time']
+
 .. _manipulating_vlrs:
 
 Manipulating VLRs
