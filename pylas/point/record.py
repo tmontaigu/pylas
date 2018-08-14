@@ -301,8 +301,12 @@ class PackedPointRecord(PointRecord):
         out.write(self.raw_bytes())
 
     def to_unpacked(self):
-        array = packing.unpack_sub_fields(self.array, self.point_format)
-        return UnpackedPointRecord(array, self.point_format)
+        # array = packing.unpack_sub_fields(self.array, self.point_format)
+        # return UnpackedPointRecord(array, self.point_format)
+        arr = np.zeros_like(self.array, self.point_format.unpacked_dtype)
+        record = UnpackedPointRecord(arr, self.point_format)
+        record.copy_fields_from(self)
+        return record
 
     def __getitem__(self, item):
         """ Gives access to the underlying numpy array
@@ -318,12 +322,16 @@ class PackedPointRecord(PointRecord):
 
     def __setitem__(self, key, value):
         """ Sets elements in the array
-        Appends points to all dims when setting an existing dimension to a bigger array
         """
         self._append_zeros_if_too_small(value)
         try:
             composed_dim, sub_field = self.sub_fields_dict[key]
-            packing.pack(self.array[composed_dim], value, sub_field.mask, inplace=True)
+            try:
+                packing.pack(self.array[composed_dim], value, sub_field.mask, inplace=True)
+            except OverflowError as e:
+                raise OverflowError("Overflow when packing {} into {}: {}".format(
+                    sub_field.name, composed_dim, e
+                ))
         except KeyError:
             self.array[key] = value
 
@@ -374,5 +382,4 @@ class UnpackedPointRecord(PointRecord):
         return cls(data, point_format)
 
     def to_packed(self):
-        array = packing.repack_sub_fields(self.array, self.point_format)
-        return PackedPointRecord(array, self.point_format)
+        return PackedPointRecord.from_point_record(self, self.point_format)
