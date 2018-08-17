@@ -77,7 +77,7 @@ you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_
 Accessing Points Records
 ========================
 
-To access point records unsing the dimension name, you have 2 options:
+To access point records using the dimension name, you have 2 options:
 
 1) regular attribute access using the `las.dimension_name` syntax
 2) dict-like attribute access `las[dimension_name]`.
@@ -111,7 +111,7 @@ you can access the list of available dimensions in the file you read just like t
 ('X', 'Y', 'Z', 'intensity', 'return_number', 'number_of_returns', 'scan_direction_flag', 'edge_of_flight_line', 'classification', 'synthetic', 'key_point', 'withheld', 'scan_angle_rank', 'user_data', 'point_source_id', 'gps_time', 'red', 'green', 'blue')
 
 This gives you all the dimension names, including extra dimensions if any.
-If you with to get only the extra dimension names the point format can give them to you:
+If you wish to get only the extra dimension names the point format can give them to you:
 
 >>> point_format.extra_dimension_names
 []

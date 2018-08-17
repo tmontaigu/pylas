@@ -91,10 +91,13 @@ class IPointRecord(ABC):
 
 
 class PointRecord(IPointRecord):
-    def __init__(self, data, point_format):
+    def __init__(self, data, point_format: PointFormat):
         self.array = data
         self.point_format = point_format
-        self.dimensions_names = point_format.unpacked_dtype.names
+
+    @property
+    def dimensions_names(self):
+        return self.point_format.dimension_names
 
     @property
     def extra_dimensions_names(self):
