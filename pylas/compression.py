@@ -72,7 +72,7 @@ def create_laz_vlr(points_record):
     record_schema = lazperf.RecordSchema()
 
     if points_record.point_format.id >= 6:
-        raise PylasError("Can't compress points with format it >= 6")
+        raise PylasError("Can't compress points with format id >= 6")
     record_schema.add_point()
 
     if "gps_time" in points_record.dimensions_names:
