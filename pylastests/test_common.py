@@ -113,8 +113,15 @@ def test_change_format(las):
     assert dim_does_not_exists(las, "nir")
 
 
-# TODO: okay, so onversion from/to fmt <6 and > 6
-# cannot be tested like this becasue some fieds have more bits some there are some conversion 'issues'
+def test_conversion_file_version():
+    las = pylas.create(point_format_id=0, file_version='1.4')
+    las2 = pylas.convert(las, file_version='1.2')
+
+    assert las.points_data.point_format == las2.points_data.point_format
+    for dim_name in las.points_data.point_format.dimension_names:
+        assert np.allclose(
+            las.points_data[dim_name], las2.points_data[dim_name]
+        ), "{} not equal".format(dim_name)
 
 
 def test_conversion_copies_fields(all_las_but_1_4):
