@@ -3,6 +3,7 @@ used directly by a user
 """
 import copy
 import io
+import logging
 
 import numpy as np
 
@@ -13,6 +14,7 @@ from .lasreader import LasReader
 from .point import dims, record, PointFormat
 
 USE_UNPACKED = False
+logger = logging.getLogger(__name__)
 
 
 def open_las(source, closefd=True):
@@ -114,7 +116,9 @@ def create_from_header(header):
     pylas.lasdatas.base.LasBase
     """
     header = copy.copy(header)
-    points = record.PackedPointRecord.zeros(PointFormat(header.point_format_id), header.point_count)
+    points = record.PackedPointRecord.zeros(
+        PointFormat(header.point_format_id), header.point_count
+    )
     if header.version >= "1.4":
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)
@@ -246,21 +250,31 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
-    point_format = PointFormat(point_format_id, source_las.points_data.point_format.extra_dims)
+    point_format = PointFormat(
+        point_format_id, source_las.points_data.point_format.extra_dims
+    )
     points = record.PackedPointRecord.from_point_record(
         source_las.points_data, point_format
     )
 
+    try:
+        evlrs = source_las.evlrs
+    except ValueError:
+        evlrs = []
+
     if file_version >= "1.4":
-        try:
-            evlrs = source_las.evlrs
-        except ValueError:
-            evlrs = []
 
         las = las14.LasData(
             header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
         )
     else:
+        if evlrs:
+            logger.warning(
+                "The source contained {} EVLRs,"
+                " they will be lost as version {} doest not support them".format(
+                    len(evlrs), file_version
+                )
+            )
         las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
     return las
