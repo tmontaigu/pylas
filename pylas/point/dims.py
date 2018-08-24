@@ -278,6 +278,12 @@ def min_file_version_for_point_format(point_format_id):
         raise errors.PointFormatNotSupported(point_format_id)
 
 
+def supported_versions():
+    """ Returns the set of supported file versions
+    """
+    return set(VERSION_TO_POINT_FMT.keys())
+
+
 def supported_point_formats():
     """ Returns a set of all the point formats supported in pylas
     """

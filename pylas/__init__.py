@@ -9,7 +9,7 @@ from .lib import open_las as open
 from .lib import read_las as read
 from .lib import merge_las as merge
 from .point import PointFormat
-from .point.dims import supported_point_formats
+from .point.dims import supported_point_formats, supported_versions
 from .point.format import lost_dimensions
 
 import logging
