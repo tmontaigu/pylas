@@ -92,6 +92,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             y_scale=0.001,
             z_scale=0.001,
         )
+        self.date = datetime.date.today()
 
     @property
     def point_count(self):
