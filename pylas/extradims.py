@@ -57,6 +57,18 @@ _type_to_extra_dim_id_style_2 = {
 
 
 def get_type_for_extra_dim(type_index):
+    """ Returns the type str ('u1" or "u2", etc) for the given type index
+    Parameters
+    ----------
+    type_index: int
+        index of the type as defined in the LAS Specification
+
+    Returns
+    -------
+    str,
+        a string representing the type, can be understood by numpy
+
+    """
     try:
         return _extra_dims_style_1[type_index]
     except IndexError:
@@ -64,6 +76,18 @@ def get_type_for_extra_dim(type_index):
 
 
 def get_id_for_extra_dim_type(type_str):
+    """ Returns the index of the type as defined in the LAS Specification
+
+    Parameters
+    ----------
+    type_str: str
+
+    Returns
+    -------
+    int
+        index of the type
+
+    """
     try:
         return _type_to_extra_dim_id_style_1[type_str]
     except KeyError:
