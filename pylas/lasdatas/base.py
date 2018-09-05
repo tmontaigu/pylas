@@ -66,17 +66,14 @@ class LasBase(object):
 
     @x.setter
     def x(self, value):
-        self.header.x_offset = np.min(value)
         self.X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
 
     @y.setter
     def y(self, value):
-        self.header.y_offset = np.min(value)
         self.Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
 
     @z.setter
     def z(self, value):
-        self.header.z_offset = np.min(value)
         self.Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
 
     @property
