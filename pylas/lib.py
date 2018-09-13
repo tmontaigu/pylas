@@ -116,9 +116,8 @@ def create_from_header(header):
     pylas.lasdatas.base.LasBase
     """
     header = copy.copy(header)
-    points = record.PackedPointRecord.zeros(
-        PointFormat(header.point_format_id), header.point_count
-    )
+    header.point_count = 0
+    points = record.PackedPointRecord.empty(PointFormat(header.point_format_id))
     if header.version >= "1.4":
         return las14.LasData(header=header, points=points)
     return las12.LasData(header=header, points=points)
