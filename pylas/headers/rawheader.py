@@ -206,7 +206,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def mins(self, value):
         """ Sets de minimum values of x, y, z as a numpy array
         """
-        self.x_min, self.y_min, self._z_min = value
+        self.x_min, self.y_min, self.z_min = value
 
     @property
     def maxs(self):
@@ -218,7 +218,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def maxs(self, value):
         """ Sets de maximum values of x, y, z as a numpy array
         """
-        self.x_max, self.y_max, self._z_max = value
+        self.x_max, self.y_max, self.z_max = value
 
     @property
     def scales(self):
@@ -238,7 +238,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @offsets.setter
     def offsets(self, value):
-        self.x_offsets, self.y_offsets, self.z_offsets = value
+        self.x_offset, self.y_offset, self.z_offset = value
 
     def write_to(self, out_stream):
         out_stream.write(bytes(self))

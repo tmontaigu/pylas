@@ -13,17 +13,17 @@ def test_number_of_points_return_is_updated(all_las_but_1_4):
     r = las.return_number
 
     for i in reversed(range(nb_slice)):
-        r[i * (nb_points // nb_slice) : (i + 1) * (nb_points // nb_slice)] = i
+        r[i * (nb_points // nb_slice): (i + 1) * (nb_points // nb_slice)] = i
 
     las.return_number = r
     las = test_common.write_then_read_again(las)
 
     assert (
-        tuple(las.header.number_of_points_by_return[:nb_slice])
-        == (nb_points // nb_slice,) * nb_slice
+            tuple(las.header.number_of_points_by_return[:nb_slice])
+            == (nb_points // nb_slice,) * nb_slice
     )
     assert tuple(las.header.number_of_points_by_return[nb_slice:]) == (0,) * (
-        len(las.header.number_of_points_by_return) - nb_slice
+            len(las.header.number_of_points_by_return) - nb_slice
     )
 
 
@@ -67,3 +67,45 @@ def test_set_uuid():
     las.header.uuid = u
     las = test_common.write_then_read_again(las)
     assert las.header.uuid == u
+
+
+def test_set_offsets():
+    header = pylas.headers.HeaderFactory.new('1.2')
+    header.offsets = [0.5, 0.6, 0.7]
+
+    assert 0.5 == header.x_offset
+    assert 0.6 == header.y_offset
+    assert 0.7 == header.z_offset
+    assert [0.5, 0.6, 0.7] == list(header.offsets)
+
+
+def test_set_scales():
+    header = pylas.headers.HeaderFactory.new('1.2')
+    header.scales = [0.001, 0.001, 0.01]
+
+    assert 0.001 == header.x_scale
+    assert 0.001 == header.y_scale
+    assert 0.01 == header.z_scale
+    assert [0.001, 0.001, 0.01] == list(header.scales)
+
+
+def test_set_maxs():
+    header = pylas.headers.HeaderFactory.new('1.2')
+    values = [42.0, 1337.42, 553.3]
+    header.maxs = values
+
+    assert values[0] == header.x_max
+    assert values[1] == header.y_max
+    assert values[2] == header.z_max
+    assert values == list(header.maxs)
+
+
+def test_set_mins():
+    header = pylas.headers.HeaderFactory.new('1.2')
+    values = [42.0, 1337.42, 553.3]
+    header.mins = values
+
+    assert values[0] == header.x_min
+    assert values[1] == header.y_min
+    assert values[2] == header.z_min
+    assert values == list(header.mins)
