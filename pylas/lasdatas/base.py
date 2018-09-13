@@ -14,7 +14,7 @@ def scale_dimension(array_dim, scale, offset):
 
 
 def unscale_dimension(array_dim, scale, offset):
-    return (np.array(array_dim) - offset) / scale
+    return np.round((np.array(array_dim) - offset) / scale)
 
 
 class LasBase(object):
@@ -66,14 +66,23 @@ class LasBase(object):
 
     @x.setter
     def x(self, value):
+        if self.header.x_offset == 0.0:
+            self.header.x_offset = np.min(value)
+        # self.header.x_offset = max(np.min(value), self.header.x_offset)
         self.X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
 
     @y.setter
     def y(self, value):
+        if self.header.y_offset == 0.0:
+            self.header.y_offset = np.min(value)
+        # self.header.y_offset = max(np.min(value), self.header.y_offset)
         self.Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
 
     @z.setter
     def z(self, value):
+        if self.header.z_offset == 0.0:
+            self.header.z_offset = np.min(value)
+        # self.header.z_offset = max(np.min(value), self.header.z_offset)
         self.Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
 
     @property

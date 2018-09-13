@@ -140,6 +140,9 @@ class PointFormat:
     def __repr__(self):
         return "<PointFormat({})>".format(self.id)
 
+    def is_supported(self):
+        return self.id in dims.ALL_POINT_FORMATS_DIMENSIONS
+
 
 def lost_dimensions(point_fmt_in, point_fmt_out):
     """  Returns a list of the names of the dimensions that will be lost

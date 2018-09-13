@@ -14,6 +14,7 @@ vegetation1_3_las = os.path.dirname(__file__) + "/vegetation_1_3.las"
 test1_4_las = os.path.dirname(__file__) + "/" + "test1_4.las"
 extra_bytes_las = os.path.dirname(__file__) + "/extrabytes.las"
 extra_bytes_laz = os.path.dirname(__file__) + "/extra.laz"
+plane_laz = os.path.dirname(__file__) + "/plane.laz"
 
 
 def write_then_read_again(las, do_compress=False):
@@ -23,7 +24,7 @@ def write_then_read_again(las, do_compress=False):
     return pylas.read(out)
 
 
-@pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las])
+@pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las, plane_laz])
 def las(request):
     return pylas.read(request.param)
 
@@ -155,3 +156,42 @@ def test_rw_all_set_one(las):
         assert np.alltrue(las[dim_name] == las2[dim_name]), "{} not equal".format(
             dim_name
         )
+
+
+def test_coords_do_not_break(las):
+    xs, ys, zs = las.x, las.y, las.z
+
+    las.x = xs
+    las.y = ys
+    las.z = zs
+
+    assert np.allclose(xs, las.x)
+    assert np.allclose(ys, las.y)
+    assert np.allclose(zs, las.z)
+
+
+def test_coords_when_setting_offsets_and_scales(las):
+    new_las = pylas.create()
+
+    new_las.header.offsets = las.header.offsets
+    new_las.header.scales = las.header.scales
+
+    new_las.x = las.x
+    new_las.y = las.y
+    new_las.z = las.z
+
+    assert np.allclose(las.x, new_las.x)
+    assert np.allclose(las.y, new_las.y)
+    assert np.allclose(las.z, new_las.z)
+
+
+def test_coords_when_using_create_from_header(las):
+    new_las = pylas.create_from_header(las.header)
+
+    new_las.x = las.x
+    new_las.y = las.y
+    new_las.z = las.z
+
+    assert np.allclose(las.x, new_las.x)
+    assert np.allclose(las.y, new_las.y)
+    assert np.allclose(las.z, new_las.z)
