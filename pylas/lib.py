@@ -306,11 +306,11 @@ def merge_las(*las_files):
 
     header = las_files[0].header
     num_pts_merged = sum(len(las.points) for las in las_files)
-    header.point_count = num_pts_merged
 
     # scaled x, y, z have to be set manually
     # to be sure to have a good offset in the header
     merged = create_from_header(header)
+    merged.points = np.zeros(num_pts_merged, merged.points.dtype)
     merged_x = np.zeros(num_pts_merged, np.float64)
     merged_y = np.zeros(num_pts_merged, np.float64)
     merged_z = np.zeros(num_pts_merged, np.float64)
