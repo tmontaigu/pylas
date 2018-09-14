@@ -109,3 +109,12 @@ def test_set_mins():
     assert values[1] == header.y_min
     assert values[2] == header.z_min
     assert values == list(header.mins)
+
+
+def test_point_count_stays_synchronized():
+    las = pylas.read(test_common.simple_las)
+    assert las.header.point_count == len(las.points_data)
+
+    las.points = las.points[:120]
+    assert 120 == las.header.point_count
+    assert las.header.point_count == len(las.points_data)
