@@ -316,12 +316,13 @@ def merge_las(*las_files):
     merged_z = np.zeros(num_pts_merged, np.float64)
 
     offset = 0
-    for las in las_files:
+    for i, las in enumerate(las_files, start=1):
         slc = slice(offset, offset + len(las.points))
         merged.points[slc] = las.points
         merged_x[slc] = las.x
         merged_y[slc] = las.y
         merged_z[slc] = las.z
+        merged['point_source_id'][slc] = i
         offset += len(las.points)
 
     merged.x = merged_x
