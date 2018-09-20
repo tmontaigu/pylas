@@ -102,7 +102,7 @@ class PointFormat:
     def num_extra_bytes(self):
         """ Returns the number of extra bytes
         """
-        return sum(extra_dim[1] for extra_dim in self.extra_dims)
+        return sum(np.dtype(extra_dim[1]).itemsize for extra_dim in self.extra_dims)
 
     @property
     def has_waveform_packet(self):
