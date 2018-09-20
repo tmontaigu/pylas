@@ -310,6 +310,14 @@ def merge_las(*las_files):
     # scaled x, y, z have to be set manually
     # to be sure to have a good offset in the header
     merged = create_from_header(header)
+    # TODO extra dimensions should be manged better here
+
+    print(las_files[0].points_data.point_format.extra_dims)
+    print(las_files[0].points.dtype)
+
+    for dim_name, dim_type in las_files[0].points_data.point_format.extra_dims:
+        merged.add_extra_dim(dim_name, dim_type)
+
     merged.points = np.zeros(num_pts_merged, merged.points.dtype)
     merged_x = np.zeros(num_pts_merged, np.float64)
     merged_y = np.zeros(num_pts_merged, np.float64)

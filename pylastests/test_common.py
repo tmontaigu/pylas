@@ -24,7 +24,8 @@ def write_then_read_again(las, do_compress=False):
     return pylas.read(out)
 
 
-@pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las, plane_laz, extra_bytes_laz, extra_bytes_las])
+@pytest.fixture(
+    params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las, plane_laz, extra_bytes_laz, extra_bytes_las])
 def las(request):
     return pylas.read(request.param)
 
@@ -199,3 +200,7 @@ def test_coords_when_using_create_from_header(las):
 
 def test_slicing(las):
     las.points = las.points[len(las.points) // 2:]
+
+
+def test_can_write_then_re_read_files(las):
+    las = write_then_read_again(las, do_compress=las.points_data.point_format.id < 6)
