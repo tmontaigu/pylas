@@ -2,10 +2,12 @@ import logging
 
 import numpy as np
 
+from pylas import extradims
+from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
+from .. import errors
 from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
 from ..point import record, dims, PointFormat
 from ..vlrs import known, vlrlist
-from .. import errors
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +158,22 @@ class LasBase(object):
 
     def __setitem__(self, key, value):
         self.points_data[key] = value
+
+    def add_extra_dim(self, name, type, description=""):
+        name = name.replace(" ", "_")
+        type_id = extradims.get_id_for_extra_dim_type(type)
+        extra_byte = ExtraBytesStruct(
+            data_type=type_id, name=name.encode(), description=description.encode()
+        )
+
+        try:
+            extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
+        except IndexError:
+            extra_bytes_vlr = ExtraBytesVlr()
+            self.vlrs.append(extra_bytes_vlr)
+        finally:
+            extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
+            self.points_data.add_extra_dims([(name, type)])
 
     def update_header(self):
         self.header.point_format_id = self.points_data.point_format.id
