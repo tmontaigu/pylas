@@ -59,23 +59,6 @@ def test_good_version_is_used():
         assert las.header.version_minor == 4
 
 
-def test_extraction(file):
-    new = pylas.create(point_format_id=0)
-
-    assert file.points_data.point_format.id == 3
-
-    # automatic promotion of point format
-    new.points = file.points[file.classification == 2]
-    assert new.points_data.point_format.id == 3
-    assert new.header.point_format_id == 3
-
-    assert len(new.points) == sum(file.classification == 2)
-    assert np.alltrue(new.classification == 2)
-
-    file = write_then_read_again(new)
-    assert np.alltrue(file.classification == 2)
-
-
 def test_create_fmt_0(file):
     new = pylas.create(point_format_id=0)
 

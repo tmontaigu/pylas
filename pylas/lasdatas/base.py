@@ -5,6 +5,7 @@ import numpy as np
 from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
 from ..point import record, dims, PointFormat
 from ..vlrs import known, vlrlist
+from .. import errors
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +108,9 @@ class LasBase(object):
         value: numpy.array of the new points
 
         """
-        new_point_record = record.PackedPointRecord(value)
+        if value.dtype != self.points.dtype:
+            raise errors.IncompatibleDataFormat('Cannot set points with a different point format, convert first')
+        new_point_record = record.PackedPointRecord(value, self.points_data.point_format)
         dims.raise_if_version_not_compatible_with_fmt(
             new_point_record.point_format.id, self.header.version
         )
