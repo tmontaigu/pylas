@@ -312,9 +312,6 @@ def merge_las(*las_files):
     merged = create_from_header(header)
     # TODO extra dimensions should be manged better here
 
-    print(las_files[0].points_data.point_format.extra_dims)
-    print(las_files[0].points.dtype)
-
     for dim_name, dim_type in las_files[0].points_data.point_format.extra_dims:
         merged.add_extra_dim(dim_name, dim_type)
 
