@@ -357,7 +357,6 @@ class UnpackedPointRecord(PointRecord):
             point_fmt_id = dims.np_dtype_to_point_format(data.dtype, unpacked=True)
         super().__init__(data, point_fmt_id)
 
-    # TODO fix when there are extra dims
     @property
     def point_size(self):
         return self.point_format.dtype.itemsize
