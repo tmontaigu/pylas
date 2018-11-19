@@ -20,6 +20,10 @@ def unscale_dimension(array_dim, scale, offset):
     return np.round((np.array(array_dim) - offset) / scale)
 
 
+def is_in_bounds_of_type(array, type_info):
+    return array.max() < type_info.max and array.min() > type_info.min
+
+
 class LasBase(object):
     """ LasBase is the base of all the different LasData classes.
     These classes are objects that the user will interact with to manipulate las data.
@@ -71,22 +75,44 @@ class LasBase(object):
     def x(self, value):
         if self.header.x_offset == 0.0:
             self.header.x_offset = np.min(value)
-        # self.header.x_offset = max(np.min(value), self.header.x_offset)
-        self.X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
+
+        X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
+        dim_info = self.point_format.dimension_type_info('X')
+        if not is_in_bounds_of_type(X, dim_info):
+            raise OverflowError("Values given for 'x' won't fit in an {} array, with the current scale ({})".format(
+                dim_info.dtype, self.header.x_scale
+            ))
+
+        self.X = X
 
     @y.setter
     def y(self, value):
         if self.header.y_offset == 0.0:
             self.header.y_offset = np.min(value)
-        # self.header.y_offset = max(np.min(value), self.header.y_offset)
-        self.Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
+
+        Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
+        dim_info = self.point_format.dimension_type_info('Y')
+        if not is_in_bounds_of_type(Y, dim_info):
+            raise OverflowError("Values given for 'y' won't fit in an {} array, with the current scale ({})".format(
+                dim_info.dtype, self.header.x_scale
+            ))
+
+        self.Y = Y
 
     @z.setter
     def z(self, value):
         if self.header.z_offset == 0.0:
             self.header.z_offset = np.min(value)
-        # self.header.z_offset = max(np.min(value), self.header.z_offset)
-        self.Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
+
+        Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
+        dim_info = self.point_format.dimension_type_info('Z')
+        if not is_in_bounds_of_type(Z, dim_info):
+            raise OverflowError("Values given for 'z' won't fit in an {} array, with the current scale ({})".format(
+                dim_info.dtype, self.header.x_scale
+            ))
+
+        self.Z = Z
+
     @property
     def point_format(self):
         return self.points_data.point_format
