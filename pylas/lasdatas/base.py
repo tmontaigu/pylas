@@ -24,6 +24,9 @@ def is_in_bounds_of_type(array, type_info):
     return array.max() < type_info.max and array.min() > type_info.min
 
 
+OVERFLOW_ERR_MSG = "Values given for '{}' won't fit in an {} array, with the current scale ({})"
+
+
 class LasBase(object):
     """ LasBase is the base of all the different LasData classes.
     These classes are objects that the user will interact with to manipulate las data.
@@ -79,10 +82,7 @@ class LasBase(object):
         X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
         dim_info = self.point_format.dimension_type_info('X')
         if not is_in_bounds_of_type(X, dim_info):
-            raise OverflowError("Values given for 'x' won't fit in an {} array, with the current scale ({})".format(
-                dim_info.dtype, self.header.x_scale
-            ))
-
+            raise OverflowError(OVERFLOW_ERR_MSG.format('x', dim_info.dtype, self.header.x_scale))
         self.X = X
 
     @y.setter
@@ -93,10 +93,7 @@ class LasBase(object):
         Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
         dim_info = self.point_format.dimension_type_info('Y')
         if not is_in_bounds_of_type(Y, dim_info):
-            raise OverflowError("Values given for 'y' won't fit in an {} array, with the current scale ({})".format(
-                dim_info.dtype, self.header.x_scale
-            ))
-
+            raise OverflowError(OVERFLOW_ERR_MSG.format('y', dim_info.dtype, self.header.y_scale))
         self.Y = Y
 
     @z.setter
@@ -107,10 +104,7 @@ class LasBase(object):
         Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
         dim_info = self.point_format.dimension_type_info('Z')
         if not is_in_bounds_of_type(Z, dim_info):
-            raise OverflowError("Values given for 'z' won't fit in an {} array, with the current scale ({})".format(
-                dim_info.dtype, self.header.x_scale
-            ))
-
+            raise OverflowError(OVERFLOW_ERR_MSG.format('z', dim_info.dtype, self.header.z_scale))
         self.Z = Z
 
     @property
