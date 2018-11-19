@@ -111,6 +111,9 @@ class PointFormat:
         dimensions = set(self.dimension_names)
         return all(name in dimensions for name in dims.WAVEFORM_FIELDS_NAMES)
 
+    def dimension_type_info(self, dimension_name):
+        return np.iinfo(self.dtype[dimension_name])
+
     @staticmethod
     def _access_dict(d, key):
         try:

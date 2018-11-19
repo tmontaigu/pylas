@@ -87,6 +87,9 @@ class LasBase(object):
             self.header.z_offset = np.min(value)
         # self.header.z_offset = max(np.min(value), self.header.z_offset)
         self.Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
+    @property
+    def point_format(self):
+        return self.points_data.point_format
 
     @property
     def points(self):
