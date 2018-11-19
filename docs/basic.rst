@@ -19,7 +19,7 @@ that you can use to access to the data.
     import s3fs
     fs = s3fs.S3FileSystem()
     with fs.open('my-bucket/some_file.las', 'rb') as f:
-         las = pylas.read()
+         las = pylas.read(f)
 
 
 The other way to read a las file is to use the :func:`pylas.open`.
