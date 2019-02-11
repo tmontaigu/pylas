@@ -9,24 +9,26 @@ def test_adding_classification_lookup():
     classification_lookup = pylas.vlrs.known.ClassificationLookupVlr()
 
     assert len(classification_lookup.lookups) == 0
-    classification_lookup.add_lookup(20, "computer")
+    classification_lookup[20] = "computer"
     assert len(classification_lookup.lookups) == 1
-    classification_lookup.add_lookup(17, "car")
+    classification_lookup[17] = "car"
 
     simple.vlrs.append(classification_lookup)
 
     simple = test_common.write_then_read_again(simple)
-    classification_lookups = simple.vlrs.get("ClassificationLookupVlr")
-    assert len(classification_lookups) == 1
+    classification_lookups = simple.vlrs.get("ClassificationLookupVlr")[0]
 
-    classification_lookup = classification_lookups[0]
-    lookups = {
-        lookup.class_number: lookup.description
-        for lookup in classification_lookup.lookups
-    }
+    assert classification_lookups[20] == "computer"
+    assert classification_lookups[17] == "car"
 
-    assert lookups[20] == "computer"
-    assert lookups[17] == "car"
+
+def test_lookup_out_of_range():
+    classification_lookup = pylas.vlrs.known.ClassificationLookupVlr()
+    with pytest.raises(ValueError):
+        classification_lookup[541] = "LiquidWater"
+
+    with pytest.raises(ValueError):
+        classification_lookup[-42] = "SolidWater"
 
 
 def test_adding_extra_bytes_vlr_by_hand():
@@ -41,8 +43,8 @@ def test_adding_extra_bytes_vlr_by_hand():
     ebs = pylas.vlrs.known.ExtraBytesStruct(data_type=3, name="Fake".encode())
     ebvlr.extra_bytes_structs.append(ebs)
     simple.vlrs.append(ebvlr)
-    assert len(simple.vlrs.get('ExtraBytesVlr')) == 1
+    assert len(simple.vlrs.get("ExtraBytesVlr")) == 1
 
     las = pylas.lib.write_then_read_again(simple)
     assert simple.points_data.point_size == las.points_data.point_size
-    assert len(las.vlrs.get('ExtraBytesVlr')) == 0
+    assert len(las.vlrs.get("ExtraBytesVlr")) == 0
