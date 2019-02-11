@@ -60,10 +60,8 @@ and an array field of 3 doubles for each points.
 
 .. note::
 
-    As the specification of the ExtraBytesVlr appeared in the 1.4 LAS Spec, pylas restrict the ability to
-    add new dimensions to file with version >= 1.4 even if it would be totally possible to define new dimension
-    on older versions.
-    (Maybe this should change?)
+    Although the specification of the ExtraBytesVlr appeared in the 1.4 LAS Spec, pylas allows to
+    add new dimensions to file with version < 1.4
 
 Custom VLRs
 ===========
