@@ -1,7 +1,7 @@
 """ The definition of the VLR Header, VLR, the KnownVLRs
  are in this module.
 
- A KnownVLR is a VLR that we know how to parse its record_data
+ A KnownVLR is a VLR for which we know how to parse its record_data
 """
 import abc
 import ctypes
@@ -90,6 +90,12 @@ class BaseKnownVLR(BaseVLR, IKnownVLR):
 
 class ClassificationLookupVlr(BaseKnownVLR):
     """ This vlr maps class numbers to short descriptions / names
+
+    >>> lookup = ClassificationLookupVlr()
+    >>> lookup[0] = "never_classified"
+    >>> lookup[2] = "ground"
+    >>> lookup[0]
+    'never_classified'
     """
     _lookup_struct = struct.Struct("<B15s")
 

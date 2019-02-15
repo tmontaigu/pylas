@@ -23,4 +23,5 @@ Submodules
    pylas.compression
    pylas.headers
    pylas.point.format
+   pylas.vlrs.known
 

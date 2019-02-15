@@ -9,7 +9,7 @@ Extra Dimensions
 The LAS Specification version 1.4 defines a standard way to add extra dimensions to
 a LAS file.
 
-In pylas you can add extra dimensions using the :meth:`pylas.lasdatas.las14.LasData.add_extra_dim` function
+In pylas you can add extra dimensions using the :meth:`pylas.lasdatas.base.LasBase.add_extra_dim` function
 
 
 The Allowed base types for an extra dimensions are:

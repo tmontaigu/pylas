@@ -183,6 +183,17 @@ class LasBase(object):
         self.points_data[key] = value
 
     def add_extra_dim(self, name, type, description=""):
+        """ Adds a new extra dimension to the point record
+
+        Parameters
+        ----------
+        name: str
+            the name of the dimension
+        type: str
+            type of the dimension (eg 'uint8')
+        description: str, optional
+            a small description of the dimension
+        """
         name = name.replace(" ", "_")
         type_id = extradims.get_id_for_extra_dim_type(type)
         extra_byte = ExtraBytesStruct(
