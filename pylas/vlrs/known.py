@@ -9,7 +9,7 @@ import struct
 from abc import abstractmethod
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
-from ..extradims import get_type_for_extra_dim
+from ..extradims import get_type_for_extra_dim, get_signedness_for_extra_dim, DimensionSignedness
 
 
 class IKnownVLR(abc.ABC):
@@ -189,13 +189,54 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         ("options", ctypes.c_uint8),
         ("name", ctypes.c_char * 32),
         ("unused", ctypes.c_uint8 * 4),
-        ("no_data", ctypes.c_double * 3),
-        ("min", ctypes.c_double * 3),
-        ("max", ctypes.c_double * 3),
-        ("scale", ctypes.c_double * 3),
-        ("offset", ctypes.c_double * 3),
+        ("_no_data", (ctypes.c_byte * 8) * 3),
+        ("_min", (ctypes.c_byte * 8) * 3),
+        ("_max", (ctypes.c_byte * 8) * 3),
+        ("_scale", (ctypes.c_byte * 8) * 3),
+        ("_offset", (ctypes.c_byte * 8) * 3),
         ("description", ctypes.c_char * 32),
     ]
+
+    _uint64t_struct = struct.Struct("<Q")
+    _int64t_struct = struct.Struct("<q")
+    _double_struct = struct.Struct("<d")
+
+
+    def _struct_parser_for_type_signedness(self):
+        signedness = get_signedness_for_extra_dim(self.data_type)
+
+        if signedness == DimensionSignedness.FLOATING:
+            return self._double_struct
+        elif signedness == DimensionSignedness.SIGNED:
+            return self._int64t_struct
+        elif signedness == DimensionSignedness.UNSIGNED:
+            return self._uint64t_struct
+        else:
+            return None
+
+    def _parse_special_property(self, name):
+        strct = self._struct_parser_for_type_signedness()
+        return tuple(strct.unpack(d)[0] for d in getattr(self, name))
+
+    @property
+    def no_data(self):
+        return self._parse_special_property("_no_data")
+
+    @property
+    def min(self):
+        return self._parse_special_property("_min")
+
+    @property
+    def max(self):
+        return self._parse_special_property("_max")
+
+    @property
+    def offset(self):
+        return self._parse_special_property("_offset")
+
+    @property
+    def scale(self):
+        return self._parse_special_property("_scale")
 
     def format_name(self):
         return self.name.rstrip(NULL_BYTE).decode().replace(" ", "_").replace("-", "_")

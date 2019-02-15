@@ -1,4 +1,5 @@
 from . import errors
+from enum import Enum, auto
 
 _extra_dims_base_style_1 = (
     "",
@@ -54,6 +55,39 @@ _type_to_extra_dim_id_style_1 = {
 _type_to_extra_dim_id_style_2 = {
     type_str: i for i, type_str in enumerate(_extra_dims_style_2)
 }
+
+class DimensionSignedness(Enum):
+    FLOATING = auto(),
+    SIGNED = auto(),
+    UNSIGNED = auto()
+
+
+
+def get_signedness_for_extra_dim(type_index):
+    """ Returns the signedness foe the given type index
+
+    Parameters
+    ----------
+    type_index: int
+        index of the type as defined in the LAS Specification
+
+    Returns
+    -------
+    DimensionSignedness,
+        the enum variant
+    """
+    try:
+        t = _extra_dims_style_2[type_index]
+        if "uint" in t:
+            return DimensionSignedness.UNSIGNED
+        elif "int" in t:
+            return DimensionSignedness.SIGNED
+        else:
+            return DimensionSignedness.FLOATING
+    except IndexError:
+        raise errors.UnknownExtraType(type_index)
+
+
 
 
 def get_type_for_extra_dim(type_index):
