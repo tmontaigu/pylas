@@ -1,5 +1,6 @@
+from enum import Enum
+
 from . import errors
-from enum import Enum, auto
 
 _extra_dims_base_style_1 = (
     "",
@@ -43,10 +44,10 @@ _extra_dims_style_2_array_3 = tuple(
 )
 
 _extra_dims_style_1 = (
-    _extra_dims_base_style_1 + _extra_dims_style_1_array_2 + _extra_dims_style_1_array_3
+        _extra_dims_base_style_1 + _extra_dims_style_1_array_2 + _extra_dims_style_1_array_3
 )
 _extra_dims_style_2 = (
-    _extra_dims_base_style_2 + _extra_dims_style_1_array_2 + _extra_dims_style_2_array_3
+        _extra_dims_base_style_2 + _extra_dims_style_1_array_2 + _extra_dims_style_2_array_3
 )
 
 _type_to_extra_dim_id_style_1 = {
@@ -56,11 +57,11 @@ _type_to_extra_dim_id_style_2 = {
     type_str: i for i, type_str in enumerate(_extra_dims_style_2)
 }
 
-class DimensionSignedness(Enum):
-    FLOATING = auto(),
-    SIGNED = auto(),
-    UNSIGNED = auto()
 
+class DimensionSignedness(Enum):
+    FLOATING = 0,
+    SIGNED = 1,
+    UNSIGNED = 2
 
 
 def get_signedness_for_extra_dim(type_index):
@@ -86,8 +87,6 @@ def get_signedness_for_extra_dim(type_index):
             return DimensionSignedness.FLOATING
     except IndexError:
         raise errors.UnknownExtraType(type_index)
-
-
 
 
 def get_type_for_extra_dim(type_index):
