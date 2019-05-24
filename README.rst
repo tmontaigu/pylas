@@ -19,7 +19,7 @@ Example
 
     # Directly read and write las 
     las = pylas.read('filename.las')
-    las = pylas.convert(point_format_id=2)
+    las = pylas.convert(las, point_format_id=2)
     las.write('converted.las')
 
     # Open data to inspect header and then read
