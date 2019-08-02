@@ -14,13 +14,13 @@ pylas reads and writes these formats and provides a Python API via Numpy Arrays.
 
 Here is an example of reading in LAZ data and getting some simple summaries of the pointcloud:
 
-.. code:: python
+.. testcode::
 
     import numpy as np
     import pylas
 
-    with pylas.open('simple.laz') as fh:
-        print('Points from Header:', fh.header.number_of_point_records)
+    with pylas.open('pylastests/simple.laz') as fh:
+        print('Points from Header:', fh.header.point_count)
         las = fh.read()
         print(las)
         print('Points from data:', len(las.points))
@@ -30,15 +30,20 @@ Here is an example of reading in LAZ data and getting some simple summaries of t
         for r,c in zip(bins,counts):
             print('    {}:{}'.format(r,c))
         
-    # Prints:
-    # Points from Header: 1065
-    # LasData(1.2, point fmt: 3, 1065 points, 0 vlrs)
-    # Points from data: 1065
-    # Ground Point Return Number distribution:
-    #     1:239
-    #     2:25
-    #     3:11
-    #     4:1
+
+Would output:
+
+.. testoutput::
+
+    Points from Header: 1065
+    <LasData(1.2, point fmt: <PointFormat(3)>, 1065 points, 0 vlrs)>
+    Points from data: 1065
+    Ground Point Return Number distribution:
+        1:239
+        2:25
+        3:11
+        4:1
+
 
 User Guide
 ==========
