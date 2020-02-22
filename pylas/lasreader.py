@@ -3,7 +3,7 @@ import logging
 import struct
 
 from . import headers, errors, evlrs
-from .compression import laszip_decompress
+from .compression import laszip_decompress, pylaz_decompress_buffer, lazperf_decompress_buffer
 from .lasdatas import las14, las12
 from .point import record, PointFormat
 from .vlrs import rawvlr
@@ -119,22 +119,36 @@ class LasReader:
     def _read_compressed_points_data(self, laszip_vlr, point_format):
         """ reads the compressed point record
         """
-        offset_to_chunk_table = struct.unpack("<q", self.stream.read(8))[0]
-        size_of_point_data = offset_to_chunk_table - self.stream.tell()
-
-        if offset_to_chunk_table <= 0:
-            logger.warning(
-                "Strange offset to chunk table: {}, ignoring it..".format(
-                    offset_to_chunk_table
-                )
-            )
+        if self.header.version >= "1.4" and self.header.number_of_evlr > 0:
+            size_of_point_data = self.header.start_of_first_evlr - self.stream.tell()
+        else:
             size_of_point_data = -1  # Read everything
 
-        points = record.PackedPointRecord.from_compressed_buffer(
-            self.stream.read(size_of_point_data),
+        points_data = self.stream.read(size_of_point_data)
+
+        try:
+            decompressed_points = pylaz_decompress_buffer(
+                points_data,
+                point_format.dtype.itemsize,
+                self.header.point_count,
+                laszip_vlr
+            )
+        except errors.LazError as e:
+            logger.error("pylaz failed to decompress points: {}".format(e))
+            # _offset_to_chunk_table = struct.unpack("<q", points_data[:8])[0]
+            points_data = points_data[8:]
+
+            decompressed_points = lazperf_decompress_buffer(
+                points_data,
+                point_format.dtype.itemsize,
+                self.header.point_count,
+                laszip_vlr
+            )
+
+        points = record.PackedPointRecord.from_buffer(
+            decompressed_points,
             point_format,
-            self.header.point_count,
-            laszip_vlr,
+            self.header.point_count
         )
         return points
 

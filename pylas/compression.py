@@ -9,7 +9,7 @@ import subprocess
 
 import numpy as np
 
-from .errors import LazPerfNotFound, PylasError
+from .errors import LazPerfNotFound, PylasError, LazError
 
 HAS_LAZPERF = False
 
@@ -25,7 +25,7 @@ except:
 
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
-        raise LazPerfNotFound("Cannot manipulate laz data")
+        raise LazPerfNotFound("Lazperf is not installed")
     elif lazperf.__version__ < "1.3.0":
         raise LazPerfNotFound(
             "Version >= 1.3.0 required, you have {}".format(lazperf.__version__)
@@ -48,26 +48,44 @@ def uncompressed_id_to_compressed(point_format_id):
     return (2 ** 7) | point_format_id
 
 
-def decompress_buffer(compressed_buffer, points_dtype, point_count, laszip_vlr):
+def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr):
+    try:
+        import pylaz
+    except Exception as e:
+        raise LazError("pylaz is not installed") from e
+
+    # TODO see if pyo3 can make pylaz have its own error exc type
+    #   directly in Rust
+
+    try:
+        point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
+        vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
+
+        point_decompressed = np.zeros(point_count * point_size, np.uint8)
+
+        pylaz.decompress_points(point_compressed, vlr_data, point_decompressed)
+    except RuntimeError as e:
+        raise LazError("pylaz error: {}".format(e)) from e
+    else:
+        return point_decompressed
+
+
+def lazperf_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr):
     raise_if_no_lazperf()
 
     point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
     vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
     decompressor = lazperf.VLRDecompressor(
-        point_compressed, points_dtype.itemsize, vlr_data
+        point_compressed, point_size, vlr_data
     )
 
     point_uncompressed = decompressor.decompress_points(point_count)
 
-    point_uncompressed = np.frombuffer(
-        point_uncompressed, dtype=points_dtype, count=point_count
-    )
-
     return point_uncompressed
 
 
-def create_laz_vlr(points_record):
+def lazperf_create_laz_vlr(points_record):
     raise_if_no_lazperf()
     record_schema = lazperf.RecordSchema()
 
@@ -92,14 +110,32 @@ def create_laz_vlr(points_record):
     return lazperf.LazVLR(record_schema)
 
 
-def compress_buffer(uncompressed_buffer, record_schema, offset):
-    raise_if_no_lazperf()
+def lazperf_compress_points(points_data):
+    laz_vrl = lazperf_create_laz_vlr(points_data)
 
-    compressor = lazperf.VLRCompressor(record_schema, offset)
+    compressor = lazperf.VLRCompressor(laz_vrl.schema, 0)
+    uncompressed_buffer = np.frombuffer(points_data.array, np.uint8)
     uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
     compressed = compressor.compress(uncompressed_buffer)
 
-    return compressed
+    return compressed, laz_vrl.data()
+
+
+def pylaz_compress_points(points_data):
+    try:
+        import pylaz
+    except Exception as e:
+        raise LazError("pylaz is not installed") from e
+
+    vlr = pylaz.LazVlr.new_for_compression(
+        points_data.point_format.id, points_data.point_format.num_extra_bytes)
+
+    compressed_data = pylaz.compress_points(
+        vlr,
+        np.frombuffer(points_data.array, np.uint8)
+    )
+
+    return compressed_data, vlr.record_data
 
 
 def find_laszip_executable():

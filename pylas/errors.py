@@ -18,7 +18,11 @@ class FileVersionNotSupported(PylasError):
     pass
 
 
-class LazPerfNotFound(PylasError):
+class LazError(PylasError):
+    pass
+
+
+class LazPerfNotFound(LazError):
     pass
 
 

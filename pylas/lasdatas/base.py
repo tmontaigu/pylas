@@ -1,11 +1,12 @@
 import logging
+import struct
 
 import numpy as np
 
 from pylas import extradims
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .. import errors
-from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
+from ..compression import uncompressed_id_to_compressed, lazperf_compress_points, pylaz_compress_points
 from ..point import record, dims, PointFormat
 from ..vlrs import known, vlrlist
 
@@ -250,8 +251,12 @@ class LasBase(object):
             self.vlrs.extract("ExtraBytesVlr")
 
         if do_compress:
-            laz_vrl = create_laz_vlr(self.points_data)
-            self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
+            try:
+                compressed_points_buf, vlr_data = pylaz_compress_points(self.points_data)
+            except:
+                compressed_points_buf, vlr_data = lazperf_compress_points(self.points_data)
+
+            self.vlrs.append(known.LasZipVlr(vlr_data))
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
             self.header.offset_to_point_data = (
@@ -262,11 +267,11 @@ class LasBase(object):
             )
             self.header.number_of_vlr = len(raw_vlrs)
 
-            points_bytes = compress_buffer(
-                np.frombuffer(self.points_data.array, np.uint8),
-                laz_vrl.schema,
-                self.header.offset_to_point_data,
-            ).tobytes()
+            # Update Chunk table offset from being from the start of point data
+            # to the start of the file
+            points_bytes = bytearray(compressed_points_buf.tobytes())
+            offset_to_chunk_table = struct.unpack_from("<q", points_bytes, 0)[0]
+            struct.pack_into("<q", points_bytes, 0, self.header.offset_to_point_data + offset_to_chunk_table)
 
         else:
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
