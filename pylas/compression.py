@@ -54,9 +54,6 @@ def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
     except Exception as e:
         raise LazError("pylaz is not installed") from e
 
-    # TODO see if pyo3 can make pylaz have its own error exc type
-    #   directly in Rust
-
     try:
         point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
         vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
@@ -64,10 +61,30 @@ def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
         point_decompressed = np.zeros(point_count * point_size, np.uint8)
 
         pylaz.decompress_points(point_compressed, vlr_data, point_decompressed)
-    except RuntimeError as e:
+    except pylaz.PyLazError as e:
         raise LazError("pylaz error: {}".format(e)) from e
     else:
         return point_decompressed
+
+
+def pylaz_compress_points(points_data):
+    try:
+        import pylaz
+    except Exception as e:
+        raise LazError("pylaz is not installed") from e
+
+    try:
+        vlr = pylaz.LazVlr.new_for_compression(
+            points_data.point_format.id, points_data.point_format.num_extra_bytes)
+
+        compressed_data = pylaz.compress_points(
+            vlr,
+            np.frombuffer(points_data.array, np.uint8)
+        )
+    except pylaz.PyLazError as e:
+        raise LazError("pylaz error: {}".format(e)) from e
+    else:
+        return compressed_data, vlr.record_data()
 
 
 def lazperf_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr):
@@ -119,23 +136,6 @@ def lazperf_compress_points(points_data):
     compressed = compressor.compress(uncompressed_buffer)
 
     return compressed, laz_vrl.data()
-
-
-def pylaz_compress_points(points_data):
-    try:
-        import pylaz
-    except Exception as e:
-        raise LazError("pylaz is not installed") from e
-
-    vlr = pylaz.LazVlr.new_for_compression(
-        points_data.point_format.id, points_data.point_format.num_extra_bytes)
-
-    compressed_data = pylaz.compress_points(
-        vlr,
-        np.frombuffer(points_data.array, np.uint8)
-    )
-
-    return compressed_data, vlr.record_data
 
 
 def find_laszip_executable():

@@ -253,7 +253,8 @@ class LasBase(object):
         if do_compress:
             try:
                 compressed_points_buf, vlr_data = pylaz_compress_points(self.points_data)
-            except:
+            except RuntimeError as e:
+                logger.error("pylaz failed to compress: {}".format(e))
                 compressed_points_buf, vlr_data = lazperf_compress_points(self.points_data)
 
             self.vlrs.append(known.LasZipVlr(vlr_data))
