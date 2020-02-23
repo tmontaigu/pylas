@@ -124,7 +124,11 @@ class LasReader:
         else:
             size_of_point_data = -1  # Read everything
 
-        points_data = self.stream.read(size_of_point_data)
+        current_pos = self.stream.tell()
+        points_data = bytearray(self.stream.read(size_of_point_data))
+        offset_to_chunk_table = struct.unpack("<q", points_data[:8])[0]
+        offset_to_chunk_table -= current_pos
+        struct.pack_into("<q", points_data, 0, offset_to_chunk_table)
 
         try:
             decompressed_points = pylaz_decompress_buffer(
@@ -135,7 +139,6 @@ class LasReader:
             )
         except errors.LazError as e:
             logger.error("pylaz failed to decompress points: {}".format(e))
-            # _offset_to_chunk_table = struct.unpack("<q", points_data[:8])[0]
             points_data = points_data[8:]
 
             decompressed_points = lazperf_decompress_buffer(

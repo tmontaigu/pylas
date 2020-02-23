@@ -48,7 +48,7 @@ def uncompressed_id_to_compressed(point_format_id):
     return (2 ** 7) | point_format_id
 
 
-def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr):
+def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr, parallel=True):
     try:
         import pylaz
     except Exception as e:
@@ -60,14 +60,14 @@ def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
 
         point_decompressed = np.zeros(point_count * point_size, np.uint8)
 
-        pylaz.decompress_points(point_compressed, vlr_data, point_decompressed)
+        pylaz.decompress_points(point_compressed, vlr_data, point_decompressed, parallel)
     except pylaz.PyLazError as e:
         raise LazError("pylaz error: {}".format(e)) from e
     else:
         return point_decompressed
 
 
-def pylaz_compress_points(points_data):
+def pylaz_compress_points(points_data, parallel=True):
     try:
         import pylaz
     except Exception as e:
@@ -79,7 +79,8 @@ def pylaz_compress_points(points_data):
 
         compressed_data = pylaz.compress_points(
             vlr,
-            np.frombuffer(points_data.array, np.uint8)
+            np.frombuffer(points_data.array, np.uint8),
+            parallel
         )
     except pylaz.PyLazError as e:
         raise LazError("pylaz error: {}".format(e)) from e
