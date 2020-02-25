@@ -6,6 +6,7 @@ There are also functions to use Laszip (meant to be used as a fallback)
 """
 import os
 import subprocess
+from enum import Enum, auto
 
 import numpy as np
 
@@ -151,40 +152,64 @@ def find_laszip_executable():
             return binary
 
     else:
-        return None
-
-
-def _pass_through_laszip(stream, action="decompress"):
-    laszip_binary = find_laszip_executable()
-    if laszip_binary is None:
         raise FileNotFoundError("Could not find laszip executable")
 
-    if action == "decompress":
-        out_t = "-olas"
-    elif action == "compress":
-        out_t = "-olaz"
-    else:
-        raise ValueError("Invalid Action")
 
-    prc = subprocess.Popen(
-        [laszip_binary, "-stdin", out_t, "-stdout"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    data, stderr = prc.communicate(stream.read())
-    if prc.returncode != 0:
-        raise RuntimeError(
-            "Laszip failed to {} with error code {}\n\t{}".format(
-                action, prc.returncode, "\n\t".join(stderr.decode().splitlines())
-            )
+class LasZipProcess:
+    class Actions(Enum):
+        Compress = auto()
+        Decompress = auto()
+
+    def __init__(self, action, stdin=subprocess.PIPE, stdout=subprocess.PIPE):
+        """ Creates a Popen to the laszip executable.
+
+        This tries to be a wrapper for
+        https://docs.python.org/fr/3/library/subprocess.html#subprocess.Popen
+
+        Valid inputs for `stdin` and `stdout` are file objects supporting
+        the fileno() method. For example files opened with  `open`.
+
+        The usage is kinda tricky:
+        """
+        laszip_binary = find_laszip_executable()
+
+        if action == LasZipProcess.Actions.Decompress:
+            out_t = "-olas"
+        elif action == LasZipProcess.Actions.Compress:
+            out_t = "-olaz"
+        else:
+            raise ValueError("Invalid Action")
+
+        self.prc = subprocess.Popen(
+            [laszip_binary, "-stdin", out_t, "-stdout"],
+            stdin=stdin,
+            stdout=stdout,
+            stderr=subprocess.PIPE,
         )
-    return data
 
+    @property
+    def stdin(self):
+        return self.prc.stdin
 
-def laszip_compress(stream):
-    return _pass_through_laszip(stream, action="compress")
+    @property
+    def stdout(self):
+        return self.prc.stdout
 
+    def communicate(self):
+        stdout_data, stderr_data = self.prc.communicate()
+        self._raise_if_bad_err_code(stderr_data.decode())
+        return stdout_data
 
-def laszip_decompress(stream):
-    return _pass_through_laszip(stream, action="decompress")
+    def _raise_if_bad_err_code(self, error_msg):
+        if self.prc.returncode != 0:
+            raise RuntimeError(
+                "Laszip failed to {} with error code {}\n\t{}".format(
+                    "compress", self.prc.returncode, "\n\t".join(error_msg.splitlines())
+                )
+            )
+
+    def wait_until_finished(self):
+        self.stdin.close()
+        self.prc.wait()
+        self._raise_if_bad_err_code(self.prc.stderr.read().decode())
+

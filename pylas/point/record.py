@@ -135,6 +135,9 @@ class PointRecord(IPointRecord):
         self.array = np.zeros_like(old_array, dtype=self.point_format.dtype)
         self.copy_fields_from(old_array)
 
+    def memoryview(self):
+        return memoryview(self.array)
+
     def raw_bytes(self):
         return self.array.tobytes()
 
