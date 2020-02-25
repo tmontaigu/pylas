@@ -22,9 +22,5 @@ class LazError(PylasError):
     pass
 
 
-class LazPerfNotFound(LazError):
-    pass
-
-
 class IncompatibleDataFormat(PylasError):
     pass

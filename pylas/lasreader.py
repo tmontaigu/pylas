@@ -61,8 +61,8 @@ class LasReader:
 
         try:
             points = self._read_points(vlrs)
-        except (RuntimeError, errors.LazPerfNotFound) as e:
-            logger.error("LazPerf failed to decompress ({}), trying laszip.".format(e))
+        except errors.LazError as e:
+            logger.error("error when decompressing {}, trying laszip".format(e))
             decompressed_stream = self._decompress_with_laszip_executable()
             self.__init__(decompressed_stream)
             return self.read()

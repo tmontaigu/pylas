@@ -10,7 +10,7 @@ from enum import Enum, auto
 
 import numpy as np
 
-from .errors import LazPerfNotFound, PylasError, LazError
+from .errors import PylasError, LazError
 
 HAS_LAZPERF = False
 
@@ -26,9 +26,9 @@ except:
 
 def raise_if_no_lazperf():
     if not HAS_LAZPERF:
-        raise LazPerfNotFound("Lazperf is not installed")
+        raise LazError("Lazperf is not installed")
     elif lazperf.__version__ < "1.3.0":
-        raise LazPerfNotFound(
+        raise LazError(
             "Version >= 1.3.0 required, you have {}".format(lazperf.__version__)
         )
 
@@ -92,52 +92,60 @@ def pylaz_compress_points(points_data, parallel=True):
 def lazperf_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr):
     raise_if_no_lazperf()
 
-    point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
+    try:
+        point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
-    vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
-    decompressor = lazperf.VLRDecompressor(
-        point_compressed, point_size, vlr_data
-    )
+        vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
+        decompressor = lazperf.VLRDecompressor(
+            point_compressed, point_size, vlr_data
+        )
 
-    point_uncompressed = decompressor.decompress_points(point_count)
+        point_uncompressed = decompressor.decompress_points(point_count)
 
-    return point_uncompressed
-
+        return point_uncompressed
+    except RuntimeError as e:
+        raise LazError("lazperf error: {}".format(e))
 
 def lazperf_create_laz_vlr(points_record):
     raise_if_no_lazperf()
-    record_schema = lazperf.RecordSchema()
+    try:
+        record_schema = lazperf.RecordSchema()
 
-    if points_record.point_format.id >= 6:
-        raise PylasError("Can't compress points with format id >= 6")
-    record_schema.add_point()
+        if points_record.point_format.id >= 6:
+            raise PylasError("Can't compress points with format id >= 6")
+        record_schema.add_point()
 
-    if "gps_time" in points_record.dimensions_names:
-        record_schema.add_gps_time()
+        if "gps_time" in points_record.dimensions_names:
+            record_schema.add_gps_time()
 
-    if "red" in points_record.dimensions_names:
-        record_schema.add_rgb()
+        if "red" in points_record.dimensions_names:
+            record_schema.add_rgb()
 
-    num_extra_bytes = points_record.point_format.num_extra_bytes
-    if num_extra_bytes > 0:
-        record_schema.add_extra_bytes(num_extra_bytes)
-    elif num_extra_bytes < 0:
-        raise PylasError(
-            "Incoherent number of extra bytes ({})".format(num_extra_bytes)
-        )
+        num_extra_bytes = points_record.point_format.num_extra_bytes
+        if num_extra_bytes > 0:
+            record_schema.add_extra_bytes(num_extra_bytes)
+        elif num_extra_bytes < 0:
+            raise PylasError(
+                "Incoherent number of extra bytes ({})".format(num_extra_bytes)
+            )
 
-    return lazperf.LazVLR(record_schema)
+        return lazperf.LazVLR(record_schema)
+    except RuntimeError as e:
+        raise LazError("lazperf error: {}".format(e))
 
 
 def lazperf_compress_points(points_data):
-    laz_vrl = lazperf_create_laz_vlr(points_data)
+    try:
+        laz_vrl = lazperf_create_laz_vlr(points_data)
 
-    compressor = lazperf.VLRCompressor(laz_vrl.schema, 0)
-    uncompressed_buffer = np.frombuffer(points_data.array, np.uint8)
-    uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
-    compressed = compressor.compress(uncompressed_buffer)
+        compressor = lazperf.VLRCompressor(laz_vrl.schema, 0)
+        uncompressed_buffer = np.frombuffer(points_data.array, np.uint8)
+        uncompressed_buffer = np.frombuffer(uncompressed_buffer, dtype=np.uint8)
+        compressed = compressor.compress(uncompressed_buffer)
 
-    return compressed, laz_vrl.data()
+        return compressed, laz_vrl.data()
+    except RuntimeError as e:
+        raise LazError("lazperf error: {}".format(e))
 
 
 def find_laszip_executable():
