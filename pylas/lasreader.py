@@ -1,9 +1,10 @@
 import io
 import logging
+import os
 import struct
 
 from . import headers, errors, evlrs
-from .compression import laszip_decompress
+from .compression import lazrs_decompress_buffer, lazperf_decompress_buffer, LasZipProcess
 from .lasdatas import las14, las12
 from .point import record, PointFormat
 from .vlrs import rawvlr
@@ -60,10 +61,10 @@ class LasReader:
 
         try:
             points = self._read_points(vlrs)
-        except (RuntimeError, errors.LazPerfNotFound) as e:
-            logger.error("LazPerf failed to decompress ({}), trying laszip.".format(e))
-            self.stream.seek(self.start_pos)
-            self.__init__(io.BytesIO(laszip_decompress(self.stream)))
+        except errors.LazError as e:
+            logger.error("error when decompressing {}, trying laszip".format(e))
+            decompressed_stream = self._decompress_with_laszip_executable()
+            self.__init__(decompressed_stream)
             return self.read()
 
         if points.point_format.has_waveform_packet:
@@ -119,24 +120,64 @@ class LasReader:
     def _read_compressed_points_data(self, laszip_vlr, point_format):
         """ reads the compressed point record
         """
-        offset_to_chunk_table = struct.unpack("<q", self.stream.read(8))[0]
-        size_of_point_data = offset_to_chunk_table - self.stream.tell()
-
-        if offset_to_chunk_table <= 0:
-            logger.warning(
-                "Strange offset to chunk table: {}, ignoring it..".format(
-                    offset_to_chunk_table
-                )
-            )
+        if self.header.version >= "1.4" and self.header.number_of_evlr > 0:
+            size_of_point_data = self.header.start_of_first_evlr - self.stream.tell()
+        else:
             size_of_point_data = -1  # Read everything
 
-        points = record.PackedPointRecord.from_compressed_buffer(
-            self.stream.read(size_of_point_data),
+        current_pos = self.stream.tell()
+        points_data = bytearray(self.stream.read(size_of_point_data))
+        offset_to_chunk_table = struct.unpack("<q", points_data[:8])[0]
+        offset_to_chunk_table -= current_pos
+        struct.pack_into("<q", points_data, 0, offset_to_chunk_table)
+
+        try:
+            decompressed_points = lazrs_decompress_buffer(
+                points_data,
+                point_format.dtype.itemsize,
+                self.header.point_count,
+                laszip_vlr
+            )
+        except errors.LazError as e:
+            logger.error("lazrs failed to decompress points: {}".format(e))
+            points_data = points_data[8:]
+
+            decompressed_points = lazperf_decompress_buffer(
+                points_data,
+                point_format.dtype.itemsize,
+                self.header.point_count,
+                laszip_vlr
+            )
+
+        points = record.PackedPointRecord.from_buffer(
+            decompressed_points,
             point_format,
-            self.header.point_count,
-            laszip_vlr,
+            self.header.point_count
         )
         return points
+
+    def _decompress_with_laszip_executable(self):
+        self.stream.seek(self.start_pos)
+        try:
+            fileno = self.stream.fileno()
+        except OSError:
+            laszip_prc = LasZipProcess(LasZipProcess.Actions.Decompress)
+            laszip_prc.stdin.write(self.stream.read())
+            stdout_data = laszip_prc.communicate()
+            new_source = io.BytesIO(stdout_data)
+        else:
+            # The input is a file
+            # let laszip read directly from it to avoid copying it
+            # the os seek is need as the stream used is probably a buffered reader
+            # so the position of the file handle has to be reset also
+            # https://stackoverflow.com/questions/22417010/subprocess-popen-stdin-read-file
+            os.lseek(fileno, self.start_pos, os.SEEK_SET)
+            laszip_prc = LasZipProcess(LasZipProcess.Actions.Decompress, stdin=self.stream)
+            stdout_data = laszip_prc.communicate()
+            new_source = io.BytesIO(stdout_data)
+
+        return new_source
+
 
     def _read_internal_waveform_packet(self):
         """ reads and returns the waveform vlr header, waveform record

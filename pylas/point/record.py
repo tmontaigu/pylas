@@ -10,7 +10,7 @@ import numpy as np
 
 from . import dims, packing
 from .. import errors
-from ..compression import decompress_buffer
+from ..compression import lazperf_decompress_buffer
 from ..point import PointFormat
 
 logger = logging.getLogger(__name__)
@@ -79,13 +79,6 @@ class IPointRecord(ABC):
 
     @classmethod
     @abstractmethod
-    def from_compressed_buffer(
-            cls, compressed_buffer, point_format_id, count, laszip_vlr
-    ):
-        pass
-
-    @classmethod
-    @abstractmethod
     def empty(cls, point_format_id):
         pass
 
@@ -141,6 +134,9 @@ class PointRecord(IPointRecord):
         old_array = self.array
         self.array = np.zeros_like(old_array, dtype=self.point_format.dtype)
         self.copy_fields_from(old_array)
+
+    def memoryview(self):
+        return memoryview(self.array)
 
     def raw_bytes(self):
         return self.array.tobytes()
@@ -287,17 +283,6 @@ class PackedPointRecord(PointRecord):
         data = np.frombuffer(buffer, dtype=points_dtype, offset=offset, count=count)
 
         return cls(data, point_format)
-
-    @classmethod
-    def from_compressed_buffer(cls, compressed_buffer, point_format, count, laszip_vlr):
-        """  Construct the point record by reading and decompressing the points data from
-        the input buffer
-        """
-        point_dtype = point_format.dtype
-        uncompressed = decompress_buffer(
-            compressed_buffer, point_dtype, count, laszip_vlr
-        )
-        return cls(uncompressed, point_format)
 
     def write_to(self, out):
         """ Writes the points to the output stream"""

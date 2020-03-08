@@ -1,11 +1,17 @@
 import logging
+import struct
 
 import numpy as np
 
 from pylas import extradims
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .. import errors
-from ..compression import compress_buffer, create_laz_vlr, uncompressed_id_to_compressed
+from ..compression import (
+    uncompressed_id_to_compressed,
+    lazperf_compress_points,
+    lazrs_compress_points,
+    LasZipProcess
+)
 from ..point import record, dims, PointFormat
 from ..vlrs import known, vlrlist
 
@@ -250,8 +256,17 @@ class LasBase(object):
             self.vlrs.extract("ExtraBytesVlr")
 
         if do_compress:
-            laz_vrl = create_laz_vlr(self.points_data)
-            self.vlrs.append(known.LasZipVlr(laz_vrl.data()))
+            try:
+                compressed_points_buf, vlr_data = lazrs_compress_points(self.points_data)
+            except errors.LazError as e:
+                try:
+                    logger.error("pylaz failed to compress: {}".format(e))
+                    compressed_points_buf, vlr_data = lazperf_compress_points(self.points_data)
+                except errors.LazError as e:
+                    logger.error("lazperf failed to compress: {}".format(e))
+                    self._compress_with_laszip_executable(out_stream)
+                    return
+            self.vlrs.append(known.LasZipVlr(vlr_data))
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
 
             self.header.offset_to_point_data = (
@@ -262,19 +277,18 @@ class LasBase(object):
             )
             self.header.number_of_vlr = len(raw_vlrs)
 
-            points_bytes = compress_buffer(
-                np.frombuffer(self.points_data.array, np.uint8),
-                laz_vrl.schema,
-                self.header.offset_to_point_data,
-            ).tobytes()
-
+            # Update Chunk table offset from being from the start of point data
+            # to the start of the file
+            points_bytes = bytearray(compressed_points_buf.tobytes())
+            offset_to_chunk_table = struct.unpack_from("<q", points_bytes, 0)[0]
+            struct.pack_into("<q", points_bytes, 0, self.header.offset_to_point_data + offset_to_chunk_table)
         else:
             raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
             self.header.number_of_vlr = len(raw_vlrs)
             self.header.offset_to_point_data = (
                     self.header.size + raw_vlrs.total_size_in_bytes()
             )
-            points_bytes = self.points_data.raw_bytes()
+            points_bytes = self.points_data.memoryview()
 
         self.header.write_to(out_stream)
         self._raise_if_not_expected_pos(out_stream, self.header.size)
@@ -345,6 +359,22 @@ class LasBase(object):
             if do_compress is None:
                 do_compress = False
             self.write_to(destination, do_compress=do_compress)
+
+    def _compress_with_laszip_executable(self, out_stream):
+        try:
+            out_stream.fileno()
+        except OSError:
+            laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress)
+            self.write_to(laszip_prc.stdin)
+            stdout_data = laszip_prc.communicate()
+            out_stream.seek(0)
+            out_stream.write(stdout_data)
+        else:
+            # The ouput is a file
+            # let laszip write directly to it, to avoid copies
+            laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress, stdout=out_stream)
+            self.write_to(laszip_prc.stdin)
+            laszip_prc.wait_until_finished()
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(
