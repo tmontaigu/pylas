@@ -13,6 +13,7 @@ from ..compression import (
     LasZipProcess
 )
 from ..point import record, dims, PointFormat
+from ..utils import ConveyorThread
 from ..vlrs import known, vlrlist
 
 logger = logging.getLogger(__name__)
@@ -365,10 +366,14 @@ class LasBase(object):
             out_stream.fileno()
         except OSError:
             laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress)
-            self.write_to(laszip_prc.stdin)
-            stdout_data = laszip_prc.communicate()
             out_stream.seek(0)
-            out_stream.write(stdout_data)
+            t = ConveyorThread(laszip_prc.stdout, out_stream)
+            t.start()
+            self.write_to(laszip_prc.stdin, do_compress=False)
+            laszip_prc.stdin.close()
+            t.join()
+            laszip_prc.wait()
+            laszip_prc.raise_if_bad_err_code()
         else:
             # The ouput is a file
             # let laszip write directly to it, to avoid copies

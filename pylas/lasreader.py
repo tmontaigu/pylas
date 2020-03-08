@@ -7,6 +7,7 @@ from . import headers, errors, evlrs
 from .compression import lazrs_decompress_buffer, lazperf_decompress_buffer, LasZipProcess
 from .lasdatas import las14, las12
 from .point import record, PointFormat
+from .utils import ConveyorThread
 from .vlrs import rawvlr
 from .vlrs.vlrlist import VLRList
 
@@ -162,9 +163,15 @@ class LasReader:
             fileno = self.stream.fileno()
         except OSError:
             laszip_prc = LasZipProcess(LasZipProcess.Actions.Decompress)
+            new_source = io.BytesIO()
+            t = ConveyorThread(laszip_prc.stdout, new_source)
+            t.start()
             laszip_prc.stdin.write(self.stream.read())
-            stdout_data = laszip_prc.communicate()
-            new_source = io.BytesIO(stdout_data)
+            laszip_prc.stdin.close()
+            t.join()
+            laszip_prc.wait()
+            new_source.seek(0)
+            laszip_prc.raise_if_bad_err_code()
         else:
             # The input is a file
             # let laszip read directly from it to avoid copying it
