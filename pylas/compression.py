@@ -203,12 +203,17 @@ class LasZipProcess:
     def stdout(self):
         return self.prc.stdout
 
+    def wait(self):
+        return self.prc.wait()
+
     def communicate(self):
         stdout_data, stderr_data = self.prc.communicate()
-        self._raise_if_bad_err_code(stderr_data.decode())
+        self.raise_if_bad_err_code(stderr_data.decode())
         return stdout_data
 
-    def _raise_if_bad_err_code(self, error_msg):
+    def raise_if_bad_err_code(self, error_msg=None):
+        if error_msg is None:
+            error_msg = self.prc.stderr.read().decode()
         if self.prc.returncode != 0:
             raise RuntimeError(
                 "Laszip failed to {} with error code {}\n\t{}".format(
@@ -219,5 +224,5 @@ class LasZipProcess:
     def wait_until_finished(self):
         self.stdin.close()
         self.prc.wait()
-        self._raise_if_bad_err_code(self.prc.stderr.read().decode())
+        self.raise_if_bad_err_code(self.prc.stderr.read().decode())
 
