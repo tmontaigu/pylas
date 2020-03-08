@@ -13,9 +13,21 @@ setup(
     author_email="thomas.montaigu@laposte.net",
     python_requires=">=3",
     keywords="las lidar",
-    install_requires=["numpy"],
     license="BSD 3-Clause",
     packages=find_packages(exclude=("pylastests",)),
     zip_safe=False,
+    install_requires=["numpy"],
+    extras_require={
+        "dev": [
+            "pytest",
+            "sphinx",
+            "sphinx-rtd-theme"
+        ],
+        "lazperf": [
+            "lazperf>=1.3.0"
+        ],
+        "lazrs": [
+            "lazrs>=0.1.0"
+        ]
+    }
 )
-
