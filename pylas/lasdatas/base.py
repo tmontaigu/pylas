@@ -362,6 +362,8 @@ class LasBase(object):
             self.write_to(destination, do_compress=do_compress)
 
     def _compress_with_laszip_executable(self, out_stream):
+        if self.vlrs.get("ExtraBytesVlr"):
+            raise errors.LazError("Compressing LAS that has extra bytes is not supported with LASzip")
         try:
             out_stream.fileno()
         except OSError:
