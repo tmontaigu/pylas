@@ -22,6 +22,12 @@ setup(
             "pytest",
             "sphinx",
             "sphinx-rtd-theme"
+        ],
+        "lazperf": [
+            "lazperf>=1.3.0"
+        ],
+        "lazrs": [
+            "lazrs>=0.1.0"
         ]
     }
 )
