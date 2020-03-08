@@ -49,11 +49,11 @@ def uncompressed_id_to_compressed(point_format_id):
     return (2 ** 7) | point_format_id
 
 
-def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr, parallel=True):
+def lazrs_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr, parallel=True):
     try:
-        import pylaz
+        import lazrs
     except Exception as e:
-        raise LazError("pylaz is not installed") from e
+        raise LazError("lazrs is not installed") from e
 
     try:
         point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
@@ -61,30 +61,30 @@ def pylaz_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
 
         point_decompressed = np.zeros(point_count * point_size, np.uint8)
 
-        pylaz.decompress_points(point_compressed, vlr_data, point_decompressed, parallel)
-    except pylaz.PyLazError as e:
-        raise LazError("pylaz error: {}".format(e)) from e
+        lazrs.decompress_points(point_compressed, vlr_data, point_decompressed, parallel)
+    except lazrs.LazrsError as e:
+        raise LazError("lazrs error: {}".format(e)) from e
     else:
         return point_decompressed
 
 
-def pylaz_compress_points(points_data, parallel=True):
+def lazrs_compress_points(points_data, parallel=True):
     try:
-        import pylaz
+        import lazrs
     except Exception as e:
-        raise LazError("pylaz is not installed") from e
+        raise LazError("lazrs is not installed") from e
 
     try:
-        vlr = pylaz.LazVlr.new_for_compression(
+        vlr = lazrs.LazVlr.new_for_compression(
             points_data.point_format.id, points_data.point_format.num_extra_bytes)
 
-        compressed_data = pylaz.compress_points(
+        compressed_data = lazrs.compress_points(
             vlr,
             np.frombuffer(points_data.array, np.uint8),
             parallel
         )
-    except pylaz.PyLazError as e:
-        raise LazError("pylaz error: {}".format(e)) from e
+    except lazrs.LazrsError as e:
+        raise LazError("lazrs error: {}".format(e)) from e
     else:
         return compressed_data, vlr.record_data()
 

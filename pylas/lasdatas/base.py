@@ -9,7 +9,7 @@ from .. import errors
 from ..compression import (
     uncompressed_id_to_compressed,
     lazperf_compress_points,
-    pylaz_compress_points,
+    lazrs_compress_points,
     LasZipProcess
 )
 from ..point import record, dims, PointFormat
@@ -257,12 +257,12 @@ class LasBase(object):
 
         if do_compress:
             try:
-                compressed_points_buf, vlr_data = pylaz_compress_points(self.points_data)
+                compressed_points_buf, vlr_data = lazrs_compress_points(self.points_data)
             except errors.LazError as e:
                 try:
                     logger.error("pylaz failed to compress: {}".format(e))
                     compressed_points_buf, vlr_data = lazperf_compress_points(self.points_data)
-                except (RuntimeError, errors.LazPerfNotFound) as e:
+                except errors.LazError as e:
                     logger.error("lazperf failed to compress: {}".format(e))
                     self._compress_with_laszip_executable(out_stream)
                     return

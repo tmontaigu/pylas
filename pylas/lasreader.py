@@ -4,7 +4,7 @@ import os
 import struct
 
 from . import headers, errors, evlrs
-from .compression import pylaz_decompress_buffer, lazperf_decompress_buffer, LasZipProcess
+from .compression import lazrs_decompress_buffer, lazperf_decompress_buffer, LasZipProcess
 from .lasdatas import las14, las12
 from .point import record, PointFormat
 from .vlrs import rawvlr
@@ -132,14 +132,14 @@ class LasReader:
         struct.pack_into("<q", points_data, 0, offset_to_chunk_table)
 
         try:
-            decompressed_points = pylaz_decompress_buffer(
+            decompressed_points = lazrs_decompress_buffer(
                 points_data,
                 point_format.dtype.itemsize,
                 self.header.point_count,
                 laszip_vlr
             )
         except errors.LazError as e:
-            logger.error("pylaz failed to decompress points: {}".format(e))
+            logger.error("lazrs failed to decompress points: {}".format(e))
             points_data = points_data[8:]
 
             decompressed_points = lazperf_decompress_buffer(
