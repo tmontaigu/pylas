@@ -281,6 +281,10 @@ class RawHeader1_4(RawHeader1_3):
             )
         self._number_of_points_by_return = value[:15]
 
+    def update_evlrs_info_in_stream(self, stream, start=0):
+        stream.seek(start + self.start_of_first_evlr)
+        stream.write(bytes(self.start_of_first_evlr))
+        stream.write(bytes(self.number_of_evlr))
 
 class HeaderFactory:
     """ Factory to create a new header by specifying the version.
