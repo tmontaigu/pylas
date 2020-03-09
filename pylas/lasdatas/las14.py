@@ -29,7 +29,7 @@ class LasData(LasBase):
         # LAS 1.4 may have evlrs located after the point data, and the header has a field
         # that must give the offset to first evlr
         # so in the case of writing compressed points we have to update the header
-        # written with seek + write
+        # written afterwards with seek + write
         start = out_stream.tell()
         if not do_compress:
             if len(self.evlrs) > 0:
