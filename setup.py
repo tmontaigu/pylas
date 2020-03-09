@@ -11,7 +11,7 @@ setup(
     url="https://github.com/tmontaigu/pylas",
     author="Thomas Montaigu",
     author_email="thomas.montaigu@laposte.net",
-    python_requires=">=3",
+    python_requires=">=3.6",
     keywords="las lidar",
     license="BSD 3-Clause",
     packages=find_packages(exclude=("pylastests",)),

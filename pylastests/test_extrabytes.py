@@ -14,8 +14,11 @@ from pylastests.test_common import (
 extra_bytes_files = [extra_bytes_las]
 # Because currently lazperf cannot decompress 1.4 file with extra dim
 # and Travis CI doesn't have laszip installed
-if find_laszip_executable() is not None:
+try:
+    find_laszip_executable()
     extra_bytes_files.append(extra_bytes_laz)
+except FileNotFoundError:
+    pass
 
 
 @pytest.fixture(params=extra_bytes_files)
