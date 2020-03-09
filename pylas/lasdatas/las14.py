@@ -26,6 +26,11 @@ class LasData(LasBase):
         start = out_stream.tell()
         super().write_to(out_stream, do_compress=do_compress)
 
+        # when do_compress=True, and that the method to compress
+        # is piping data through laszip we will write evlrs 2 times
+        # once when we write the data (with do_compress=False)
+        # to laszip stdin and the other time after the data laszip returned us
+        # it's a bit a bit strange but should do no harm
         raw_evlrs = evlrs.RawEVLRList.from_list(self.evlrs)
         if len(self.evlrs) > 0:
             self.header.start_of_first_evlr = out_stream.tell()
