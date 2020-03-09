@@ -2,6 +2,7 @@ from .base import LasBase
 from .. import evlrs
 from ..headers.rawheader import RawHeader1_4
 from ..utils import ctypes_max_limit
+from ..vlrs import vlrlist
 
 
 class LasData(LasBase):
@@ -34,7 +35,8 @@ class LasData(LasBase):
         if not do_compress:
             if len(self.evlrs) > 0:
                 self.header.number_of_evlr = len(self.evlrs)
-                self.header.start_of_first_evlr = self.header.point_size * self.header.point_count
+                raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
+                self.header.start_of_first_evlr = (self.header.point_size * self.header.point_count) + self.header.size + raw_vlrs.total_size_in_bytes()
 
             super().write_to(out_stream, do_compress=do_compress)
             if len(self.evlrs) > 0:
