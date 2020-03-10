@@ -7,6 +7,7 @@ from . import headers, errors, evlrs
 from .compression import lazrs_decompress_buffer, lazperf_decompress_buffer, LasZipProcess
 from .lasdatas import las14, las12
 from .point import record, PointFormat
+from .point.dims import size_of_point_format_id
 from .utils import ConveyorThread
 from .vlrs import rawvlr
 from .vlrs.vlrlist import VLRList
@@ -106,6 +107,13 @@ class LasReader:
         try:
             extra_dims = vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
         except IndexError:
+            extra_dims = None
+
+        point_size_without_extra_bytes = size_of_point_format_id(self.header.point_format_id)
+        if extra_dims is not None and self.header.point_size == point_size_without_extra_bytes:
+            logger.warning("There is an ExtraByteVlr but the header.point_size matches the "
+                           "point size without extra bytes. The extrabytes vlr info will be ignored")
+            vlrs.extract("ExtraBytesVlr")
             extra_dims = None
 
         point_format = PointFormat(self.header.point_format_id, extra_dims=extra_dims)
