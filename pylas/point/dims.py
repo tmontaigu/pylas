@@ -268,6 +268,13 @@ def np_dtype_to_point_format(dtype, unpacked=False):
         )
 
 
+def size_of_point_format_id(point_format_id):
+    try:
+        return ALL_POINT_FORMATS_DTYPE[point_format_id].itemsize
+    except KeyError:
+        raise errors.PointFormatNotSupported(point_format_id)
+
+
 def min_file_version_for_point_format(point_format_id):
     """  Returns the minimum file version that supports the given point_format_id
     """
