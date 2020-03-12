@@ -217,6 +217,12 @@ class LasBase(object):
             self.points_data.add_extra_dims([(name, type)])
 
     def update_header(self):
+        """ Update the information stored in the header
+        to be in sync with the actual data.
+
+        This method is called automatically when you save a file using
+        :meth:`pylas.lasdatas.base.LasBase.write`
+        """
         self.header.point_format_id = self.points_data.point_format.id
         self.header.point_count = len(self.points_data)
         self.header.point_data_record_length = self.points_data.point_size
