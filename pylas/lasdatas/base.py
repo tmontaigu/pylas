@@ -324,7 +324,7 @@ class LasBase(object):
             to determine if the data should be compressed
             otherwise the do_compress flag indicate if the data should be compressed
         """
-        is_ext_laz = filename.split(".")[-1] == "laz"
+        is_ext_laz = filename.split(".")[-1].lower() == "laz"
         if is_ext_laz and do_compress is None:
             do_compress = True
         with open(filename, mode="wb") as out:
