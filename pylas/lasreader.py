@@ -137,15 +137,22 @@ class LasReader:
         current_pos = self.stream.tell()
         points_data = bytearray(self.stream.read(size_of_point_data))
         offset_to_chunk_table = struct.unpack("<q", points_data[:8])[0]
-        offset_to_chunk_table -= current_pos
-        struct.pack_into("<q", points_data, 0, offset_to_chunk_table)
-
+        lazrs_parallel = True
+        if offset_to_chunk_table == current_pos:
+            # The compressor was interrupted before being able to write the chunk table
+            # The parallel decompression relies on the chunk table, so we can't use it
+            lazrs_parallel = False
+        elif offset_to_chunk_table != -1:
+            offset_to_chunk_table -= current_pos
+            struct.pack_into("<q", points_data, 0, offset_to_chunk_table)
+            
         try:
             decompressed_points = lazrs_decompress_buffer(
                 points_data,
                 point_format.dtype.itemsize,
                 self.header.point_count,
-                laszip_vlr
+                laszip_vlr,
+                parallel=lazrs_parallel
             )
         except errors.LazError as e:
             logger.error("lazrs failed to decompress points: {}".format(e))
@@ -192,7 +199,6 @@ class LasReader:
             new_source = io.BytesIO(stdout_data)
 
         return new_source
-
 
     def _read_internal_waveform_packet(self):
         """ reads and returns the waveform vlr header, waveform record
