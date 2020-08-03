@@ -243,6 +243,30 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def write_to(self, out_stream):
         out_stream.write(bytes(self))
 
+    def partial_reset(self):
+        self.generating_software = PROJECT_NAME
+        self.date = datetime.date.today()
+        self.offset_to_point_data = LAS_HEADERS_SIZE[self._version_]
+        self.point_count = 0
+        self.number_vlrs = 0
+        self.number_of_points_by_return = (0, 0, 0, 0, 0)
+        self.mins = [0.0, 0.0, 0.0]
+        self.maxs = [0.0, 0.0, 0.0]
+
+    def set_point_count_to_max(self):
+        self.point_count = np.iinfo(np.uint32).max
+
+    def set_compressed(self, compressed: bool):
+        if compressed:
+            self._point_data_format_id = compression.uncompressed_id_to_compressed(
+                self._point_data_format_id
+            )
+        else:
+            self._point_data_format_id = compression.compressed_id_to_uncompressed(
+                self._point_data_format_id
+            )
+
+
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)
 
@@ -285,6 +309,18 @@ class RawHeader1_4(RawHeader1_3):
         stream.seek(start + self.start_of_first_evlr)
         stream.write(bytes(self.start_of_first_evlr))
         stream.write(bytes(self.number_of_evlr))
+
+    def set_point_count_to_max(self):
+        self.legacy_point_count = 0
+        self.point_count = np.iinfo(np.uint64).max
+
+    def partial_reset(self):
+        super().partial_reset()
+        self.start_of_first_evlr = 0
+        self.number_of_evlr = 0
+        self.point_count = 0
+        self.number_of_points_by_return([0] * 15)
+
 
 class HeaderFactory:
     """ Factory to create a new header by specifying the version.
@@ -342,11 +378,21 @@ class HeaderFactory:
 
     @classmethod
     def read_from_stream(cls, stream):
-        version = cls.peek_file_version(stream)
+        sizeof_u8 = ctypes.sizeof(ctypes.c_uint8)
+        header_bytes = bytearray(stream.read(cls._offset_to_major_version + (sizeof_u8 * 2)))
+
+        if header_bytes[:4] != LAS_FILE_SIGNATURE:
+            raise errors.PylasError(
+                "File Signature ({}) is not {}".format(header_bytes[:4], LAS_FILE_SIGNATURE)
+            )
+
+        major = ctypes.c_uint8.from_buffer(header_bytes, cls._offset_to_major_version).value
+        minor = ctypes.c_uint8.from_buffer(header_bytes, cls._offset_to_major_version + sizeof_u8).value
+        version = "{}.{}".format(major, minor)
+
         header_class = cls.header_class_for_version(version)
-        return header_class.from_buffer(
-            bytearray(stream.read(ctypes.sizeof(header_class)))
-        )
+        header_bytes += stream.read(ctypes.sizeof(header_class) - len(header_bytes))
+        return header_class.from_buffer(header_bytes)
 
     @classmethod
     def from_mmap(cls, mmap):

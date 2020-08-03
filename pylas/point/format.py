@@ -38,6 +38,10 @@ class PointFormat:
         return self.unpacked_dtype.names
 
     @property
+    def size(self):
+        return self.dtype.itemsize
+
+    @property
     def dtype(self):
         """ Returns the numpy.dtype used to store the point records in a numpy array
 

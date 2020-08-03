@@ -35,6 +35,16 @@ def all_las_but_1_4(request):
     return pylas.read(request.param)
 
 
+@pytest.fixture(params=[simple_las, vegetation1_3_las, test1_4_las, extra_bytes_las])
+def las_path_fixture(request):
+    return request.param
+
+
+@pytest.fixture(params=[simple_laz, extra_bytes_laz, plane_laz])
+def all_laz_path(request):
+    return request.param
+
+
 def dim_does_not_exists(las, dim_name):
     try:
         _ = getattr(las, dim_name)

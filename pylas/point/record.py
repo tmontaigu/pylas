@@ -5,12 +5,12 @@ in the context of Las point data
 """
 import logging
 from abc import ABC, abstractmethod
+from typing import NoReturn
 
 import numpy as np
 
 from . import dims, packing
 from .. import errors
-from ..compression import lazperf_decompress_buffer
 from ..point import PointFormat
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def raise_not_enough_bytes_error(
         expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
-):
+) -> NoReturn :
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
         "expected {} bytes, read {} bytes ({} bytes missing == {} points) and it cannot be corrected\n"
@@ -40,17 +40,25 @@ class IPointRecord(ABC):
 
     @property
     @abstractmethod
+    def point_format(self) -> PointFormat: ...
+
+    @property
+    @abstractmethod
+    def array(self) -> np.ndarray: ...
+
+    @property
+    @abstractmethod
     def point_size(self):
         """ Shall return the point size as that will be written in the header
         """
-        pass
+        return self.point_format.size
 
     @property
     @abstractmethod
     def actual_point_size(self):
         """ Shall return the actual size in bytes that ta points take in memory
         """
-        pass
+        return self.array.dtype.itemsize
 
     @abstractmethod
     def __getitem__(self, item):
@@ -83,10 +91,18 @@ class IPointRecord(ABC):
         pass
 
 
-class PointRecord(IPointRecord):
+class PointRecord(IPointRecord, ABC):
     def __init__(self, data, point_format: PointFormat):
-        self.array = data
-        self.point_format = point_format
+        self._array = data
+        self._point_format = point_format
+
+    @property
+    def point_format(self) -> PointFormat:
+        return self._point_format
+
+    @property
+    def array(self) -> np.ndarray:
+        return self._array
 
     @property
     def dimensions_names(self):
@@ -132,7 +148,7 @@ class PointRecord(IPointRecord):
     def add_extra_dims(self, type_tuples):
         self.point_format.extra_dims.extend(type_tuples)
         old_array = self.array
-        self.array = np.zeros_like(old_array, dtype=self.point_format.dtype)
+        self._array = np.zeros_like(old_array, dtype=self.point_format.dtype)
         self.copy_fields_from(old_array)
 
     def memoryview(self):
@@ -154,9 +170,15 @@ class PointRecord(IPointRecord):
         """
         size_diff = len(value) - len(self.array)
         if size_diff:
-            self.array = np.append(
+            self._array = np.append(
                 self.array, np.zeros(size_diff, dtype=self.array.dtype)
             )
+
+    def __getattr__(self, item):
+        try:
+            return self[item]
+        except ValueError:
+            raise AttributeError("{} is not a valid dimension".format(item)) from None
 
     def __len__(self):
         return self.array.shape[0]
@@ -216,7 +238,7 @@ class PackedPointRecord(PointRecord):
 
         Parameters
         ----------
-        point_format_id: int
+        point_format: PointFormat
             The point format id the point record should have
         point_count : int
             The number of point the point record should have
@@ -289,8 +311,6 @@ class PackedPointRecord(PointRecord):
         out.write(self.raw_bytes())
 
     def to_unpacked(self):
-        # array = packing.unpack_sub_fields(self.array, self.point_format)
-        # return UnpackedPointRecord(array, self.point_format)
         arr = np.zeros_like(self.array, self.point_format.unpacked_dtype)
         record = UnpackedPointRecord(arr, self.point_format)
         record.copy_fields_from(self)
@@ -327,6 +347,27 @@ class PackedPointRecord(PointRecord):
         return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
             self.point_format, len(self), self.actual_point_size
         )
+
+
+class ScaleAwarePointRecord(PackedPointRecord):
+
+    def __init__(self, array, point_format, scales, offsets):
+        super().__init__(array, point_format)
+        self.scales = scales
+        self.offsets = offsets
+
+    def __getitem__(self, item):
+        if isinstance(item, (slice, np.ndarray)):
+            return ScaleAwarePointRecord(self.array[item], self.point_format, self.scales, self.offsets)
+
+        if item == "x":
+            return (self["X"] * self.scales[0]) + self.offsets[0]
+        elif item == "y":
+            return (self["Y"] * self.scales[1]) + self.offsets[1]
+        elif item == "z":
+            return (self["Z"] * self.scales[2]) + self.offsets[2]
+        else:
+            return super(ScaleAwarePointRecord, self).__getitem__(item)
 
 
 class UnpackedPointRecord(PointRecord):
@@ -370,3 +411,11 @@ class UnpackedPointRecord(PointRecord):
 
     def to_packed(self):
         return PackedPointRecord.from_point_record(self, self.point_format)
+
+
+def scale_dimension(array_dim, scale, offset):
+    return (array_dim * scale) + offset
+
+
+def unscale_dimension(array_dim, scale, offset):
+    return np.round((np.array(array_dim) - offset) / scale)

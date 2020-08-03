@@ -43,6 +43,9 @@ class RawVLRList:
         for vlr in self.vlrs:
             vlr.write_to(out_stream)
 
+    def __iter__(self):
+        return iter(self.vlrs)
+
     @classmethod
     def from_list(cls, vlrs):
         """ Construct a RawVLR list from a list of vlrs

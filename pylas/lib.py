@@ -4,20 +4,24 @@ used directly by a user
 import copy
 import io
 import logging
+import os
+from typing import Union
 
 import numpy as np
 
 from . import headers, utils
+from .compression import LazBackend
 from .lasdatas import las12, las14
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
+from .laswriter import LasWriter
 from .point import dims, record, PointFormat
 
 USE_UNPACKED = False
 logger = logging.getLogger(__name__)
 
 
-def open_las(source, closefd=True):
+def open_las(source, mode='r', closefd=True, laz_backends=LazBackend.all(), header=None, do_compress=None) -> Union[LasReader, LasWriter]:
     """ Opens and reads the header of the las content in the source
 
         >>> with open_las('pylastests/simple.las') as f:
@@ -31,6 +35,10 @@ def open_las(source, closefd=True):
         <LasHeader(1.2)>
         >>> f.closed
         False
+        >>> f.close()
+        >>> f.closed
+        True
+
 
         >>> f = open('pylastests/simple.las', mode='rb')
         >>> with open_las(f) as flas:
@@ -40,7 +48,7 @@ def open_las(source, closefd=True):
 
     Parameters
     ----------
-    source : str or io.BytesIO
+    source : str or bytes or io.BytesIO
         if source is a str it must be a filename
         a stream if a file object with the methods read, seek, tell
 
@@ -55,18 +63,35 @@ def open_las(source, closefd=True):
     pylas.lasreader.LasReader
 
     """
-    if isinstance(source, str):
-        stream = open(source, mode="rb")
-        if not closefd:
-            raise ValueError("Cannot use closefd with filename")
-    elif isinstance(source, bytes):
-        stream = io.BytesIO(source)
+    if mode == "r":
+        if isinstance(source, str):
+            stream = open(source, mode="rb", closefd=closefd)
+        elif isinstance(source, bytes):
+            stream = io.BytesIO(source)
+        else:
+            stream = source
+        return LasReader(stream, closefd=closefd, laz_backends=laz_backends)
+    elif mode == 'w':
+        if header is None:
+            raise ValueError("A header is needed when opening a file for writing")
+
+        if isinstance(source, str):
+            if do_compress is None:
+                do_compress = os.path.splitext(source)[1].lower() == ".laz"
+            stream = open(source, mode="wb+", closefd=closefd)
+        elif isinstance(source, bytes):
+            stream = io.BytesIO(source)
+        else:
+            assert source.seekable()
+            stream = source
+        if do_compress is None:
+            do_compress = False
+        return LasWriter(stream, header=header, do_compress=do_compress, laz_backends=laz_backends)
     else:
-        stream = source
-    return LasReader(stream, closefd=closefd)
+        raise ValueError("Unknown mode '{}'".format(mode))
 
 
-def read_las(source, closefd=True):
+def read_las(source, closefd=True, laz_blackends=LazBackend.all()):
     """ Entry point for reading las data in pylas
 
     Reads the whole file into memory.
@@ -90,7 +115,7 @@ def read_las(source, closefd=True):
     pylas.lasdatas.base.LasBase
         The object you can interact with to get access to the LAS points & VLRs
     """
-    with open_las(source, closefd=closefd) as reader:
+    with open_las(source, closefd=closefd, laz_backends=laz_blackends) as reader:
         return reader.read()
 
 
@@ -310,7 +335,7 @@ def merge_las(*las_files):
     # scaled x, y, z have to be set manually
     # to be sure to have a good offset in the header
     merged = create_from_header(header)
-    # TODO extra dimensions should be manged better here
+    # TODO extra dimensions should be managed better here
 
     for dim_name, dim_type in las_files[0].points_data.point_format.extra_dims:
         merged.add_extra_dim(dim_name, dim_type)

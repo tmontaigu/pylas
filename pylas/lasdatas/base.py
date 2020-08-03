@@ -13,18 +13,11 @@ from ..compression import (
     LasZipProcess
 )
 from ..point import record, dims, PointFormat
+from ..point.record import scale_dimension, unscale_dimension
 from ..utils import ConveyorThread
 from ..vlrs import known, vlrlist
 
 logger = logging.getLogger(__name__)
-
-
-def scale_dimension(array_dim, scale, offset):
-    return (array_dim * scale) + offset
-
-
-def unscale_dimension(array_dim, scale, offset):
-    return np.round((np.array(array_dim) - offset) / scale)
 
 
 def is_in_bounds_of_type(array, type_info):

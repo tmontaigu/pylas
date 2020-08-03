@@ -4,6 +4,7 @@ when compression/decompression is actually needed
 
 There are also functions to use Laszip (meant to be used as a fallback)
 """
+import enum
 import os
 import subprocess
 from enum import Enum, auto
@@ -31,6 +32,16 @@ def raise_if_no_lazperf():
         raise LazError(
             "Version >= 1.3.0 required, you have {}".format(lazperf.__version__)
         )
+
+
+class LazBackend(enum.Enum):
+    LazrsParallel = 0
+    Lazrs = 1
+    Laszip = 2
+
+    @staticmethod
+    def all():
+        return LazBackend.LazrsParallel, LazBackend.Lazrs, LazBackend.Laszip
 
 
 def is_point_format_compressed(point_format_id):
@@ -63,6 +74,8 @@ def lazrs_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
 
         lazrs.decompress_points(point_compressed, vlr_data, point_decompressed, parallel)
     except lazrs.LazrsError as e:
+        if str(e) == "IoError: failed to fill whole buffer":
+            ...
         raise LazError("lazrs error: {}".format(e)) from e
     else:
         return point_decompressed
@@ -105,6 +118,7 @@ def lazperf_decompress_buffer(compressed_buffer, point_size, point_count, laszip
         return point_uncompressed
     except RuntimeError as e:
         raise LazError("lazperf error: {}".format(e))
+
 
 def lazperf_create_laz_vlr(points_record):
     raise_if_no_lazperf()
@@ -225,4 +239,3 @@ class LasZipProcess:
         self.stdin.close()
         self.prc.wait()
         self.raise_if_bad_err_code(self.prc.stderr.read().decode())
-
