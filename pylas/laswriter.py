@@ -88,10 +88,6 @@ class LasWriter:
         elif points.point_format != self.point_format:
             raise PylasError("Incompatible point formats")
 
-        points.X = unscale_dimension(points.x, self.header.x_scale, self.header.x_offset)
-        points.Y = unscale_dimension(points.y, self.header.y_scale, self.header.y_offset)
-        points.Z = unscale_dimension(points.z, self.header.z_scale, self.header.z_offset)
-
         self._update_header(points)
         self.point_writer.write_points(points)
 
