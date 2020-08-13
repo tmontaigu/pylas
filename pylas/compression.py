@@ -8,6 +8,7 @@ import enum
 import os
 import subprocess
 from enum import Enum, auto
+from typing import List
 
 import numpy as np
 
@@ -39,8 +40,39 @@ class LazBackend(enum.Enum):
     Lazrs = 1
     Laszip = 2
 
+    def is_available(self) -> bool:
+        if self == LazBackend.Lazrs or self == LazBackend.LazrsParallel:
+            try:
+                import lazrs
+            except ModuleNotFoundError:
+                return False
+            else:
+                return True
+        elif self == LazBackend.Laszip:
+            try:
+                find_laszip_executable()
+            except FileNotFoundError:
+                return False
+            else:
+                return True
+        else:
+            return False
+
     @staticmethod
-    def all():
+    def detect_available() -> List['LazBackend']:
+        available_backends = []
+
+        if LazBackend.LazrsParallel.is_available():
+            available_backends.append(LazBackend.LazrsParallel)
+            available_backends.append(LazBackend.Lazrs)
+
+        if LazBackend.Laszip.is_available():
+            available_backends.append(LazBackend.Laszip)
+
+        return available_backends
+
+    @staticmethod
+    def all() -> List['LazBackend']:
         return LazBackend.LazrsParallel, LazBackend.Lazrs, LazBackend.Laszip
 
 

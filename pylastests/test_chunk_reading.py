@@ -2,35 +2,21 @@ import numpy as np
 import pytest
 
 import pylas
-from pylas import LazBackend
-from pylas.compression import find_laszip_executable
 # noinspection PyUnresolvedReferences
-from pylastests.test_common import las_path_fixture, all_laz_path
+from pylastests.test_common import all_laz_path
+from pylas import LazBackend
 
 
-def get_available_laz_backends():
-    available_backends = []
-    for backend in LazBackend.all():
-        if backend == LazBackend.Laszip:
-            try:
-                find_laszip_executable()
-            except RuntimeError:
-                pass
-            else:
-                available_backends.append(backend)
-        elif backend == LazBackend.LazrsParallel:
-            available_backends.append(backend)
-
-    return available_backends
-
-
-@pytest.fixture(params=get_available_laz_backends())
+@pytest.fixture(params=LazBackend.detect_available())
 def laz_backend(request):
     return request.param
 
 
-def check_chunked_reading_is_gives_expected_points(reader_gt, reader, iter_size):
-    las = reader_gt.read()
+def check_chunked_reading_is_gives_expected_points(reader_groundtruth, reader, iter_size):
+    """ Checks that the points read by the reader are the same as points read by the
+    groundtruth reader.
+    """
+    las = reader_groundtruth.read()
     assert las.point_format == reader.point_format
     for i, points in enumerate(reader.chunk_iterator(iter_size)):
         expected_points = las.points[i * iter_size: (i + 1) * iter_size]
@@ -45,6 +31,8 @@ def test_that_chunked_reading_gives_expected_points(las_path_fixture):
 
 
 def test_chunked_laz(all_laz_path, laz_backend):
+    if not laz_backend:
+        pytest.skip("No LazBackend installed")
     with pylas.open(all_laz_path) as las_reader:
         with pylas.open(all_laz_path, laz_backends=(laz_backend,)) as laz_reader:
             check_chunked_reading_is_gives_expected_points(las_reader, laz_reader, iter_size=50)

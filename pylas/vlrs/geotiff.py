@@ -1,9 +1,8 @@
+from collections import namedtuple
 from typing import List
 
 from pylas.vlrs import vlrlist
 from pylas.vlrs.known import GeoAsciiParamsVlr, GeoDoubleParamsVlr, GeoKeyDirectoryVlr
-
-from collections import namedtuple
 
 GeoTiffKey = namedtuple("GeoTiffKey", ("id", "value"))
 
@@ -50,9 +49,9 @@ def parse_geo_tiff_keys_from_vlrs(vlr_list: vlrlist.VLRList) -> List[GeoTiffKey]
 
 
 def parse_geo_tiff(
-    key_dir_vlr: GeoKeyDirectoryVlr,
-    double_vlr: GeoDoubleParamsVlr,
-    ascii_vlr: GeoAsciiParamsVlr,
+        key_dir_vlr: GeoKeyDirectoryVlr,
+        double_vlr: GeoDoubleParamsVlr,
+        ascii_vlr: GeoAsciiParamsVlr,
 ) -> List[GeoTiffKey]:
     """ Parses the GeoTiff VLRs information into nicer structs
     """
@@ -65,10 +64,10 @@ def parse_geo_tiff(
             value = double_vlr.doubles[k.value_offset]
         elif k.tiff_tag_location == 34737:
             try:
-                value = ascii_vlr.strings[k.value_offset][k.count :]
+                value = ascii_vlr.strings[k.value_offset][k.count:]
             except IndexError:
                 # Maybe I'm just misunderstanding the specification :thinking:
-                value = ascii_vlr.strings[0][k.value_offset : k.value_offset + k.count]
+                value = ascii_vlr.strings[0][k.value_offset: k.value_offset + k.count]
         else:
             logger.warning(
                 "GeoTiffKey with unknown tiff tag location ({})".format(

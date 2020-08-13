@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class EVLRHeader(ctypes.LittleEndianStructure):
+    _pack_ = 1
     _fields_ = [
         ("_reserved", ctypes.c_uint16),
         ("user_id", ctypes.c_char * 16),
@@ -50,6 +51,12 @@ class RawEVLR:
     def write_to(self, out):
         out.write(bytes(self.header))
         out.write(self.record_data)
+
+    def __eq__(self, other):
+        return self.header.user_id == other.header.user_id and \
+               self.header.record_id == other.header.record_id and \
+               self.header.description == other.header.description and \
+               self.record_data == other.record_data
 
     def __repr__(self):
         return "<RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {})>".format(

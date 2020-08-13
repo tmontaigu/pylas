@@ -24,7 +24,7 @@ class LasReader:
     """ The reader class handles LAS and LAZ via one of the supported backend
     """
 
-    def __init__(self, source: BinaryIO, closefd: bool = True, laz_backends=LazBackend.all()):
+    def __init__(self, source: BinaryIO, closefd: bool = True, laz_backends=tuple(LazBackend.detect_available())):
         self.closefd = closefd
         self.laz_backends = laz_backends
         self.header, self.vlrs = self._read_header_and_vlrs(source)
@@ -108,9 +108,11 @@ class LasReader:
                 elif backend == LazBackend.Lazrs:
                     return LazrsPointReader(source, laszip_vlr, parallel=False)
                 elif backend == LazBackend.Laszip:
-                    point_source = LasZipProcessPointReader(source, self.header.point_size)
-                    self.header, self.vlrs = self._read_header_and_vlrs(point_source.process.stdout,
-                                                                        seekable=False)
+                    point_source = LasZipProcessPointReader(source, self.header, self.vlrs)
+                    # self.header, self.vlrs = self._read_header_and_vlrs(point_source.process.stdout,
+                    #                                                     seekable=False)
+                    self._read_header_and_vlrs(point_source.process.stdout,
+                                               seekable=False)
                     return point_source
                 else:
                     raise errors.PylasError("Unknown LazBackend: {}".format(backend))
@@ -144,7 +146,7 @@ class LasReader:
                 raise RuntimeError("Read past point data")  # TODO
         return header, vlrs
 
-    def _read_evlrs(self, source, seekable=True):
+    def _read_evlrs(self, source, seekable=False):
         """ Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """
@@ -220,36 +222,40 @@ class LasZipProcessPointReader(IPointReader):
     """
     conveyor: Optional[ConveyorThread]
 
-    def __init__(self, source, point_size: int) -> None:
+    def __init__(self, source, header, _vlrs) -> None:
         laszip_binary = find_laszip_executable()
-        self.point_size: int = point_size
+        self.point_size: int = header.point_size
         try:
             fileno = source.fileno()
         except OSError:
             source.seek(0)
-            self.source, source = source, subprocess.PIPE
-
-            self.conveyor = ConveyorThread(self.source, None, close_output=True)
-        else:
-            os.lseek(fileno, 0, os.SEEK_SET)
-            self.conveyor = None
             self.source = source
-
-        self.process = self.process = subprocess.Popen(
-            [laszip_binary, "-stdin", "-olas", "-stdout"],
-            stdin=source,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        if self.conveyor is not None:
-            self.conveyor.output_stream = self.process.stdin
+            self.process = self.process = subprocess.Popen(
+                [laszip_binary, "-stdin", "-olas", "-stdout"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.conveyor = ConveyorThread(self.source, self.process.stdin, close_output=True)
             self.conveyor.start()
+        else:
+            if header.version >= '1.4' and header.number_of_evlr > 0:
+                raise errors.PylasError("Reading a LAZ file that contains EVLR using laszip is not supported")
+            else:
+                os.lseek(fileno, 0, os.SEEK_SET)
+                self.conveyor = None
+                self.source = source
+                self.process = self.process = subprocess.Popen(
+                    [laszip_binary, "-stdin", "-olas", "-stdout"],
+                    stdin=source,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
 
     def read_n_points(self, n) -> bytes:
+        b = self.process.stdout.read(n * self.point_size)
         if self.process.poll() is not None:
             self.raise_if_bad_err_code()
-
-        b = self.process.stdout.read(n * self.point_size)
         return b
 
     def close(self):
@@ -260,6 +266,7 @@ class LasZipProcessPointReader(IPointReader):
         if self.process.poll() is None:
             # We are likely getting closed before decompressing all the data
             self.process.terminate()
+            self.process.wait()
         else:
             self.raise_if_bad_err_code()
 
@@ -268,10 +275,10 @@ class LasZipProcessPointReader(IPointReader):
         self.source.close()
 
     def raise_if_bad_err_code(self):
-        if self.process.returncode != 0:
+        if self.process is not None and self.process.returncode != 0:
             error_msg = self.process.stderr.read().decode()
             raise RuntimeError(
-                "Laszip failed to {} with error code {}\n\t{}".format(
+                "Laszip failed to {} with error code {}:\n\t{}".format(
                     "compress", self.process.returncode, "\n\t".join(error_msg.splitlines())
                 )
             )

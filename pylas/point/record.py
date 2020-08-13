@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def raise_not_enough_bytes_error(
         expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
-) -> NoReturn :
+) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
         "expected {} bytes, read {} bytes ({} bytes missing == {} points) and it cannot be corrected\n"

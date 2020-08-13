@@ -4,73 +4,85 @@ import numpy as np
 from pylas import LazBackend
 import logging
 
-logging.basicConfig(level=logging.INFO)
+from pylas.lib import write_then_read_again
+from pylas.vlrs.vlrlist import VLRList
 
-# file_path = r"L:\LAS\technicentre\ROBIN_BDX_TechnicentreVF.laz"
-# file_path = r"C:\Users\t.montaigu\Projects\pylas\pylastests\simple.laz"
-file_path = r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.laz"
 
-# print("_" * 80)
-# print("laz")
-# with pylas.open(file_path, laz_backends=[pylas.LazBackend.Laszip]) as reader:
-#     print(reader)
-#     with pylas.open("output.laz",  mode="w", header=reader.header, laz_backends=[pylas.LazBackend.LazrsParallel]) as writer:
-#         print(writer.point_format)
-#         for points in reader.chunk_iterator(50):
-#             print(points.x)
-#             writer.write(points)
+# las = pylas.read("pylastests/test1_4.las")
+# las.vlrs = VLRList()
+# assert las.evlrs == []
 #
-# print("_" * 80)
-# with pylas.open("output.laz", laz_backends=[LazBackend.Laszip]) as f:
-#     print(f.header.are_points_compressed)
-#     print(f.header.point_count)
-#     print(f.header.number_of_points_by_return[:])
-#     las = f.read()
-#     print(las)
-
-
-
-
-# file_path = r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.laz"
-# LAS = pylas.read(r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.las")
+# evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
+# evlr.record_data = b"While he grinds his own hands"
+# las.evlrs.append(evlr)
 #
-# with pylas.open(file_path, laz_backends=[pylas.LazBackend.LazrsParallel]) as reader:
-#     print("Num pts: {}".format(reader.header.point_count))
-#     iter_size = 500_001
-#     for i, points in enumerate(reader.chunk_iterator(iter_size)):
-#         print(f"Chunk number {i}")
-#         expected_pts = LAS.points[i * iter_size:(i + 1) * iter_size]
-#         for name in points.array.dtype.names:
-#             assert np.allclose(points[name], expected_pts[name]), f"{name} dims are not equal"
-
-laz_path = r"C:\Users\t.montaigu\Projects\pylas\pylastests\simple.laz"
-las_path = r"C:\Users\t.montaigu\Projects\pylas\pylastests\simple.las"
-
-# laz_path = r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.laz"
-# las_path = r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.las"
-
-# with pylas.open(laz_path, laz_backends=[LazBackend.Laszip]) as reader:
-#     print("Num pts: {}".format(reader.header.point_count))
-#     iter_size = 456_154
+# # las.points = las.points[:1]
+# # las = write_then_read_again(las, do_compress=True)
+# #
+# name = "with_evlr_no_vlrs.laz"
+# las.write(name)
 #
-#     with pylas.open("output.laz", mode="w", header=reader.header, laz_backends=[LazBackend.Laszip]) as output:
-#         for i, points in enumerate(reader.chunk_iterator(iter_size)):
-#             output.write(points)
 #
-# print("Reading back my file")
-# with pylas.open("output.laz", laz_backends=[LazBackend.LazrsParallel]) as reader:
-#     print("ab", reader.header.number_of_vlr)
-#     iter_size = 500_001
-#     hdr = reader.header
-#     print(hdr.number_of_vlr)
-#     for i, points in enumerate(reader.chunk_iterator(iter_size)):
-#         print(points)
+# def print_header(path):
+#     print("-" * 80)
+#     # with pylas.open(path, laz_backends=[LazBackend.Laszip]) as f:
+#     #     print("version", f.header.version)
+#     #     print("point count", f.header.point_count)
+#     #     print("compressed:", f.header.are_points_compressed)
+#     #     print("num_vlrs:", f.header.number_of_vlr)
+#     #     print("offset to points", f.header.offset_to_point_data)
+#     #     print("evlrs", f.header.number_of_evlr)
+#     #     print("start evlrs", f.header.start_of_first_evlr)
+#
+#     with open(path, mode='rb') as file:
+#         header = pylas.HeaderFactory.read_from_stream(file)
+#         print("version", header.version)
+#         print("point count", header.point_count)
+#         print("compressed:", header.are_points_compressed)
+#         print("num_vlrs:", header.number_of_vlr)
+#         print("offset to points", header.offset_to_point_data)
+#         print("evlrs", header.number_of_evlr)
+#         print("start evlrs", header.start_of_first_evlr)
+#         print("size", header.size)
+#         print("point_data_record_length", header.point_data_record_length)
+#         print("legacy_point_count", header.legacy_point_count)
+#         print("legacy_number_of_points_by_return", list(header.legacy_number_of_points_by_return))
+#         print("scales", header.scales)
+#         print("offsets", header.offsets)
+#         print("max", header.maxs)
+#         print("min", header.mins)
+#
+#         file.seek(header.offset_to_point_data)
+#         offset_to_chunk_table = int.from_bytes(file.read(8), 'little', signed=True)
+#         print("offset to chunk_table", offset_to_chunk_table)
+#
+#
+# with open(name, mode='rb') as f:
+#     b1 = f.read()
+#
+# with open("pylastests/groundtruth.laz", mode='rb') as f:
+#     b2 = f.read()
+#
+# print(len(b1), len(b2))
+#
+# for i, (c, cc) in enumerate(zip(b1, b2)):
+#     if c != cc:
+#         print(f"bytes {i} are not equal")
+#
+# print_header(name)
+# print_header("pylastests/groundtruth.laz")
 
-las = pylas.read("pylastests/test1_4.las")
-print(f"{las} has {len(las.evlrs)} evlrs")
-las.evlrs.append(pylas.EVLR(user_id="lol", record_id=14))
-las.write("mdr.laz")
-
-llas = pylas.read("mdr.las")
-print(llas)
-print("evlrs:", llas.evlrs)
+# with io.BytesIO() as o:
+#     las.write_to(o, do_compress=True)
+#
+#     with open("ayaya.laz", mode="wb") as f:
+#         f.write(o.getvalue())
+# with open("pylastests/groundtruth.laz", mode='rb') as f:
+#     b = f.read()
+#     # for b in f:
+#     #     print(len(b))
+# las = pylas.read(b)
+#las = pylas.read("with_evlr_no_vlrs.laz")
+with pylas.open("pylastests/groundtruth.laz", laz_backends=[LazBackend.Laszip]) as f:
+    print("opened now reading")
+    f.read()

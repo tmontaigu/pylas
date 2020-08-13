@@ -1,10 +1,10 @@
-import io
 import os
 
 import numpy as np
 import pytest
 
 import pylas
+from pylas.lib import write_then_read_again
 
 do_compression = [False, True]
 
@@ -15,13 +15,6 @@ test1_4_las = os.path.dirname(__file__) + "/" + "test1_4.las"
 extra_bytes_las = os.path.dirname(__file__) + "/extrabytes.las"
 extra_bytes_laz = os.path.dirname(__file__) + "/extra.laz"
 plane_laz = os.path.dirname(__file__) + "/plane.laz"
-
-
-def write_then_read_again(las, do_compress=False):
-    out = io.BytesIO()
-    las.write(out, do_compress=do_compress)
-    out.seek(0)
-    return pylas.read(out)
 
 
 @pytest.fixture(
@@ -63,8 +56,6 @@ def dim_does_exists(las, dim_name):
 
 # TODO: should propably use ALL_POiNTS_FORMATS_DIMS dict
 # to do this test
-
-
 def test_change_format(las):
     in_version = las.header.version
 
@@ -213,4 +204,4 @@ def test_slicing(las):
 
 
 def test_can_write_then_re_read_files(las):
-    las = write_then_read_again(las, do_compress=las.points_data.point_format.id < 6)
+    _las = write_then_read_again(las, do_compress=las.points_data.point_format.id < 6)

@@ -15,7 +15,8 @@ from .errors import PylasError
 from .evlrs import EVLRList, RawEVLRList
 from .point import dims
 from .point.format import PointFormat
-from .point.record import PointRecord, unscale_dimension
+from .point.record import PointRecord
+from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
 
@@ -46,7 +47,7 @@ class WriterBuilder:
 
 
 class LasWriter:
-    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=(LazBackend.Laszip,), closefd=True):
+    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=tuple(LazBackend.detect_available()), closefd=True):
         self.closefd = closefd
         self.header = copy(header)
         self.header.partial_reset()
@@ -100,9 +101,10 @@ class LasWriter:
 
         if len(evlrs) > 0:
             self.point_writer.done()
+            self.done = True
             self.header.number_of_evlr = len(evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
-            self.header.update_evlrs_info_in_stream(self.dest)
+            # self.header.update_evlrs_info_in_stream(self.dest)
             raw_evlrs = RawEVLRList.from_list(evlrs)
             raw_evlrs.write_to(self.dest)
 
@@ -202,10 +204,24 @@ class LasZipProcessPointWriter(PointWriter):
         laszip_binary = find_laszip_executable()
         self.dest = dest
 
-        self.process = subprocess.Popen([laszip_binary, "-stdin", '-olaz', "-stdout"],
-                                        stdin=subprocess.PIPE,
-                                        stdout=dest,
-                                        stderr=subprocess.PIPE)
+        self.conveyor: Optional[ConveyorThread]
+        try:
+            _ = dest.fileno()
+        except OSError:
+            self.dest = dest
+            self.process = subprocess.Popen([laszip_binary, "-stdin", '-olaz', "-stdout"],
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
+
+            self.conveyor = ConveyorThread(self.process.stdout, self.dest)
+            self.conveyor.start()
+        else:
+            self.conveyor = None
+            self.process = subprocess.Popen([laszip_binary, "-stdin", '-olaz', "-stdout"],
+                                            stdin=subprocess.PIPE,
+                                            stdout=self.dest,
+                                            stderr=subprocess.PIPE)
 
     @property
     def destination(self):
@@ -228,8 +244,12 @@ class LasZipProcessPointWriter(PointWriter):
                 raise errors.LazError("Laszip process failed: {}".format(self.process.stderr.read().decode())) from None
 
     def done(self):
+        self.process.stdin.flush()
         self.process.stdin.close()
         self.process.wait()
+        if self.conveyor is not None:
+            self.conveyor.join()
+
         self.raise_if_bad_err_code()
         self._rewrite_chunk_table_offset()
 
@@ -246,7 +266,8 @@ class LasZipProcessPointWriter(PointWriter):
             self.dest.write(offset_to_chunk_table.to_bytes(8, 'little', signed=True))
             self.dest.seek(-8, io.SEEK_END)
             self.dest.truncate()
-        self.dest.seek(position_backup, io.SEEK_SET)
+        else:
+            self.dest.seek(position_backup, io.SEEK_SET)
 
     def write_updated_header(self, header):
         self.dest.seek(0, io.SEEK_SET)
@@ -255,6 +276,11 @@ class LasZipProcessPointWriter(PointWriter):
         hdr.maxs = header.maxs
         hdr.mins = header.mins
         hdr.number_of_points_by_return = header.number_of_points_by_return
+
+        if header.version >= '1.4':
+            hdr.number_of_evlr = header.number_of_evlr
+            hdr.start_of_first_evlr = header.start_of_first_evlr
+
         self.dest.seek(0, io.SEEK_SET)
         hdr.write_to(self.dest)
 

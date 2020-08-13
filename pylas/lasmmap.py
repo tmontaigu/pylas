@@ -1,7 +1,6 @@
 import mmap
 
 from . import headers
-from . import lasreader
 from .lasdatas import base
 from .point import PointFormat, record
 from .vlrs import vlrlist

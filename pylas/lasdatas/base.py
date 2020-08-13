@@ -1,22 +1,14 @@
 import logging
-import struct
 
 import numpy as np
 
 from pylas import extradims
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .. import errors
-from ..compression import (
-    uncompressed_id_to_compressed,
-    lazperf_compress_points,
-    lazrs_compress_points,
-    LasZipProcess
-)
+from ..laswriter import LasWriter
 from ..point import record, dims, PointFormat
 from ..point.record import scale_dimension, unscale_dimension
-from ..utils import ConveyorThread
 from ..vlrs import vlrlist
-from ..laswriter import LasWriter
 
 logger = logging.getLogger(__name__)
 
@@ -310,26 +302,6 @@ class LasBase(object):
             if do_compress is None:
                 do_compress = False
             self.write_to(destination, do_compress=do_compress)
-
-    def _compress_with_laszip_executable(self, out_stream):
-        try:
-            out_stream.fileno()
-        except OSError:
-            laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress)
-            out_stream.seek(0)
-            t = ConveyorThread(laszip_prc.stdout, out_stream)
-            t.start()
-            self.write_to(laszip_prc.stdin, do_compress=False)
-            laszip_prc.stdin.close()
-            t.join()
-            laszip_prc.wait()
-            laszip_prc.raise_if_bad_err_code()
-        else:
-            # The ouput is a file
-            # let laszip write directly to it, to avoid copies
-            laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress, stdout=out_stream)
-            self.write_to(laszip_prc.stdin)
-            laszip_prc.wait_until_finished()
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(

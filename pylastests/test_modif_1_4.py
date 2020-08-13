@@ -26,7 +26,8 @@ def test_intensity(las):
 
     assert np.alltrue(las.intensity == res.intensity)
 
-def test_writing_evlrs():
+
+def test_writing_las_with_evlrs():
     las = pylas.read(test1_4_las)
     assert las.evlrs == []
 
@@ -37,5 +38,15 @@ def test_writing_evlrs():
     las_1 = write_then_read_again(las, do_compress=False)
     assert las_1.evlrs == [evlr]
 
-    las_2 = write_then_read_again(las, do_compress=True)
-    assert las_2.evlrs == [evlr]
+
+@pytest.mark.skip(reason="Writing LAZ wit EVLRs is not well supported")
+def test_writing_laz_with_evlrs():
+    las = pylas.read(test1_4_las)
+    assert las.evlrs == []
+
+    evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
+    evlr.record_data = b"While he grinds his own hands"
+    las.evlrs.append(evlr)
+
+    las_1 = write_then_read_again(las, do_compress=True)
+    assert las_1.evlrs == [evlr]

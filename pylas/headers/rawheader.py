@@ -6,7 +6,7 @@ import uuid
 
 import numpy as np
 
-from .. import compression
+from .. import compression, utils
 from .. import errors
 
 logger = logging.getLogger(__name__)
@@ -248,7 +248,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         self.date = datetime.date.today()
         self.offset_to_point_data = LAS_HEADERS_SIZE[self._version_]
         self.point_count = 0
-        self.number_vlrs = 0
+        self.number_of_vlr = 0
         self.number_of_points_by_return = (0, 0, 0, 0, 0)
         self.mins = [0.0, 0.0, 0.0]
         self.maxs = [0.0, 0.0, 0.0]
@@ -266,28 +266,42 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
                 self._point_data_format_id
             )
 
-
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)
 
 
 class RawHeader1_2(RawHeader1_1):
+    _pack_ = 1
     _version_ = "1.2"
 
 
 class RawHeader1_3(RawHeader1_2):
+    _pack_ = 1
     _version_ = "1.3"
     _fields_ = [("start_of_waveform_data_packet_record", ctypes.c_uint64)]
 
 
 class RawHeader1_4(RawHeader1_3):
+    _pack_ = 1
     _version_ = "1.4"
     _fields_ = [
         ("start_of_first_evlr", ctypes.c_uint64),
         ("number_of_evlr", ctypes.c_uint32),
-        ("point_count", ctypes.c_uint64),
+        ("_point_count", ctypes.c_uint64),
         ("_number_of_points_by_return", ctypes.c_uint64 * 15),
     ]
+
+    @property
+    def point_count(self):
+        return self._point_count
+
+    @point_count.setter
+    def point_count(self, value):
+        if value > utils.ctypes_max_limit(ctypes.sizeof(ctypes.c_uint32)):
+            self.legacy_point_count = 0
+        else:
+            self.legacy_point_count = value
+        self._point_count = value
 
     @property
     def number_of_points_by_return(self):
@@ -296,13 +310,16 @@ class RawHeader1_4(RawHeader1_3):
     @number_of_points_by_return.setter
     def number_of_points_by_return(self, value):
         value = tuple(value)
-        self.legacy_number_of_points_by_return = value[:5]
         if len(value) > 15:
             logger.warning(
                 "Received return numbers up to {}, truncating to 15 for header.".format(
                     len(value)
                 )
             )
+            self.legacy_number_of_points_by_return = [0] * 5
+        else:
+            self.legacy_number_of_points_by_return = value[:5]
+
         self._number_of_points_by_return = value[:15]
 
     def update_evlrs_info_in_stream(self, stream, start=0):
@@ -314,7 +331,7 @@ class RawHeader1_4(RawHeader1_3):
 
     def set_point_count_to_max(self):
         super().set_point_count_to_max()
-        self.point_count = np.iinfo(np.uint64).max
+        self._point_count = np.iinfo(np.uint64).max
 
     def partial_reset(self):
         super().partial_reset()

@@ -21,7 +21,14 @@ USE_UNPACKED = False
 logger = logging.getLogger(__name__)
 
 
-def open_las(source, mode='r', closefd=True, laz_backends=LazBackend.all(), header=None, do_compress=None) -> Union[LasReader, LasWriter]:
+def open_las(
+        source,
+        mode='r',
+        closefd=True,
+        laz_backends=tuple(LazBackend.detect_available()),
+        header=None,
+        do_compress=None
+) -> Union[LasReader, LasWriter]:
     """ Opens and reads the header of the las content in the source
 
         >>> with open_las('pylastests/simple.las') as f:
@@ -91,7 +98,7 @@ def open_las(source, mode='r', closefd=True, laz_backends=LazBackend.all(), head
         raise ValueError("Unknown mode '{}'".format(mode))
 
 
-def read_las(source, closefd=True, laz_blackends=LazBackend.all()):
+def read_las(source, closefd=True, laz_blackends=(LazBackend.Laszip,)):
     """ Entry point for reading las data in pylas
 
     Reads the whole file into memory.
