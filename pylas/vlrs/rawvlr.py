@@ -123,6 +123,12 @@ class VLR(BaseVLR):
         vlr.record_data = raw_vlr.record_data
         return vlr
 
+    def __eq__(self, other):
+        return self.record_id == other.record_id and \
+               self.user_id == other.user_id and \
+               self.description == other.description and \
+               self.record_data == other.record_data
+
     def __repr__(self):
         return "<{}(user_id: '{}', record_id: '{}', data len: {})>".format(
             self.__class__.__name__, self.user_id, self.record_id, len(self.record_data)

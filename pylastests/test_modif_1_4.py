@@ -25,3 +25,17 @@ def test_intensity(las):
     res = write_then_read_again(las)
 
     assert np.alltrue(las.intensity == res.intensity)
+
+def test_writing_evlrs():
+    las = pylas.read(test1_4_las)
+    assert las.evlrs == []
+
+    evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
+    evlr.record_data = b"While he grinds his own hands"
+    las.evlrs.append(evlr)
+
+    las_1 = write_then_read_again(las, do_compress=False)
+    assert las_1.evlrs == [evlr]
+
+    las_2 = write_then_read_again(las, do_compress=True)
+    assert las_2.evlrs == [evlr]

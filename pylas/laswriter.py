@@ -3,7 +3,7 @@ import io
 import logging
 import subprocess
 from copy import copy
-from typing import BinaryIO
+from typing import BinaryIO, Optional
 
 import lazrs
 import numpy as np
@@ -12,6 +12,7 @@ from pylas import HeaderFactory, errors
 from .compression import LazBackend
 from .compression import find_laszip_executable
 from .errors import PylasError
+from .evlrs import EVLRList, RawEVLRList
 from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord, unscale_dimension
@@ -45,7 +46,8 @@ class WriterBuilder:
 
 
 class LasWriter:
-    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=LazBackend.all()):
+    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=(LazBackend.Laszip,), closefd=True):
+        self.closefd = closefd
         self.header = copy(header)
         self.header.partial_reset()
         self.header.maxs = [np.finfo("f8").min] * 3
@@ -57,30 +59,31 @@ class LasWriter:
 
         if vlrs is None:
             self.vlrs = VLRList()
+        else:
+            self.vlrs = vlrs
 
         # These will be initialized on the first call to `write`
         self.point_format = None
         self.point_writer = None
+        self.done = False
 
     def write(self, points: PointRecord):
         if not points:
             return
+
+        if self.done:
+            raise PylasError("Cannot write points anymore")
 
         if self.header.point_count == 0:
             dims.raise_if_version_not_compatible_with_fmt(points.point_format.id, self.header.version)
             self.point_format = points.point_format
             self.header.point_format_id = self.point_format.id
             self.header.point_size = self.point_format.size
-            self.header.set_compressed(True)
+            self.header.set_compressed(self.do_compress)
 
             # TODO extrabytes vlr
-
             if self.do_compress:
-                if not self.laz_backends:
-                    raise PylasError("No LazBackend selected, cannot compress data")
                 self.point_writer = self._create_laz_backend(self.laz_backends)
-                if self.point_writer is None:
-                    raise PylasError("No LazBackend could be initialized")
             else:
                 self.point_writer = UncompressedPointWriter(self.dest)
 
@@ -91,10 +94,25 @@ class LasWriter:
         self._update_header(points)
         self.point_writer.write_points(points)
 
+    def write_evlrs(self, evlrs: EVLRList):
+        if self.header.version < "1.4":
+            raise PylasError("EVLRs are not supported on files with version less than 1.4")
+
+        if len(evlrs) > 0:
+            self.point_writer.done()
+            self.header.number_of_evlr = len(evlrs)
+            self.header.start_of_first_evlr = self.dest.tell()
+            self.header.update_evlrs_info_in_stream(self.dest)
+            raw_evlrs = RawEVLRList.from_list(evlrs)
+            raw_evlrs.write_to(self.dest)
+
     def close(self):
-        self.point_writer.done()
-        self.point_writer.write_updated_header(self.header)
-        self.dest.close()
+        if self.point_writer is not None:
+            if not self.done:
+                self.point_writer.done()
+            self.point_writer.write_updated_header(self.header)
+        if self.closefd:
+            self.dest.close()
 
     def _update_header(self, points: PointRecord):
         self.header.x_max = max(self.header.x_max, (points["X"].max() * self.header.x_scale) + self.header.x_offset)
@@ -112,6 +130,8 @@ class LasWriter:
         self.header.point_count += len(points)
 
     def _create_laz_backend(self, laz_backends):
+        if not laz_backends:
+            raise PylasError("No LazBackend selected, cannot compress data")
         for backend in laz_backends:
             try:
                 if backend == LazBackend.Laszip:
@@ -122,8 +142,11 @@ class LasWriter:
                     return LazrsPointWriter(self.dest, self.point_format, parallel=False)
                 else:
                     raise PylasError("Unknown LazBacked: {}".format(backend))
-            except errors.LazError as e:
+            except Exception as e:
                 logger.error(e)
+                last_error = e
+        else:
+            raise PylasError(f"No LazBackend could be initialized: {last_error}")
 
     def __enter__(self):
         return self
@@ -199,12 +222,31 @@ class LasZipProcessPointWriter(PointWriter):
         if self.process.poll() is not None:
             self.raise_if_bad_err_code()
         else:
-            self.process.stdin.write(points.memoryview())
+            try:
+                self.process.stdin.write(points.memoryview())
+            except BrokenPipeError:
+                raise errors.LazError("Laszip process failed: {}".format(self.process.stderr.read().decode())) from None
 
     def done(self):
         self.process.stdin.close()
         self.process.wait()
         self.raise_if_bad_err_code()
+        self._rewrite_chunk_table_offset()
+
+    def _rewrite_chunk_table_offset(self):
+        position_backup = self.dest.tell()
+        self.dest.seek(0, io.SEEK_SET)
+        hdr = HeaderFactory.read_from_stream(self.dest)
+        self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
+        offset_to_chunk_table = int.from_bytes(self.dest.read(8), 'little', signed=True)
+        if offset_to_chunk_table == -1:
+            self.dest.seek(-8, io.SEEK_END)
+            offset_to_chunk_table = int.from_bytes(self.dest.read(8), 'little', signed=True)
+            self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
+            self.dest.write(offset_to_chunk_table.to_bytes(8, 'little', signed=True))
+            self.dest.seek(-8, io.SEEK_END)
+            self.dest.truncate()
+        self.dest.seek(position_backup, io.SEEK_SET)
 
     def write_updated_header(self, header):
         self.dest.seek(0, io.SEEK_SET)
@@ -216,20 +258,10 @@ class LasZipProcessPointWriter(PointWriter):
         self.dest.seek(0, io.SEEK_SET)
         hdr.write_to(self.dest)
 
-        self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
-        offset_to_chunk_table = int.from_bytes(self.dest.read(8), 'little', signed=True)
-        if offset_to_chunk_table == -1:
-            self.dest.seek(-8, io.SEEK_END)
-            offset_to_chunk_table = int.from_bytes(self.dest.read(8), 'little', signed=True)
-            self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
-            self.dest.write(offset_to_chunk_table.to_bytes(8, 'little', signed=True))
-            self.dest.seek(-8, io.SEEK_END)
-            self.dest.truncate()
-
     def raise_if_bad_err_code(self):
         if self.process.returncode != 0:
             error_msg = self.process.stderr.read().decode()
-            raise RuntimeError(
+            raise errors.LazError(
                 "Laszip failed to {} with error code {}\n\t{}".format("compress", self.process.returncode,
                                                                       "\n\t".join(error_msg.splitlines())))
 

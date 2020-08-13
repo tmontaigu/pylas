@@ -49,19 +49,28 @@ las_path = r"C:\Users\t.montaigu\Projects\pylas\pylastests\simple.las"
 # laz_path = r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.laz"
 # las_path = r"L:\LAS\1.2\Talence\R1_F_0+000_0+050.las"
 
-with pylas.open(laz_path, laz_backends=[LazBackend.Laszip]) as reader:
-    print("Num pts: {}".format(reader.header.point_count))
-    iter_size = 456_154
+# with pylas.open(laz_path, laz_backends=[LazBackend.Laszip]) as reader:
+#     print("Num pts: {}".format(reader.header.point_count))
+#     iter_size = 456_154
+#
+#     with pylas.open("output.laz", mode="w", header=reader.header, laz_backends=[LazBackend.Laszip]) as output:
+#         for i, points in enumerate(reader.chunk_iterator(iter_size)):
+#             output.write(points)
+#
+# print("Reading back my file")
+# with pylas.open("output.laz", laz_backends=[LazBackend.LazrsParallel]) as reader:
+#     print("ab", reader.header.number_of_vlr)
+#     iter_size = 500_001
+#     hdr = reader.header
+#     print(hdr.number_of_vlr)
+#     for i, points in enumerate(reader.chunk_iterator(iter_size)):
+#         print(points)
 
-    with pylas.open("output.laz", mode="w", header=reader.header, laz_backends=[LazBackend.Laszip]) as output:
-        for i, points in enumerate(reader.chunk_iterator(iter_size)):
-            output.write(points)
+las = pylas.read("pylastests/test1_4.las")
+print(f"{las} has {len(las.evlrs)} evlrs")
+las.evlrs.append(pylas.EVLR(user_id="lol", record_id=14))
+las.write("mdr.laz")
 
-print("Reading back my file")
-with pylas.open("output.laz", laz_backends=[LazBackend.LazrsParallel]) as reader:
-    print("ab", reader.header.number_of_vlr)
-    iter_size = 500_001
-    hdr = reader.header
-    print(hdr.number_of_vlr)
-    for i, points in enumerate(reader.chunk_iterator(iter_size)):
-        print(points)
+llas = pylas.read("mdr.las")
+print(llas)
+print("evlrs:", llas.evlrs)

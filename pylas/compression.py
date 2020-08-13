@@ -74,8 +74,6 @@ def lazrs_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
 
         lazrs.decompress_points(point_compressed, vlr_data, point_decompressed, parallel)
     except lazrs.LazrsError as e:
-        if str(e) == "IoError: failed to fill whole buffer":
-            ...
         raise LazError("lazrs error: {}".format(e)) from e
     else:
         return point_decompressed

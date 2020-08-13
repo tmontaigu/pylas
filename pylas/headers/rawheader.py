@@ -306,12 +306,14 @@ class RawHeader1_4(RawHeader1_3):
         self._number_of_points_by_return = value[:15]
 
     def update_evlrs_info_in_stream(self, stream, start=0):
-        stream.seek(start + self.start_of_first_evlr)
-        stream.write(bytes(self.start_of_first_evlr))
-        stream.write(bytes(self.number_of_evlr))
+        current_pos = stream.tell()
+        stream.seek(start + RawHeader1_4.start_of_first_evlr.offset)
+        stream.write(self.start_of_first_evlr.to_bytes(8, 'little'))
+        stream.write(self.number_of_evlr.to_bytes(4, 'little'))
+        stream.seek(current_pos)
 
     def set_point_count_to_max(self):
-        self.legacy_point_count = 0
+        super().set_point_count_to_max()
         self.point_count = np.iinfo(np.uint64).max
 
     def partial_reset(self):
@@ -319,7 +321,7 @@ class RawHeader1_4(RawHeader1_3):
         self.start_of_first_evlr = 0
         self.number_of_evlr = 0
         self.point_count = 0
-        self.number_of_points_by_return([0] * 15)
+        self.number_of_points_by_return = [0] * 15
 
 
 class HeaderFactory:

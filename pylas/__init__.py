@@ -12,6 +12,7 @@ from .lib import LazBackend
 from .point import PointFormat
 from .point.dims import supported_point_formats, supported_versions
 from .point.format import lost_dimensions
+from .evlrs import EVLR
 from .laswriter import LasWriter
 
 import logging
