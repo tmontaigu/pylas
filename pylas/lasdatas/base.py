@@ -2,13 +2,13 @@ import logging
 
 import numpy as np
 
-from pylas import extradims
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
-from .. import errors
+from .. import errors, extradims
 from ..laswriter import LasWriter
 from ..point import record, dims, PointFormat
 from ..point.record import scale_dimension, unscale_dimension
 from ..vlrs import vlrlist
+from ..compression import LazBackend
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +225,7 @@ class LasBase(object):
             unique, counts = np.unique(self.return_number, return_counts=True)
             self.header.number_of_points_by_return = counts
 
-    def write_to(self, out_stream, do_compress=False):
+    def write_to(self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()):
         """ writes the data to a stream
 
         Parameters
@@ -235,7 +235,8 @@ class LasBase(object):
         do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
         """
-        with LasWriter(out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False) as writer:
+        with LasWriter(out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False,
+                       laz_backends=laz_backends) as writer:
             writer.write(self.points_data)
 
     @staticmethod
@@ -266,7 +267,7 @@ class LasBase(object):
         with open(filename, mode="wb+") as out:
             self.write_to(out, do_compress=do_compress)
 
-    def write(self, destination, do_compress=None):
+    def write(self, destination, do_compress=None, laz_backend=LazBackend.detect_available()):
         """ Writes to a stream or file
 
         When destination is a string, it will be interpreted as the path were the file should be written to,
@@ -301,7 +302,7 @@ class LasBase(object):
         else:
             if do_compress is None:
                 do_compress = False
-            self.write_to(destination, do_compress=do_compress)
+            self.write_to(destination, do_compress=do_compress, laz_backends=laz_backend)
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(

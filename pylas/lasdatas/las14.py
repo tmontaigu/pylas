@@ -1,6 +1,7 @@
 from .base import LasBase
 from ..laswriter import LasWriter
 from ..utils import ctypes_max_limit
+from ..compression import LazBackend
 
 
 class LasData(LasBase):
@@ -23,7 +24,7 @@ class LasData(LasBase):
         else:
             self.header.legacy_point_count = len(self.points_data)
 
-    def write_to(self, out_stream, do_compress=False):
-        with LasWriter(out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False) as writer:
+    def write_to(self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()):
+        with LasWriter(out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False, laz_backends=laz_backends) as writer:
             writer.write(self.points_data)
             writer.write_evlrs(self.evlrs)

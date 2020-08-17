@@ -100,8 +100,13 @@ class LasReader:
             self.point_source.close()
 
     def _create_laz_backend(self, source):
+        try:
+            backends = iter(self.laz_backends)
+        except TypeError:
+            backends = (self.laz_backends,)
+
         laszip_vlr = self.vlrs.pop(self.vlrs.index("LasZipVlr"))
-        for backend in self.laz_backends:
+        for backend in backends:
             try:
                 if backend == LazBackend.LazrsParallel:
                     return LazrsPointReader(source, laszip_vlr, parallel=True)
@@ -225,6 +230,8 @@ class LasZipProcessPointReader(IPointReader):
     def __init__(self, source, header, _vlrs) -> None:
         laszip_binary = find_laszip_executable()
         self.point_size: int = header.point_size
+        if header.version >= '1.4' and header.number_of_evlr > 0:
+            raise errors.PylasError("Reading a LAZ file that contains EVLR using laszip is not supported")
         try:
             fileno = source.fileno()
         except OSError:
@@ -239,18 +246,15 @@ class LasZipProcessPointReader(IPointReader):
             self.conveyor = ConveyorThread(self.source, self.process.stdin, close_output=True)
             self.conveyor.start()
         else:
-            if header.version >= '1.4' and header.number_of_evlr > 0:
-                raise errors.PylasError("Reading a LAZ file that contains EVLR using laszip is not supported")
-            else:
-                os.lseek(fileno, 0, os.SEEK_SET)
-                self.conveyor = None
-                self.source = source
-                self.process = self.process = subprocess.Popen(
-                    [laszip_binary, "-stdin", "-olas", "-stdout"],
-                    stdin=source,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
+            os.lseek(fileno, 0, os.SEEK_SET)
+            self.conveyor = None
+            self.source = source
+            self.process = self.process = subprocess.Popen(
+                [laszip_binary, "-stdin", "-olas", "-stdout"],
+                stdin=source,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
     def read_n_points(self, n) -> bytes:
         b = self.process.stdout.read(n * self.point_size)

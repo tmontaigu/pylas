@@ -11,6 +11,7 @@ import numpy as np
 
 from . import headers, utils
 from .compression import LazBackend
+from .errors import PylasError
 from .lasdatas import las12, las14
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
@@ -71,6 +72,12 @@ def open_las(
 
     """
     if mode == "r":
+        if header is not None:
+            raise PylasError("header argument is not used when opening in read mode, "
+                             "did you meant to open in write mode ?")
+        if do_compress is not None:
+            raise PylasError("do_compress argument is not used when opening in read mode, "
+                             "did you meant to open in write mode ?")
         if isinstance(source, str):
             stream = open(source, mode="rb", closefd=closefd)
         elif isinstance(source, bytes):
@@ -93,12 +100,12 @@ def open_las(
             stream = source
         if do_compress is None:
             do_compress = False
-        return LasWriter(stream, header=header, do_compress=do_compress, laz_backends=laz_backends)
+        return LasWriter(stream, header=header, do_compress=do_compress, laz_backends=laz_backends, closefd=closefd)
     else:
         raise ValueError("Unknown mode '{}'".format(mode))
 
 
-def read_las(source, closefd=True, laz_blackends=(LazBackend.Laszip,)):
+def read_las(source, closefd=True, laz_blackends=tuple(LazBackend.detect_available())):
     """ Entry point for reading las data in pylas
 
     Reads the whole file into memory.
@@ -369,13 +376,13 @@ def merge_las(*las_files):
     return merged
 
 
-def write_then_read_again(las, do_compress=False):
+def write_then_read_again(las, do_compress=False, laz_backend=LazBackend.detect_available()):
     """ writes the given las into memory using BytesIO and 
     reads it again, returning the newly read file.
 
     Mostly used for testing purposes, without having to write to disk
     """
     out = io.BytesIO()
-    las.write(out, do_compress=do_compress)
+    las.write(out, do_compress=do_compress, laz_backend=laz_backend)
     out.seek(0)
     return read_las(out)

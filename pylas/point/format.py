@@ -145,7 +145,7 @@ class PointFormat:
         return self.id
 
     def __repr__(self):
-        return "<PointFormat({})>".format(self.id)
+        return "<PointFormat({}, {} bytes of extra dims)>".format(self.id, self.num_extra_bytes)
 
     def is_supported(self):
         return self.id in dims.ALL_POINT_FORMATS_DIMENSIONS

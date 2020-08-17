@@ -8,7 +8,7 @@ import enum
 import os
 import subprocess
 from enum import Enum, auto
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -36,6 +36,8 @@ def raise_if_no_lazperf():
 
 
 class LazBackend(enum.Enum):
+   #type_hint = Union[LazBackend, Iterable[LazBackend]]
+
     LazrsParallel = 0
     Lazrs = 1
     Laszip = 2
@@ -59,7 +61,7 @@ class LazBackend(enum.Enum):
             return False
 
     @staticmethod
-    def detect_available() -> List['LazBackend']:
+    def detect_available() -> Tuple['LazBackend']:
         available_backends = []
 
         if LazBackend.LazrsParallel.is_available():
@@ -69,7 +71,7 @@ class LazBackend(enum.Enum):
         if LazBackend.Laszip.is_available():
             available_backends.append(LazBackend.Laszip)
 
-        return available_backends
+        return tuple(available_backends)
 
     @staticmethod
     def all() -> List['LazBackend']:

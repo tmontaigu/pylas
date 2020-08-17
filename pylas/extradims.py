@@ -127,4 +127,4 @@ def get_id_for_extra_dim_type(type_str):
         try:
             return _type_to_extra_dim_id_style_2[type_str]
         except KeyError:
-            raise errors.UnknownExtraType(type_str)
+            raise errors.UnknownExtraType(type_str) from None

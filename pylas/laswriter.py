@@ -8,7 +8,7 @@ from typing import BinaryIO, Optional
 import lazrs
 import numpy as np
 
-from pylas import HeaderFactory, errors
+from pylas import HeaderFactory, errors, extradims
 from .compression import LazBackend
 from .compression import find_laszip_executable
 from .errors import PylasError
@@ -17,7 +17,7 @@ from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord
 from .utils import ConveyorThread
-from .vlrs.known import LasZipVlr
+from .vlrs.known import LasZipVlr, ExtraBytesStruct, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,8 @@ class WriterBuilder:
 
 
 class LasWriter:
-    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=tuple(LazBackend.detect_available()), closefd=True):
+    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=tuple(LazBackend.detect_available()),
+                 closefd=True):
         self.closefd = closefd
         self.header = copy(header)
         self.header.partial_reset()
@@ -82,7 +83,27 @@ class LasWriter:
             self.header.point_size = self.point_format.size
             self.header.set_compressed(self.do_compress)
 
-            # TODO extrabytes vlr
+            try:
+                self.vlrs.index("ExtraBytesVlr")
+            except ValueError:
+                extra_bytes_vlr = ExtraBytesVlr()
+                for name, type_str in self.point_format.extra_dims:
+                    name = name.replace(" ", "_")
+                    if type_str.endswith('u1'):
+                        extra_byte = ExtraBytesStruct(
+                            data_type=0,
+                            name=name.encode(),
+                            description="".encode(),
+                            options=int(type_str[:-2])
+                        )
+                    else:
+                        type_id = extradims.get_id_for_extra_dim_type(type_str)
+                        extra_byte = ExtraBytesStruct(
+                            data_type=type_id, name=name.encode(), description="".encode()
+                        )
+                    extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
+                    self.vlrs.append(extra_bytes_vlr)
+
             if self.do_compress:
                 self.point_writer = self._create_laz_backend(self.laz_backends)
             else:
@@ -132,8 +153,11 @@ class LasWriter:
         self.header.point_count += len(points)
 
     def _create_laz_backend(self, laz_backends):
-        if not laz_backends:
-            raise PylasError("No LazBackend selected, cannot compress data")
+        try:
+            laz_backends = iter(laz_backends)
+        except TypeError:
+            laz_backends = (laz_backends,)
+
         for backend in laz_backends:
             try:
                 if backend == LazBackend.Laszip:
