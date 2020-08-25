@@ -30,13 +30,11 @@ def raise_if_no_lazperf():
     if not HAS_LAZPERF:
         raise LazError("Lazperf is not installed")
     elif lazperf.__version__ < "1.3.0":
-        raise LazError(
-            "Version >= 1.3.0 required, you have {}".format(lazperf.__version__)
-        )
+        raise LazError("Version >= 1.3.0 required, you have {}".format(lazperf.__version__))
 
 
 class LazBackend(enum.Enum):
-   #type_hint = Union[LazBackend, Iterable[LazBackend]]
+    # type_hint = Union[LazBackend, Iterable[LazBackend]]
 
     LazrsParallel = 0
     Lazrs = 1
@@ -61,7 +59,7 @@ class LazBackend(enum.Enum):
             return False
 
     @staticmethod
-    def detect_available() -> Tuple['LazBackend']:
+    def detect_available() -> Tuple["LazBackend"]:
         available_backends = []
 
         if LazBackend.LazrsParallel.is_available():
@@ -74,7 +72,7 @@ class LazBackend(enum.Enum):
         return tuple(available_backends)
 
     @staticmethod
-    def all() -> List['LazBackend']:
+    def all() -> List["LazBackend"]:
         return LazBackend.LazrsParallel, LazBackend.Lazrs, LazBackend.Laszip
 
 
@@ -87,7 +85,7 @@ def is_point_format_compressed(point_format_id):
 
 
 def compressed_id_to_uncompressed(point_format_id):
-    return point_format_id & 0x3f
+    return point_format_id & 0x3F
 
 
 def uncompressed_id_to_compressed(point_format_id):
@@ -120,14 +118,9 @@ def lazrs_compress_points(points_data, parallel=True):
         raise LazError("lazrs is not installed") from e
 
     try:
-        vlr = lazrs.LazVlr.new_for_compression(
-            points_data.point_format.id, points_data.point_format.num_extra_bytes)
+        vlr = lazrs.LazVlr.new_for_compression(points_data.point_format.id, points_data.point_format.num_extra_bytes)
 
-        compressed_data = lazrs.compress_points(
-            vlr,
-            np.frombuffer(points_data.array, np.uint8),
-            parallel
-        )
+        compressed_data = lazrs.compress_points(vlr, np.frombuffer(points_data.array, np.uint8), parallel)
     except lazrs.LazrsError as e:
         raise LazError("lazrs error: {}".format(e)) from e
     else:
@@ -141,9 +134,7 @@ def lazperf_decompress_buffer(compressed_buffer, point_size, point_count, laszip
         point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
         vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
-        decompressor = lazperf.VLRDecompressor(
-            point_compressed, point_size, vlr_data
-        )
+        decompressor = lazperf.VLRDecompressor(point_compressed, point_size, vlr_data)
 
         point_uncompressed = decompressor.decompress_points(point_count)
 
@@ -171,9 +162,7 @@ def lazperf_create_laz_vlr(points_record):
         if num_extra_bytes > 0:
             record_schema.add_extra_bytes(num_extra_bytes)
         elif num_extra_bytes < 0:
-            raise PylasError(
-                "Incoherent number of extra bytes ({})".format(num_extra_bytes)
-            )
+            raise PylasError("Incoherent number of extra bytes ({})".format(num_extra_bytes))
 
         return lazperf.LazVLR(record_schema)
     except RuntimeError as e:
@@ -198,10 +187,7 @@ def find_laszip_executable():
     laszip_names = ("laszip", "laszip.exe", "laszip-cli", "laszip-cli.exe")
 
     for binary in laszip_names:
-        in_path = (
-            os.path.isfile(os.path.join(x, binary))
-            for x in os.environ["PATH"].split(os.pathsep)
-        )
+        in_path = (os.path.isfile(os.path.join(x, binary)) for x in os.environ["PATH"].split(os.pathsep))
         if any(in_path):
             return binary
 
@@ -235,10 +221,7 @@ class LasZipProcess:
             raise ValueError("Invalid Action")
 
         self.prc = subprocess.Popen(
-            [laszip_binary, "-stdin", out_t, "-stdout"],
-            stdin=stdin,
-            stdout=stdout,
-            stderr=subprocess.PIPE,
+            [laszip_binary, "-stdin", out_t, "-stdout"], stdin=stdin, stdout=stdout, stderr=subprocess.PIPE,
         )
 
     @property

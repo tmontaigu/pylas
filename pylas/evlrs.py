@@ -37,12 +37,8 @@ class RawEVLR:
     @classmethod
     def read_from(cls, data_stream):
         raw_evlr = cls()
-        raw_evlr.header = EVLRHeader.from_buffer(
-            bytearray(data_stream.read(EVLR_HEADER_SIZE))
-        )
-        raw_evlr.record_data = data_stream.read(
-            raw_evlr.header.record_length_after_header
-        )
+        raw_evlr.header = EVLRHeader.from_buffer(bytearray(data_stream.read(EVLR_HEADER_SIZE)))
+        raw_evlr.record_data = data_stream.read(raw_evlr.header.record_length_after_header)
         return raw_evlr
 
     def size_in_bytes(self):
@@ -53,16 +49,16 @@ class RawEVLR:
         out.write(self.record_data)
 
     def __eq__(self, other):
-        return self.header.user_id == other.header.user_id and \
-               self.header.record_id == other.header.record_id and \
-               self.header.description == other.header.description and \
-               self.record_data == other.record_data
+        return (
+            self.header.user_id == other.header.user_id
+            and self.header.record_id == other.header.record_id
+            and self.header.description == other.header.description
+            and self.record_data == other.record_data
+        )
 
     def __repr__(self):
         return "<RawEVLR(user_id: {}, record_id: {}, record_length_after_header: {})>".format(
-            self.header.user_id,
-            self.header.record_id,
-            self.header.record_length_after_header,
+            self.header.user_id, self.header.record_id, self.header.record_length_after_header,
         )
 
 

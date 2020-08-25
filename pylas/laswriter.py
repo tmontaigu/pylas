@@ -29,8 +29,15 @@ except ModuleNotFoundError:
 
 
 class LasWriter:
-    def __init__(self, dest, header, vlrs=None, do_compress=False, laz_backends=tuple(LazBackend.detect_available()),
-                 closefd=True):
+    def __init__(
+        self,
+        dest,
+        header,
+        vlrs=None,
+        do_compress=False,
+        laz_backends=tuple(LazBackend.detect_available()),
+        closefd=True,
+    ):
         self.closefd = closefd
         self.header = copy(header)
         self.header.partial_reset()
@@ -71,18 +78,13 @@ class LasWriter:
                 extra_bytes_vlr = ExtraBytesVlr()
                 for name, type_str in self.point_format.extra_dims:
                     name = name.replace(" ", "_")
-                    if type_str.endswith('u1'):
+                    if type_str.endswith("u1"):
                         extra_byte = ExtraBytesStruct(
-                            data_type=0,
-                            name=name.encode(),
-                            description="".encode(),
-                            options=int(type_str[:-2])
+                            data_type=0, name=name.encode(), description="".encode(), options=int(type_str[:-2])
                         )
                     else:
                         type_id = extradims.get_id_for_extra_dim_type(type_str)
-                        extra_byte = ExtraBytesStruct(
-                            data_type=type_id, name=name.encode(), description="".encode()
-                        )
+                        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode(), description="".encode())
                     extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
                     self.vlrs.append(extra_bytes_vlr)
 
@@ -167,10 +169,10 @@ class LasWriter:
 
 
 class PointWriter(abc.ABC):
-
     @property
     @abc.abstractmethod
-    def destination(self): ...
+    def destination(self):
+        ...
 
     def write_initial_header_and_vlrs(self, header, vlrs: VLRList):
         raw_vlrs = RawVLRList.from_list(vlrs)
@@ -181,10 +183,12 @@ class PointWriter(abc.ABC):
         raw_vlrs.write_to(self.destination)
 
     @abc.abstractmethod
-    def write_points(self, points): ...
+    def write_points(self, points):
+        ...
 
     @abc.abstractmethod
-    def done(self): ...
+    def done(self):
+        ...
 
     def write_updated_header(self, header):
         self.destination.seek(0, io.SEEK_SET)
@@ -192,7 +196,6 @@ class PointWriter(abc.ABC):
 
 
 class UncompressedPointWriter(PointWriter):
-
     def __init__(self, dest):
         self.dest = dest
 
@@ -208,7 +211,6 @@ class UncompressedPointWriter(PointWriter):
 
 
 class LasZipProcessPointWriter(PointWriter):
-
     def __init__(self, dest):
         laszip_binary = find_laszip_executable()
         self.dest = dest
@@ -218,19 +220,23 @@ class LasZipProcessPointWriter(PointWriter):
             _ = dest.fileno()
         except OSError:
             self.dest = dest
-            self.process = subprocess.Popen([laszip_binary, "-stdin", '-olaz', "-stdout"],
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+            self.process = subprocess.Popen(
+                [laszip_binary, "-stdin", "-olaz", "-stdout"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
             self.conveyor = ConveyorThread(self.process.stdout, self.dest)
             self.conveyor.start()
         else:
             self.conveyor = None
-            self.process = subprocess.Popen([laszip_binary, "-stdin", '-olaz', "-stdout"],
-                                            stdin=subprocess.PIPE,
-                                            stdout=self.dest,
-                                            stderr=subprocess.PIPE)
+            self.process = subprocess.Popen(
+                [laszip_binary, "-stdin", "-olaz", "-stdout"],
+                stdin=subprocess.PIPE,
+                stdout=self.dest,
+                stderr=subprocess.PIPE,
+            )
 
     @property
     def destination(self):
@@ -267,12 +273,12 @@ class LasZipProcessPointWriter(PointWriter):
         self.dest.seek(0, io.SEEK_SET)
         hdr = HeaderFactory.read_from_stream(self.dest)
         self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
-        offset_to_chunk_table = int.from_bytes(self.dest.read(8), 'little', signed=True)
+        offset_to_chunk_table = int.from_bytes(self.dest.read(8), "little", signed=True)
         if offset_to_chunk_table == -1:
             self.dest.seek(-8, io.SEEK_END)
-            offset_to_chunk_table = int.from_bytes(self.dest.read(8), 'little', signed=True)
+            offset_to_chunk_table = int.from_bytes(self.dest.read(8), "little", signed=True)
             self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
-            self.dest.write(offset_to_chunk_table.to_bytes(8, 'little', signed=True))
+            self.dest.write(offset_to_chunk_table.to_bytes(8, "little", signed=True))
             self.dest.seek(-8, io.SEEK_END)
             self.dest.truncate()
         else:
@@ -286,7 +292,7 @@ class LasZipProcessPointWriter(PointWriter):
         hdr.mins = header.mins
         hdr.number_of_points_by_return = header.number_of_points_by_return
 
-        if header.version >= '1.4':
+        if header.version >= "1.4":
             hdr.number_of_evlr = header.number_of_evlr
             hdr.start_of_first_evlr = header.start_of_first_evlr
 
@@ -297,8 +303,10 @@ class LasZipProcessPointWriter(PointWriter):
         if self.process.returncode != 0:
             error_msg = self.process.stderr.read().decode()
             raise LazError(
-                "Laszip failed to {} with error code {}\n\t{}".format("compress", self.process.returncode,
-                                                                      "\n\t".join(error_msg.splitlines())))
+                "Laszip failed to {} with error code {}\n\t{}".format(
+                    "compress", self.process.returncode, "\n\t".join(error_msg.splitlines())
+                )
+            )
 
 
 class LazrsPointWriter(PointWriter):

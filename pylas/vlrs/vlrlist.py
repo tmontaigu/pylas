@@ -128,17 +128,9 @@ class VLRList:
 
         """
         if user_id != "" and record_ids != (None,):
-            return [
-                vlr
-                for vlr in self.vlrs
-                if vlr.user_id == user_id and vlr.record_id in record_ids
-            ]
+            return [vlr for vlr in self.vlrs if vlr.user_id == user_id and vlr.record_id in record_ids]
         else:
-            return [
-                vlr
-                for vlr in self.vlrs
-                if vlr.user_id == user_id or vlr.record_id in record_ids
-            ]
+            return [vlr for vlr in self.vlrs if vlr.user_id == user_id or vlr.record_id in record_ids]
 
     def get(self, vlr_type):
         """ Returns the list of vlrs of the requested type

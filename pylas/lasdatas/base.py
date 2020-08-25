@@ -73,9 +73,9 @@ class LasBase(object):
             self.header.x_offset = np.min(value)
 
         X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
-        dim_info = self.point_format.dimension_type_info('X')
+        dim_info = self.point_format.dimension_type_info("X")
         if not is_in_bounds_of_type(X, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format('x', dim_info.dtype, self.header.x_scale))
+            raise OverflowError(OVERFLOW_ERR_MSG.format("x", dim_info.dtype, self.header.x_scale))
         self.X = X
 
     @y.setter
@@ -84,9 +84,9 @@ class LasBase(object):
             self.header.y_offset = np.min(value)
 
         Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
-        dim_info = self.point_format.dimension_type_info('Y')
+        dim_info = self.point_format.dimension_type_info("Y")
         if not is_in_bounds_of_type(Y, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format('y', dim_info.dtype, self.header.y_scale))
+            raise OverflowError(OVERFLOW_ERR_MSG.format("y", dim_info.dtype, self.header.y_scale))
         self.Y = Y
 
     @z.setter
@@ -95,9 +95,9 @@ class LasBase(object):
             self.header.z_offset = np.min(value)
 
         Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
-        dim_info = self.point_format.dimension_type_info('Z')
+        dim_info = self.point_format.dimension_type_info("Z")
         if not is_in_bounds_of_type(Z, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format('z', dim_info.dtype, self.header.z_scale))
+            raise OverflowError(OVERFLOW_ERR_MSG.format("z", dim_info.dtype, self.header.z_scale))
         self.Z = Z
 
     @property
@@ -127,11 +127,9 @@ class LasBase(object):
 
         """
         if value.dtype != self.points.dtype:
-            raise errors.IncompatibleDataFormat('Cannot set points with a different point format, convert first')
+            raise errors.IncompatibleDataFormat("Cannot set points with a different point format, convert first")
         new_point_record = record.PackedPointRecord(value, self.points_data.point_format)
-        dims.raise_if_version_not_compatible_with_fmt(
-            new_point_record.point_format.id, self.header.version
-        )
+        dims.raise_if_version_not_compatible_with_fmt(new_point_record.point_format.id, self.header.version)
         self.points_data = new_point_record
         self.update_header()
 
@@ -189,9 +187,7 @@ class LasBase(object):
         """
         name = name.replace(" ", "_")
         type_id = extradims.get_id_for_extra_dim_type(type)
-        extra_byte = ExtraBytesStruct(
-            data_type=type_id, name=name.encode(), description=description.encode()
-        )
+        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode(), description=description.encode())
 
         try:
             extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
@@ -235,17 +231,16 @@ class LasBase(object):
         do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
         """
-        with LasWriter(out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False,
-                       laz_backends=laz_backends) as writer:
+        with LasWriter(
+            out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False, laz_backends=laz_backends
+        ) as writer:
             writer.write(self.points_data)
 
     @staticmethod
     def _raise_if_not_expected_pos(stream, expected_pos):
         if not stream.tell() == expected_pos:
             raise RuntimeError(
-                "Writing, expected to be at pos {} but stream is at pos {}".format(
-                    expected_pos, stream.tell()
-                )
+                "Writing, expected to be at pos {} but stream is at pos {}".format(expected_pos, stream.tell())
             )
 
     def write_to_file(self, filename, do_compress=None):

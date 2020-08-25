@@ -23,12 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def open_las(
-        source,
-        mode='r',
-        closefd=True,
-        laz_backends=tuple(LazBackend.detect_available()),
-        header=None,
-        do_compress=None
+    source, mode="r", closefd=True, laz_backends=tuple(LazBackend.detect_available()), header=None, do_compress=None
 ) -> Union[LasReader, LasWriter]:
     """ Opens and reads the header of the las content in the source
 
@@ -73,11 +68,13 @@ def open_las(
     """
     if mode == "r":
         if header is not None:
-            raise PylasError("header argument is not used when opening in read mode, "
-                             "did you meant to open in write mode ?")
+            raise PylasError(
+                "header argument is not used when opening in read mode, " "did you meant to open in write mode ?"
+            )
         if do_compress is not None:
-            raise PylasError("do_compress argument is not used when opening in read mode, "
-                             "did you meant to open in write mode ?")
+            raise PylasError(
+                "do_compress argument is not used when opening in read mode, " "did you meant to open in write mode ?"
+            )
         if isinstance(source, str):
             stream = open(source, mode="rb", closefd=closefd)
         elif isinstance(source, bytes):
@@ -85,7 +82,7 @@ def open_las(
         else:
             stream = source
         return LasReader(stream, closefd=closefd, laz_backends=laz_backends)
-    elif mode == 'w':
+    elif mode == "w":
         if header is None:
             raise ValueError("A header is needed when opening a file for writing")
 
@@ -277,10 +274,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         point_format_id = source_las.points_data.point_format.id
 
     if file_version is None:
-        file_version = max(
-            source_las.header.version,
-            dims.min_file_version_for_point_format(point_format_id),
-        )
+        file_version = max(source_las.header.version, dims.min_file_version_for_point_format(point_format_id),)
     else:
         file_version = str(file_version)
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
@@ -288,12 +282,8 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
-    point_format = PointFormat(
-        point_format_id, source_las.points_data.point_format.extra_dims
-    )
-    points = record.PackedPointRecord.from_point_record(
-        source_las.points_data, point_format
-    )
+    point_format = PointFormat(point_format_id, source_las.points_data.point_format.extra_dims)
+    points = record.PackedPointRecord.from_point_record(source_las.points_data, point_format)
 
     try:
         evlrs = source_las.evlrs
@@ -302,16 +292,12 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     if file_version >= "1.4":
 
-        las = las14.LasData(
-            header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
-        )
+        las = las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
     else:
         if evlrs:
             logger.warning(
                 "The source contained {} EVLRs,"
-                " they will be lost as version {} doest not support them".format(
-                    len(evlrs), file_version
-                )
+                " they will be lost as version {} doest not support them".format(len(evlrs), file_version)
             )
         las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
@@ -366,7 +352,7 @@ def merge_las(*las_files):
         merged_x[slc] = las.x
         merged_y[slc] = las.y
         merged_z[slc] = las.z
-        merged['point_source_id'][slc] = i
+        merged["point_source_id"][slc] = i
         offset += len(las.points)
 
     merged.x = merged_x

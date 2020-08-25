@@ -50,11 +50,7 @@ def pack(array, sub_field_array, mask, inplace=False):
     lsb = least_significant_bit(mask)
     max_value = int(mask >> lsb)
     if sub_field_array.max() > max_value:
-        raise OverflowError(
-            "value ({}) is greater than allowed (max: {})".format(
-                sub_field_array.max(), max_value
-            )
-        )
+        raise OverflowError("value ({}) is greater than allowed (max: {})".format(sub_field_array.max(), max_value))
     if inplace:
         array[:] = array & ~mask
         array[:] = array | ((sub_field_array << lsb) & mask).astype(array.dtype)

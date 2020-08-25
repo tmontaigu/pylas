@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def raise_not_enough_bytes_error(
-        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -40,11 +40,13 @@ class IPointRecord(ABC):
 
     @property
     @abstractmethod
-    def point_format(self) -> PointFormat: ...
+    def point_format(self) -> PointFormat:
+        ...
 
     @property
     @abstractmethod
-    def array(self) -> np.ndarray: ...
+    def array(self) -> np.ndarray:
+        ...
 
     @property
     @abstractmethod
@@ -170,9 +172,7 @@ class PointRecord(IPointRecord, ABC):
         """
         size_diff = len(value) - len(self.array)
         if size_diff:
-            self._array = np.append(
-                self.array, np.zeros(size_diff, dtype=self.array.dtype)
-            )
+            self._array = np.append(self.array, np.zeros(size_diff, dtype=self.array.dtype))
 
     def __getattr__(self, item):
         try:
@@ -281,21 +281,14 @@ class PackedPointRecord(PointRecord):
             if len(point_data_buffer) % points_dtype.itemsize != 0:
                 missing_bytes_len = expected_bytes_len - len(point_data_buffer)
                 raise_not_enough_bytes_error(
-                    expected_bytes_len,
-                    missing_bytes_len,
-                    len(point_data_buffer),
-                    points_dtype,
+                    expected_bytes_len, missing_bytes_len, len(point_data_buffer), points_dtype,
                 )
             else:
                 actual_count = len(point_data_buffer) // points_dtype.itemsize
                 logger.critical(
-                    "Expected {} points, there are {} ({} missing)".format(
-                        count, actual_count, count - actual_count
-                    )
+                    "Expected {} points, there are {} ({} missing)".format(count, actual_count, count - actual_count)
                 )
-                data = np.frombuffer(
-                    point_data_buffer, dtype=points_dtype, count=actual_count
-                )
+                data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=actual_count)
 
         return cls(data, point_format)
 
@@ -322,9 +315,7 @@ class PackedPointRecord(PointRecord):
         """
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
-            return packing.unpack(
-                self.array[composed_dim], sub_field.mask, dtype=sub_field.type
-            )
+            return packing.unpack(self.array[composed_dim], sub_field.mask, dtype=sub_field.type)
         except KeyError:
             return self.array[item]
 
@@ -337,9 +328,7 @@ class PackedPointRecord(PointRecord):
             try:
                 packing.pack(self.array[composed_dim], value, sub_field.mask, inplace=True)
             except OverflowError as e:
-                raise OverflowError("Overflow when packing {} into {}: {}".format(
-                    sub_field.name, composed_dim, e
-                ))
+                raise OverflowError("Overflow when packing {} into {}: {}".format(sub_field.name, composed_dim, e))
         except KeyError:
             self.array[key] = value
 
@@ -350,7 +339,6 @@ class PackedPointRecord(PointRecord):
 
 
 class ScaleAwarePointRecord(PackedPointRecord):
-
     def __init__(self, array, point_format, scales, offsets):
         super().__init__(array, point_format)
         self.scales = scales
@@ -392,14 +380,10 @@ class UnpackedPointRecord(PointRecord):
 
     @classmethod
     def from_stream(cls, stream, point_format_id, count, extra_dims=None):
-        return UnpackedPointRecord.from_stream(
-            stream, point_format_id, count, extra_dims=extra_dims
-        ).to_unpacked()
+        return UnpackedPointRecord.from_stream(stream, point_format_id, count, extra_dims=extra_dims).to_unpacked()
 
     @classmethod
-    def from_compressed_buffer(
-            cls, compressed_buffer, point_format_id, count, laszip_vlr
-    ):
+    def from_compressed_buffer(cls, compressed_buffer, point_format_id, count, laszip_vlr):
         return PackedPointRecord.from_compressed_buffer(
             compressed_buffer, point_format_id, count, laszip_vlr
         ).to_unpacked()

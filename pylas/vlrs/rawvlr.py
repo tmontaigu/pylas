@@ -24,9 +24,7 @@ class RawVLRHeader(ctypes.LittleEndianStructure):
 
 
 VLR_HEADER_SIZE = ctypes.sizeof(RawVLRHeader)
-MAX_VLR_RECORD_DATA_LEN = utils.ctypes_max_limit(
-    RawVLRHeader.record_length_after_header.size
-)
+MAX_VLR_RECORD_DATA_LEN = utils.ctypes_max_limit(RawVLRHeader.record_length_after_header.size)
 
 
 class RawVLR:
@@ -47,9 +45,7 @@ class RawVLR:
     def record_data(self, value):
         if len(value) > MAX_VLR_RECORD_DATA_LEN:
             raise OverflowError(
-                "VLR record data length ({}) exceeds maximum ({})".format(
-                    len(value), MAX_VLR_RECORD_DATA_LEN
-                )
+                "VLR record data length ({}) exceeds maximum ({})".format(len(value), MAX_VLR_RECORD_DATA_LEN)
             )
         self.header.record_length_after_header = len(value)
         self._record_data = value
@@ -92,9 +88,7 @@ class RawVLR:
 
     def __repr__(self):
         return "<RawVLR(user_id: {}, record_id: {}, len: {})>".format(
-            self.header.user_id,
-            self.header.record_id,
-            self.header.record_length_after_header,
+            self.header.user_id, self.header.record_id, self.header.record_length_after_header,
         )
 
 
@@ -124,10 +118,12 @@ class VLR(BaseVLR):
         return vlr
 
     def __eq__(self, other):
-        return self.record_id == other.record_id and \
-               self.user_id == other.user_id and \
-               self.description == other.description and \
-               self.record_data == other.record_data
+        return (
+            self.record_id == other.record_id
+            and self.user_id == other.user_id
+            and self.description == other.description
+            and self.record_data == other.record_data
+        )
 
     def __repr__(self):
         return "<{}(user_id: '{}', record_id: '{}', data len: {})>".format(

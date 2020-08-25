@@ -75,9 +75,7 @@ class BaseKnownVLR(BaseVLR, IKnownVLR):
 
     def __init__(self, record_id=None, description=""):
         super().__init__(
-            self.official_user_id(),
-            self.official_record_ids()[0] if record_id is None else record_id,
-            description,
+            self.official_user_id(), self.official_record_ids()[0] if record_id is None else record_id, description,
         )
 
     @classmethod
@@ -97,6 +95,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
     >>> lookup[0]
     'never_classified'
     """
+
     _lookup_struct = struct.Struct("<B15s")
 
     def __init__(self):
@@ -112,9 +111,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
             )
 
         for i in range(len(record_data) // self._lookup_struct.size):
-            class_id, desc = self._lookup_struct.unpack_from(
-                record_data, self._lookup_struct.size * i
-            )
+            class_id, desc = self._lookup_struct.unpack_from(record_data, self._lookup_struct.size * i)
             self.lookups[class_id] = desc.split(b"\x00")[0].decode("ascii")
 
     def record_data_bytes(self):
@@ -129,10 +126,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
                     )
                 yield class_id, description_bytes
 
-        return b"".join(
-            self._lookup_struct.pack(class_id, desc)
-            for class_id, desc in lookup_converter(self.lookups)
-        )
+        return b"".join(self._lookup_struct.pack(class_id, desc) for class_id, desc in lookup_converter(self.lookups))
 
     def __getitem__(self, class_id):
         return self.lookups[class_id]
@@ -250,9 +244,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         return ctypes.sizeof(ExtraBytesStruct)
 
     def __repr__(self):
-        return "<ExtraBytesStruct({}, {}, {})>".format(
-            *self.type_tuple(), self.description
-        )
+        return "<ExtraBytesStruct({}, {}, {})>".format(*self.type_tuple(), self.description)
 
 
 class ExtraBytesVlr(BaseKnownVLR):
@@ -262,30 +254,22 @@ class ExtraBytesVlr(BaseKnownVLR):
 
     def parse_record_data(self, data):
         if (len(data) % ExtraBytesStruct.size()) != 0:
-            raise ValueError(
-                "Data length of ExtraBytes vlr must be a multiple of {}".format(
-                    ExtraBytesStruct.size()
-                )
-            )
+            raise ValueError("Data length of ExtraBytes vlr must be a multiple of {}".format(ExtraBytesStruct.size()))
         num_extra_bytes_structs = len(data) // ExtraBytesStruct.size()
         self.extra_bytes_structs = [None] * num_extra_bytes_structs
         for i in range(num_extra_bytes_structs):
             self.extra_bytes_structs[i] = ExtraBytesStruct.from_buffer_copy(
-                data[ExtraBytesStruct.size() * i: ExtraBytesStruct.size() * (i + 1)]
+                data[ExtraBytesStruct.size() * i : ExtraBytesStruct.size() * (i + 1)]
             )
 
     def record_data_bytes(self):
-        return b"".join(
-            bytes(extra_struct) for extra_struct in self.extra_bytes_structs
-        )
+        return b"".join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
 
     def type_of_extra_dims(self):
         return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
 
     def __repr__(self):
-        return "<ExtraBytesVlr(extra bytes structs: {})>".format(
-            len(self.extra_bytes_structs)
-        )
+        return "<ExtraBytesVlr(extra bytes structs: {})>".format(len(self.extra_bytes_structs))
 
     @staticmethod
     def official_user_id():
@@ -333,9 +317,7 @@ class WaveformPacketVlr(BaseKnownVLR):
 
     @classmethod
     def from_raw(cls, raw_vlr):
-        vlr = cls(
-            raw_vlr.header.record_id, description=raw_vlr.header.description.decode()
-        )
+        vlr = cls(raw_vlr.header.record_id, description=raw_vlr.header.description.decode())
         vlr.description = raw_vlr.header.description
         vlr.parse_record_data(raw_vlr.record_data)
         return vlr
@@ -370,9 +352,7 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
     ]
 
     def __init__(self):
-        super().__init__(
-            key_directory_version=1, key_revision=1, minor_revision=0, number_of_kets=0
-        )
+        super().__init__(key_directory_version=1, key_revision=1, minor_revision=0, number_of_kets=0)
 
     @staticmethod
     def size():
@@ -380,10 +360,7 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
 
     def __repr__(self):
         return "<GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})>".format(
-            self.key_direction_version,
-            self.key_revision,
-            self.minor_revision,
-            self.number_of_keys,
+            self.key_direction_version, self.key_revision, self.minor_revision, self.number_of_keys,
         )
 
 
@@ -398,18 +375,14 @@ class GeoKeyDirectoryVlr(BaseKnownVLR):
         header_data = record_data[: ctypes.sizeof(GeoKeysHeaderStructs)]
         self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
         self.geo_keys = []
-        keys_data = record_data[GeoKeysHeaderStructs.size():]
-        num_keys = (
-                len(record_data[GeoKeysHeaderStructs.size():]) // GeoKeyEntryStruct.size()
-        )
+        keys_data = record_data[GeoKeysHeaderStructs.size() :]
+        num_keys = len(record_data[GeoKeysHeaderStructs.size() :]) // GeoKeyEntryStruct.size()
         if num_keys != self.geo_keys_header.number_of_keys:
             # print("Mismatch num keys")
             self.geo_keys_header.number_of_keys = num_keys
 
         for i in range(self.geo_keys_header.number_of_keys):
-            data = keys_data[
-                   (i * GeoKeyEntryStruct.size()): (i + 1) * GeoKeyEntryStruct.size()
-                   ]
+            data = keys_data[(i * GeoKeyEntryStruct.size()) : (i + 1) * GeoKeyEntryStruct.size()]
             self.geo_keys.append(GeoKeyEntryStruct.from_buffer(data))
 
     def record_data_bytes(self):
@@ -445,7 +418,7 @@ class GeoDoubleParamsVlr(BaseKnownVLR):
         record_data = bytearray(record_data)
         num_doubles = len(record_data) // sizeof_double
         for i in range(num_doubles):
-            b = record_data[i * sizeof_double: (i + 1) * sizeof_double]
+            b = record_data[i * sizeof_double : (i + 1) * sizeof_double]
             self.doubles.append(ctypes.c_double.from_buffer(b))
 
     def record_data_bytes(self):
@@ -551,10 +524,7 @@ def vlr_factory(raw_vlr):
     user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
     known_vlrs = BaseKnownVLR.__subclasses__()
     for known_vlr in known_vlrs:
-        if (
-                known_vlr.official_user_id() == user_id
-                and raw_vlr.header.record_id in known_vlr.official_record_ids()
-        ):
+        if known_vlr.official_user_id() == user_id and raw_vlr.header.record_id in known_vlr.official_record_ids():
             return known_vlr.from_raw(raw_vlr)
     else:
         return VLR.from_raw(raw_vlr)

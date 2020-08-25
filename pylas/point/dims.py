@@ -37,9 +37,7 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
     }
 
 
-def _build_unpacked_point_formats_dtypes(
-        point_formats_dimensions, composed_fields_dict, dimensions_dict
-):
+def _build_unpacked_point_formats_dtypes(point_formats_dimensions, composed_fields_dict, dimensions_dict):
     """ Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are unpacked and can be accessed directly
     """
@@ -254,17 +252,13 @@ def np_dtype_to_point_format(dtype, unpacked=False):
         The compatible point format found
     """
 
-    all_dtypes = (
-        ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
-    )
+    all_dtypes = ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
     for format_id, fmt_dtype in all_dtypes.items():
         if fmt_dtype == dtype:
             return format_id
     else:
         raise errors.IncompatibleDataFormat(
-            "Data type of array is not compatible with any point format (array dtype: {})".format(
-                dtype
-            )
+            "Data type of array is not compatible with any point format (array dtype: {})".format(dtype)
         )
 
 
@@ -309,7 +303,5 @@ def is_point_fmt_compatible_with_version(point_format_id, file_version):
 def raise_if_version_not_compatible_with_fmt(point_format_id, file_version):
     if not is_point_fmt_compatible_with_version(point_format_id, file_version):
         raise errors.PylasError(
-            "Point format {} is not compatible with file version {}".format(
-                point_format_id, file_version
-            )
+            "Point format {} is not compatible with file version {}".format(point_format_id, file_version)
         )

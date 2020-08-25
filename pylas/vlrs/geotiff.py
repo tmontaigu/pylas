@@ -36,22 +36,14 @@ def parse_geo_tiff_keys_from_vlrs(vlr_list: vlrlist.VLRList) -> List[GeoTiffKey]
     List of GeoTiff keys parsed from the VLRs
 
     """
-    geo_key_dir = vlr_list.get_by_id(
-        GeoKeyDirectoryVlr.official_user_id(), GeoKeyDirectoryVlr.official_record_ids()
-    )[0]
-    geo_doubles = vlr_list.get_by_id(
-        GeoDoubleParamsVlr.official_user_id(), GeoDoubleParamsVlr.official_record_ids()
-    )[0]
-    geo_ascii = vlr_list.get_by_id(
-        GeoAsciiParamsVlr.official_user_id(), GeoAsciiParamsVlr.official_record_ids()
-    )[0]
+    geo_key_dir = vlr_list.get_by_id(GeoKeyDirectoryVlr.official_user_id(), GeoKeyDirectoryVlr.official_record_ids())[0]
+    geo_doubles = vlr_list.get_by_id(GeoDoubleParamsVlr.official_user_id(), GeoDoubleParamsVlr.official_record_ids())[0]
+    geo_ascii = vlr_list.get_by_id(GeoAsciiParamsVlr.official_user_id(), GeoAsciiParamsVlr.official_record_ids())[0]
     return parse_geo_tiff(geo_key_dir, geo_doubles, geo_ascii)
 
 
 def parse_geo_tiff(
-        key_dir_vlr: GeoKeyDirectoryVlr,
-        double_vlr: GeoDoubleParamsVlr,
-        ascii_vlr: GeoAsciiParamsVlr,
+    key_dir_vlr: GeoKeyDirectoryVlr, double_vlr: GeoDoubleParamsVlr, ascii_vlr: GeoAsciiParamsVlr,
 ) -> List[GeoTiffKey]:
     """ Parses the GeoTiff VLRs information into nicer structs
     """
@@ -64,16 +56,12 @@ def parse_geo_tiff(
             value = double_vlr.doubles[k.value_offset]
         elif k.tiff_tag_location == 34737:
             try:
-                value = ascii_vlr.strings[k.value_offset][k.count:]
+                value = ascii_vlr.strings[k.value_offset][k.count :]
             except IndexError:
                 # Maybe I'm just misunderstanding the specification :thinking:
-                value = ascii_vlr.strings[0][k.value_offset: k.value_offset + k.count]
+                value = ascii_vlr.strings[0][k.value_offset : k.value_offset + k.count]
         else:
-            logger.warning(
-                "GeoTiffKey with unknown tiff tag location ({})".format(
-                    k.tiff_tag_location
-                )
-            )
+            logger.warning("GeoTiffKey with unknown tiff tag location ({})".format(k.tiff_tag_location))
             continue
 
         geotiff_keys.append(GeoTiffKey(k.id, value))

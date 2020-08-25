@@ -111,11 +111,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     @number_of_points_by_return.setter
     def number_of_points_by_return(self, value):
         if len(value) > 5:
-            logger.warning(
-                "Received return numbers up to {}, truncating to 5 for header.".format(
-                    len(value)
-                )
-            )
+            logger.warning("Received return numbers up to {}, truncating to 5 for header.".format(len(value)))
         self.legacy_number_of_points_by_return = tuple(value[:5])
 
     @property
@@ -149,9 +145,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
         """
         try:
-            return datetime.date(self.creation_year, 1, 1) + datetime.timedelta(
-                self.creation_day_of_year - 1
-            )
+            return datetime.date(self.creation_year, 1, 1) + datetime.timedelta(self.creation_day_of_year - 1)
         except ValueError:
             return None
 
@@ -258,13 +252,9 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     def set_compressed(self, compressed: bool):
         if compressed:
-            self._point_data_format_id = compression.uncompressed_id_to_compressed(
-                self._point_data_format_id
-            )
+            self._point_data_format_id = compression.uncompressed_id_to_compressed(self._point_data_format_id)
         else:
-            self._point_data_format_id = compression.compressed_id_to_uncompressed(
-                self._point_data_format_id
-            )
+            self._point_data_format_id = compression.compressed_id_to_uncompressed(self._point_data_format_id)
 
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)
@@ -311,11 +301,7 @@ class RawHeader1_4(RawHeader1_3):
     def number_of_points_by_return(self, value):
         value = tuple(value)
         if len(value) > 15:
-            logger.warning(
-                "Received return numbers up to {}, truncating to 15 for header.".format(
-                    len(value)
-                )
-            )
+            logger.warning("Received return numbers up to {}, truncating to 15 for header.".format(len(value)))
             self.legacy_number_of_points_by_return = [0] * 5
         else:
             self.legacy_number_of_points_by_return = value[:5]
@@ -325,8 +311,8 @@ class RawHeader1_4(RawHeader1_3):
     def update_evlrs_info_in_stream(self, stream, start=0):
         current_pos = stream.tell()
         stream.seek(start + RawHeader1_4.start_of_first_evlr.offset)
-        stream.write(self.start_of_first_evlr.to_bytes(8, 'little'))
-        stream.write(self.number_of_evlr.to_bytes(4, 'little'))
+        stream.write(self.start_of_first_evlr.to_bytes(8, "little"))
+        stream.write(self.number_of_evlr.to_bytes(4, "little"))
         stream.seek(current_pos)
 
     def set_point_count_to_max(self):
@@ -401,9 +387,7 @@ class HeaderFactory:
         header_bytes = bytearray(stream.read(cls._offset_to_major_version + (sizeof_u8 * 2)))
 
         if header_bytes[:4] != LAS_FILE_SIGNATURE:
-            raise errors.PylasError(
-                "File Signature ({}) is not {}".format(header_bytes[:4], LAS_FILE_SIGNATURE)
-            )
+            raise errors.PylasError("File Signature ({}) is not {}".format(header_bytes[:4], LAS_FILE_SIGNATURE))
 
         major = ctypes.c_uint8.from_buffer(header_bytes, cls._offset_to_major_version).value
         minor = ctypes.c_uint8.from_buffer(header_bytes, cls._offset_to_major_version + sizeof_u8).value
