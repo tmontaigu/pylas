@@ -2,7 +2,7 @@ import abc
 import logging
 import os
 import subprocess
-from typing import Optional, BinaryIO
+from typing import Optional, BinaryIO, Iterable, Union
 
 import numpy as np
 
@@ -28,7 +28,12 @@ class LasReader:
     """ The reader class handles LAS and LAZ via one of the supported backend
     """
 
-    def __init__(self, source: BinaryIO, closefd: bool = True, laz_backends=tuple(LazBackend.detect_available())):
+    def __init__(
+        self,
+        source: BinaryIO,
+        closefd: bool = True,
+        laz_backends: Union[LazBackend, Iterable[LazBackend]] = LazBackend.detect_available(),
+    ):
         self.closefd = closefd
         self.laz_backends = laz_backends
         self.header, self.vlrs = self._read_header_and_vlrs(source)

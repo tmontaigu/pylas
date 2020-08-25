@@ -71,10 +71,6 @@ class LazBackend(enum.Enum):
 
         return tuple(available_backends)
 
-    @staticmethod
-    def all() -> List["LazBackend"]:
-        return LazBackend.LazrsParallel, LazBackend.Lazrs, LazBackend.Laszip
-
 
 def is_point_format_compressed(point_format_id):
     compression_bit_7 = (point_format_id & 0x80) >> 7

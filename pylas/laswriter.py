@@ -3,7 +3,7 @@ import io
 import logging
 import subprocess
 from copy import copy
-from typing import BinaryIO, Optional
+from typing import BinaryIO, Optional, Union, Iterable
 
 import numpy as np
 
@@ -28,16 +28,43 @@ except ModuleNotFoundError:
     pass
 
 
+class PointWriter(abc.ABC):
+    @property
+    @abc.abstractmethod
+    def destination(self):
+        ...
+
+    def write_initial_header_and_vlrs(self, header, vlrs: VLRList):
+        raw_vlrs = RawVLRList.from_list(vlrs)
+        header.number_of_vlr = len(raw_vlrs)
+        header.offset_to_point_data = header.size + raw_vlrs.total_size_in_bytes()
+
+        header.write_to(self.destination)
+        raw_vlrs.write_to(self.destination)
+
+    @abc.abstractmethod
+    def write_points(self, points):
+        ...
+
+    @abc.abstractmethod
+    def done(self):
+        ...
+
+    def write_updated_header(self, header):
+        self.destination.seek(0, io.SEEK_SET)
+        header.write_to(self.destination)
+
+
 class LasWriter:
     def __init__(
         self,
         dest,
         header,
-        vlrs=None,
-        do_compress=False,
-        laz_backends=tuple(LazBackend.detect_available()),
-        closefd=True,
-    ):
+        vlrs: Optional[VLRList] = None,
+        do_compress: bool = False,
+        laz_backends: Union[LazBackend, Iterable[LazBackend]] = LazBackend.detect_available(),
+        closefd: bool = True,
+    ) -> None:
         self.closefd = closefd
         self.header = copy(header)
         self.header.partial_reset()
@@ -58,7 +85,7 @@ class LasWriter:
         self.point_writer = None
         self.done = False
 
-    def write(self, points: PointRecord):
+    def write(self, points: PointRecord) -> None:
         if not points:
             return
 
@@ -100,7 +127,7 @@ class LasWriter:
         self._update_header(points)
         self.point_writer.write_points(points)
 
-    def write_evlrs(self, evlrs: EVLRList):
+    def write_evlrs(self, evlrs: EVLRList) -> None:
         if self.header.version < "1.4":
             raise PylasError("EVLRs are not supported on files with version less than 1.4")
 
@@ -113,7 +140,7 @@ class LasWriter:
             raw_evlrs = RawEVLRList.from_list(evlrs)
             raw_evlrs.write_to(self.dest)
 
-    def close(self):
+    def close(self) -> None:
         if self.point_writer is not None:
             if not self.done:
                 self.point_writer.done()
@@ -121,7 +148,7 @@ class LasWriter:
         if self.closefd:
             self.dest.close()
 
-    def _update_header(self, points: PointRecord):
+    def _update_header(self, points: PointRecord) -> None:
         self.header.x_max = max(self.header.x_max, (points["X"].max() * self.header.x_scale) + self.header.x_offset)
         self.header.y_max = max(self.header.y_max, (points["Y"].max() * self.header.y_scale) + self.header.y_offset)
         self.header.z_max = max(self.header.z_max, (points["Z"].max() * self.header.z_scale) + self.header.z_offset)
@@ -136,7 +163,7 @@ class LasWriter:
             self.header.number_of_points_by_return[i - 1] += count
         self.header.point_count += len(points)
 
-    def _create_laz_backend(self, laz_backends):
+    def _create_laz_backend(self, laz_backends: Union[LazBackend, Iterable[LazBackend]]) -> PointWriter:
         try:
             laz_backends = iter(laz_backends)
         except TypeError:
@@ -166,33 +193,6 @@ class LasWriter:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-class PointWriter(abc.ABC):
-    @property
-    @abc.abstractmethod
-    def destination(self):
-        ...
-
-    def write_initial_header_and_vlrs(self, header, vlrs: VLRList):
-        raw_vlrs = RawVLRList.from_list(vlrs)
-        header.number_of_vlr = len(raw_vlrs)
-        header.offset_to_point_data = header.size + raw_vlrs.total_size_in_bytes()
-
-        header.write_to(self.destination)
-        raw_vlrs.write_to(self.destination)
-
-    @abc.abstractmethod
-    def write_points(self, points):
-        ...
-
-    @abc.abstractmethod
-    def done(self):
-        ...
-
-    def write_updated_header(self, header):
-        self.destination.seek(0, io.SEEK_SET)
-        header.write_to(self.destination)
 
 
 class UncompressedPointWriter(PointWriter):

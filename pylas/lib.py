@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 def open_las(
-    source, mode="r", closefd=True, laz_backends=tuple(LazBackend.detect_available()), header=None, do_compress=None
+    source, mode="r", closefd=True, laz_backends=LazBackend.detect_available(), header=None, do_compress=None
 ) -> Union[LasReader, LasWriter]:
     """ Opens and reads the header of the las content in the source
 
@@ -102,7 +102,7 @@ def open_las(
         raise ValueError("Unknown mode '{}'".format(mode))
 
 
-def read_las(source, closefd=True, laz_blackends=tuple(LazBackend.detect_available())):
+def read_las(source, closefd=True, laz_blackends=LazBackend.detect_available()):
     """ Entry point for reading las data in pylas
 
     Reads the whole file into memory.
