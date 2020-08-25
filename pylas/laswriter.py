@@ -5,13 +5,12 @@ import subprocess
 from copy import copy
 from typing import BinaryIO, Optional
 
-import lazrs
 import numpy as np
 
-from pylas import HeaderFactory, errors, extradims
+from .headers import HeaderFactory
 from .compression import LazBackend
 from .compression import find_laszip_executable
-from .errors import PylasError
+from .errors import PylasError, LazError
 from .evlrs import EVLRList, RawEVLRList
 from .point import dims
 from .point.format import PointFormat
@@ -19,31 +18,14 @@ from .point.record import PointRecord
 from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr, ExtraBytesStruct, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
+from . import extradims
 
 logger = logging.getLogger(__name__)
 
-
-class WriterBuilder:
-    def __init__(self, header=None):
-        self.header = header
-        self.vlrs = None
-        self.version = None
-        self.point_format = None
-        self.trust_header = False
-
-    def with_header(self, header):
-        self.header = copy(header)
-        return self
-
-    def with_vlrs(self, vlrs: VLRList):
-        self.vlrs = vlrs
-        return self
-
-    def with_version(self, version: str):
-        if self.header is not None:
-            self.header = HeaderFactory.convert_header(self.header, version)
-        else:
-            self.header = HeaderFactory.new(version)
+try:
+    import lazrs
+except ModuleNotFoundError:
+    pass
 
 
 class LasWriter:
@@ -160,6 +142,9 @@ class LasWriter:
 
         for backend in laz_backends:
             try:
+                if not backend.is_available():
+                    raise PylasError(f"The '{backend}' is not available")
+
                 if backend == LazBackend.Laszip:
                     return LasZipProcessPointWriter(self.dest)
                 elif backend == LazBackend.LazrsParallel:
@@ -265,7 +250,7 @@ class LasZipProcessPointWriter(PointWriter):
             try:
                 self.process.stdin.write(points.memoryview())
             except BrokenPipeError:
-                raise errors.LazError("Laszip process failed: {}".format(self.process.stderr.read().decode())) from None
+                raise LazError("Laszip process failed: {}".format(self.process.stderr.read().decode())) from None
 
     def done(self):
         self.process.stdin.flush()
@@ -311,7 +296,7 @@ class LasZipProcessPointWriter(PointWriter):
     def raise_if_bad_err_code(self):
         if self.process.returncode != 0:
             error_msg = self.process.stderr.read().decode()
-            raise errors.LazError(
+            raise LazError(
                 "Laszip failed to {} with error code {}\n\t{}".format("compress", self.process.returncode,
                                                                       "\n\t".join(error_msg.splitlines())))
 

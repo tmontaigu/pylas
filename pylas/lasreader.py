@@ -4,7 +4,6 @@ import os
 import subprocess
 from typing import Optional, BinaryIO
 
-import lazrs
 import numpy as np
 
 from . import headers, errors, evlrs
@@ -16,6 +15,11 @@ from .point.dims import size_of_point_format_id
 from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr
 from .vlrs.vlrlist import VLRList
+
+try:
+    import lazrs
+except ModuleNotFoundError:
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -108,14 +112,15 @@ class LasReader:
         laszip_vlr = self.vlrs.pop(self.vlrs.index("LasZipVlr"))
         for backend in backends:
             try:
+                if not backend.is_available():
+                    raise errors.PylasError(f"The '{backend}' is not available")
+
                 if backend == LazBackend.LazrsParallel:
                     return LazrsPointReader(source, laszip_vlr, parallel=True)
                 elif backend == LazBackend.Lazrs:
                     return LazrsPointReader(source, laszip_vlr, parallel=False)
                 elif backend == LazBackend.Laszip:
                     point_source = LasZipProcessPointReader(source, self.header, self.vlrs)
-                    # self.header, self.vlrs = self._read_header_and_vlrs(point_source.process.stdout,
-                    #                                                     seekable=False)
                     self._read_header_and_vlrs(point_source.process.stdout,
                                                seekable=False)
                     return point_source
