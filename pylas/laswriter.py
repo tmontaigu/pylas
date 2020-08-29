@@ -62,7 +62,9 @@ class LasWriter:
         header,
         vlrs: Optional[VLRList] = None,
         do_compress: bool = False,
-        laz_backends: Union[LazBackend, Iterable[LazBackend]] = LazBackend.detect_available(),
+        laz_backends: Union[
+            LazBackend, Iterable[LazBackend]
+        ] = LazBackend.detect_available(),
         closefd: bool = True,
     ) -> None:
         self.closefd = closefd
@@ -93,7 +95,9 @@ class LasWriter:
             raise PylasError("Cannot write points anymore")
 
         if self.header.point_count == 0:
-            dims.raise_if_version_not_compatible_with_fmt(points.point_format.id, self.header.version)
+            dims.raise_if_version_not_compatible_with_fmt(
+                points.point_format.id, self.header.version
+            )
             self.point_format = points.point_format
             self.header.point_format_id = self.point_format.id
             self.header.point_size = self.point_format.size
@@ -107,11 +111,18 @@ class LasWriter:
                     name = name.replace(" ", "_")
                     if type_str.endswith("u1"):
                         extra_byte = ExtraBytesStruct(
-                            data_type=0, name=name.encode(), description="".encode(), options=int(type_str[:-2])
+                            data_type=0,
+                            name=name.encode(),
+                            description="".encode(),
+                            options=int(type_str[:-2]),
                         )
                     else:
                         type_id = extradims.get_id_for_extra_dim_type(type_str)
-                        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode(), description="".encode())
+                        extra_byte = ExtraBytesStruct(
+                            data_type=type_id,
+                            name=name.encode(),
+                            description="".encode(),
+                        )
                     extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
                     self.vlrs.append(extra_bytes_vlr)
 
@@ -129,7 +140,9 @@ class LasWriter:
 
     def write_evlrs(self, evlrs: EVLRList) -> None:
         if self.header.version < "1.4":
-            raise PylasError("EVLRs are not supported on files with version less than 1.4")
+            raise PylasError(
+                "EVLRs are not supported on files with version less than 1.4"
+            )
 
         if len(evlrs) > 0:
             self.point_writer.done()
@@ -149,21 +162,40 @@ class LasWriter:
             self.dest.close()
 
     def _update_header(self, points: PointRecord) -> None:
-        self.header.x_max = max(self.header.x_max, (points["X"].max() * self.header.x_scale) + self.header.x_offset)
-        self.header.y_max = max(self.header.y_max, (points["Y"].max() * self.header.y_scale) + self.header.y_offset)
-        self.header.z_max = max(self.header.z_max, (points["Z"].max() * self.header.z_scale) + self.header.z_offset)
-        self.header.x_min = min(self.header.x_min, (points["X"].min() * self.header.x_scale) + self.header.x_offset)
-        self.header.y_min = min(self.header.y_min, (points["Y"].min() * self.header.y_scale) + self.header.y_offset)
-        self.header.z_min = min(self.header.z_min, (points["Z"].min() * self.header.z_scale) + self.header.z_offset)
+        self.header.x_max = max(
+            self.header.x_max,
+            (points["X"].max() * self.header.x_scale) + self.header.x_offset,
+        )
+        self.header.y_max = max(
+            self.header.y_max,
+            (points["Y"].max() * self.header.y_scale) + self.header.y_offset,
+        )
+        self.header.z_max = max(
+            self.header.z_max,
+            (points["Z"].max() * self.header.z_scale) + self.header.z_offset,
+        )
+        self.header.x_min = min(
+            self.header.x_min,
+            (points["X"].min() * self.header.x_scale) + self.header.x_offset,
+        )
+        self.header.y_min = min(
+            self.header.y_min,
+            (points["Y"].min() * self.header.y_scale) + self.header.y_offset,
+        )
+        self.header.z_min = min(
+            self.header.z_min,
+            (points["Z"].min() * self.header.z_scale) + self.header.z_offset,
+        )
 
         for i, count in zip(*np.unique(points.return_number, return_counts=True)):
             if i >= len(self.header.number_of_points_by_return):
-                # np.unique sorts unique values
-                break
+                break  # np.unique sorts unique values
             self.header.number_of_points_by_return[i - 1] += count
         self.header.point_count += len(points)
 
-    def _create_laz_backend(self, laz_backends: Union[LazBackend, Iterable[LazBackend]]) -> PointWriter:
+    def _create_laz_backend(
+        self, laz_backends: Union[LazBackend, Iterable[LazBackend]]
+    ) -> PointWriter:
         try:
             laz_backends = iter(laz_backends)
         except TypeError:
@@ -179,7 +211,9 @@ class LasWriter:
                 elif backend == LazBackend.LazrsParallel:
                     return LazrsPointWriter(self.dest, self.point_format, parallel=True)
                 elif backend == LazBackend.Lazrs:
-                    return LazrsPointWriter(self.dest, self.point_format, parallel=False)
+                    return LazrsPointWriter(
+                        self.dest, self.point_format, parallel=False
+                    )
                 else:
                     raise PylasError("Unknown LazBacked: {}".format(backend))
             except Exception as e:
@@ -219,7 +253,9 @@ class LasZipProcessPointWriter(PointWriter):
         try:
             _ = dest.fileno()
         except OSError:
-            self.dest = dest
+            # FIXME
+            # For some reason, when piping to stdout, creates files
+            # that are missing the chunk table
             self.process = subprocess.Popen(
                 [laszip_binary, "-stdin", "-olaz", "-stdout"],
                 stdin=subprocess.PIPE,
@@ -243,9 +279,15 @@ class LasZipProcessPointWriter(PointWriter):
         return self.process.stdin
 
     def write_initial_header_and_vlrs(self, header, vlrs):
+        # If the header we sent to laszip has a point_count
+        # that is less than the number of points that will get
+        # pass to calls to write_points, the laszip process
+        # will quit with an error, that's why we set it to max
         header.set_point_count_to_max()
         header.set_compressed(False)
-        super(LasZipProcessPointWriter, self).write_initial_header_and_vlrs(header, vlrs)
+        super(LasZipProcessPointWriter, self).write_initial_header_and_vlrs(
+            header, vlrs
+        )
         header.set_compressed(True)
         header.point_count = 0
 
@@ -256,15 +298,20 @@ class LasZipProcessPointWriter(PointWriter):
             try:
                 self.process.stdin.write(points.memoryview())
             except BrokenPipeError:
-                raise LazError("Laszip process failed: {}".format(self.process.stderr.read().decode())) from None
+                raise LazError(
+                    "Laszip process failed: {}".format(
+                        self.process.stderr.read().decode()
+                    )
+                ) from None
 
     def done(self):
         self.process.stdin.flush()
         self.process.stdin.close()
-        self.process.wait()
         if self.conveyor is not None:
             self.conveyor.join()
 
+        self.process.wait()
+        self.process.poll()
         self.raise_if_bad_err_code()
         self._rewrite_chunk_table_offset()
 
@@ -276,7 +323,9 @@ class LasZipProcessPointWriter(PointWriter):
         offset_to_chunk_table = int.from_bytes(self.dest.read(8), "little", signed=True)
         if offset_to_chunk_table == -1:
             self.dest.seek(-8, io.SEEK_END)
-            offset_to_chunk_table = int.from_bytes(self.dest.read(8), "little", signed=True)
+            offset_to_chunk_table = int.from_bytes(
+                self.dest.read(8), "little", signed=True
+            )
             self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
             self.dest.write(offset_to_chunk_table.to_bytes(8, "little", signed=True))
             self.dest.seek(-8, io.SEEK_END)
@@ -285,6 +334,7 @@ class LasZipProcessPointWriter(PointWriter):
             self.dest.seek(position_backup, io.SEEK_SET)
 
     def write_updated_header(self, header):
+        position_save = self.dest.tell()
         self.dest.seek(0, io.SEEK_SET)
         hdr = HeaderFactory.read_from_stream(self.dest)
         hdr.point_count = header.point_count
@@ -298,13 +348,16 @@ class LasZipProcessPointWriter(PointWriter):
 
         self.dest.seek(0, io.SEEK_SET)
         hdr.write_to(self.dest)
+        self.dest.seek(position_save, io.SEEK_SET)
 
     def raise_if_bad_err_code(self):
         if self.process.returncode != 0:
             error_msg = self.process.stderr.read().decode()
             raise LazError(
                 "Laszip failed to {} with error code {}\n\t{}".format(
-                    "compress", self.process.returncode, "\n\t".join(error_msg.splitlines())
+                    "compress",
+                    self.process.returncode,
+                    "\n\t".join(error_msg.splitlines()),
                 )
             )
 
@@ -312,7 +365,9 @@ class LasZipProcessPointWriter(PointWriter):
 class LazrsPointWriter(PointWriter):
     def __init__(self, dest: BinaryIO, point_format: PointFormat, parallel: bool):
         self.dest = dest
-        self.vlr = lazrs.LazVlr.new_for_compression(point_format.id, point_format.num_extra_bytes)
+        self.vlr = lazrs.LazVlr.new_for_compression(
+            point_format.id, point_format.num_extra_bytes
+        )
         self.parallel = parallel
         self.compressor = None
 

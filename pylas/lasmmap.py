@@ -9,7 +9,7 @@ WHOLE_FILE = 0
 
 
 class LasMMAP(base.LasBase):
-    """ Memory map a LAS file.
+    """Memory map a LAS file.
     It works like a regular LasData however the data is not actually read in memory
     which is useful for large files.
 

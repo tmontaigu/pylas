@@ -7,21 +7,19 @@ def ctypes_max_limit(byte_size, signed=False):
 
 
 def files_have_same_point_format_id(las_files):
-    """ Returns true if all the files have the same points format id
-    """
+    """Returns true if all the files have the same points format id"""
     point_format_found = {las.header.point_format_id for las in las_files}
     return len(point_format_found) == 1
 
 
 def files_have_same_dtype(las_files):
-    """ Returns true if all the files have the same numpy datatype
-    """
+    """Returns true if all the files have the same numpy datatype"""
     dtypes = {las.points.dtype for las in las_files}
     return len(dtypes) == 1
 
 
 class ConveyorThread(threading.Thread):
-    """ class to be used as a separate thread by calling start()
+    """class to be used as a separate thread by calling start()
 
     This class convey data from the input stream into the output stream.
     This is used when piping data into laszip.exe using python's subprocess.Popen

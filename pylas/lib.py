@@ -23,9 +23,14 @@ logger = logging.getLogger(__name__)
 
 
 def open_las(
-    source, mode="r", closefd=True, laz_backends=LazBackend.detect_available(), header=None, do_compress=None
+    source,
+    mode="r",
+    closefd=True,
+    laz_backend=LazBackend.detect_available(),
+    header=None,
+    do_compress=None,
 ) -> Union[LasReader, LasWriter]:
-    """ Opens and reads the header of the las content in the source
+    """Opens and reads the header of the las content in the source
 
         >>> with open_las('pylastests/simple.las') as f:
         ...     print(f.header.point_format_id)
@@ -33,7 +38,7 @@ def open_las(
 
 
         >>> f = open('pylastests/simple.las', mode='rb')
-        >>> with open_las(f, closefd=False) as flas:
+        >>> with open_las(f,closefd=False) as flas:
         ...     print(flas.header)
         <LasHeader(1.2)>
         >>> f.closed
@@ -51,9 +56,23 @@ def open_las(
 
     Parameters
     ----------
-    source : str or bytes or io.BytesIO
+    source: str or bytes or io.BytesIO
         if source is a str it must be a filename
         a stream if a file object with the methods read, seek, tell
+
+    mode: Optional, the mode to open the file "r" for reading, "w" for writing
+          "r" by default
+
+    laz_backend: Optional, the LAZ backend to use to handle decompression/comression
+                 By default available_backends are detected, see LazBacked to see the
+                 preference order when multiple backends are available
+
+    header: The header to use when opening in write mode.
+
+    do_compress: optional, bool
+                 -> None (default) guess if compression is needed using the file extension
+                 -> True compresses the file
+                 -> False do not compress the file
 
     closefd: bool
         Whether the stream/file object shall be closed, this only work
@@ -69,11 +88,13 @@ def open_las(
     if mode == "r":
         if header is not None:
             raise PylasError(
-                "header argument is not used when opening in read mode, " "did you meant to open in write mode ?"
+                "header argument is not used when opening in read mode, "
+                "did you meant to open in write mode ?"
             )
         if do_compress is not None:
             raise PylasError(
-                "do_compress argument is not used when opening in read mode, " "did you meant to open in write mode ?"
+                "do_compress argument is not used when opening in read mode, "
+                "did you meant to open in write mode ?"
             )
         if isinstance(source, str):
             stream = open(source, mode="rb", closefd=closefd)
@@ -81,7 +102,7 @@ def open_las(
             stream = io.BytesIO(source)
         else:
             stream = source
-        return LasReader(stream, closefd=closefd, laz_backends=laz_backends)
+        return LasReader(stream, closefd=closefd, laz_backends=laz_backend)
     elif mode == "w":
         if header is None:
             raise ValueError("A header is needed when opening a file for writing")
@@ -97,13 +118,19 @@ def open_las(
             stream = source
         if do_compress is None:
             do_compress = False
-        return LasWriter(stream, header=header, do_compress=do_compress, laz_backends=laz_backends, closefd=closefd)
+        return LasWriter(
+            stream,
+            header=header,
+            do_compress=do_compress,
+            laz_backends=laz_backend,
+            closefd=closefd,
+        )
     else:
         raise ValueError("Unknown mode '{}'".format(mode))
 
 
-def read_las(source, closefd=True, laz_blackends=LazBackend.detect_available()):
-    """ Entry point for reading las data in pylas
+def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
+    """Entry point for reading las data in pylas
 
     Reads the whole file into memory.
 
@@ -116,6 +143,10 @@ def read_las(source, closefd=True, laz_blackends=LazBackend.detect_available()):
     source : str or io.BytesIO
         The source to read data from
 
+    laz_backend: Optional, the backend to use when the file is as LAZ file.
+                 By default pylas will find the backend to use by himself.
+                 Use if you wan a specific backend to be used
+
     closefd: bool
             if True and the source is a stream, the function will close it
             after it is done reading
@@ -126,19 +157,19 @@ def read_las(source, closefd=True, laz_blackends=LazBackend.detect_available()):
     pylas.lasdatas.base.LasBase
         The object you can interact with to get access to the LAS points & VLRs
     """
-    with open_las(source, closefd=closefd, laz_backends=laz_blackends) as reader:
+    with open_las(source, closefd=closefd, laz_backend=laz_backend) as reader:
         return reader.read()
 
 
 def mmap_las(filename):
-    """ MMap a file, much like laspy did, very experimental
+    """MMap a file, much like laspy did, very experimental
     not well tested
     """
     return LasMMAP(filename)
 
 
 def create_from_header(header):
-    """ Creates a File from an existing header,
+    """Creates a File from an existing header,
     allocating the array of point according to the provided header.
     The input header is copied.
 
@@ -160,7 +191,7 @@ def create_from_header(header):
 
 
 def create_las(*, point_format_id=0, file_version=None):
-    """ Function to create a new empty las data object
+    """Function to create a new empty las data object
 
     .. note::
 
@@ -213,7 +244,7 @@ def create_las(*, point_format_id=0, file_version=None):
 
 
 def convert(source_las, *, point_format_id=None, file_version=None):
-    """ Converts a Las from one point format to another
+    """Converts a Las from one point format to another
     Automatically upgrades the file version if source file version is not compatible with
     the new point_format_id
 
@@ -274,7 +305,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         point_format_id = source_las.points_data.point_format.id
 
     if file_version is None:
-        file_version = max(source_las.header.version, dims.min_file_version_for_point_format(point_format_id),)
+        file_version = max(
+            source_las.header.version,
+            dims.min_file_version_for_point_format(point_format_id),
+        )
     else:
         file_version = str(file_version)
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
@@ -282,8 +316,12 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
-    point_format = PointFormat(point_format_id, source_las.points_data.point_format.extra_dims)
-    points = record.PackedPointRecord.from_point_record(source_las.points_data, point_format)
+    point_format = PointFormat(
+        point_format_id, source_las.points_data.point_format.extra_dims
+    )
+    points = record.PackedPointRecord.from_point_record(
+        source_las.points_data, point_format
+    )
 
     try:
         evlrs = source_las.evlrs
@@ -292,12 +330,16 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     if file_version >= "1.4":
 
-        las = las14.LasData(header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs)
+        las = las14.LasData(
+            header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
+        )
     else:
         if evlrs:
             logger.warning(
                 "The source contained {} EVLRs,"
-                " they will be lost as version {} doest not support them".format(len(evlrs), file_version)
+                " they will be lost as version {} doest not support them".format(
+                    len(evlrs), file_version
+                )
             )
         las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
 
@@ -305,7 +347,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
 
 def merge_las(*las_files):
-    """ Merges multiple las files into one
+    """Merges multiple las files into one
 
     merged = merge_las(las_1, las_2)
     merged = merge_las([las_1, las_2, las_3])
@@ -362,8 +404,10 @@ def merge_las(*las_files):
     return merged
 
 
-def write_then_read_again(las, do_compress=False, laz_backend=LazBackend.detect_available()):
-    """ writes the given las into memory using BytesIO and 
+def write_then_read_again(
+    las, do_compress=False, laz_backend=LazBackend.detect_available()
+):
+    """writes the given las into memory using BytesIO and
     reads it again, returning the newly read file.
 
     Mostly used for testing purposes, without having to write to disk

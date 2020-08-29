@@ -9,11 +9,15 @@ import struct
 from abc import abstractmethod
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
-from ..extradims import get_type_for_extra_dim, get_signedness_for_extra_dim, DimensionSignedness
+from ..extradims import (
+    get_type_for_extra_dim,
+    get_signedness_for_extra_dim,
+    DimensionSignedness,
+)
 
 
 class IKnownVLR(abc.ABC):
-    """ Interface that any KnownVLR must implement.
+    """Interface that any KnownVLR must implement.
     A KnownVLR is a VLR for which we know how to parse its record_data
 
     Implementing this interfaces allows to automatically call the
@@ -23,14 +27,13 @@ class IKnownVLR(abc.ABC):
     @staticmethod
     @abstractmethod
     def official_user_id():
-        """ Shall return the official user_id as described in the documentation
-        """
+        """Shall return the official user_id as described in the documentation"""
         pass
 
     @staticmethod
     @abstractmethod
     def official_record_ids():
-        """ Shall return the official record_id for the VLR
+        """Shall return the official record_id for the VLR
 
         .. note::
 
@@ -45,7 +48,7 @@ class IKnownVLR(abc.ABC):
 
     @abstractmethod
     def record_data_bytes(self):
-        """ Shall return the bytes corresponding to the record_data part of the VLR
+        """Shall return the bytes corresponding to the record_data part of the VLR
         as they should be written in the file.
 
         Returns
@@ -58,7 +61,7 @@ class IKnownVLR(abc.ABC):
 
     @abstractmethod
     def parse_record_data(self, record_data):
-        """ Shall parse the given record_data into a user-friendlier structure
+        """Shall parse the given record_data into a user-friendlier structure
 
         Parameters
         ----------
@@ -70,12 +73,13 @@ class IKnownVLR(abc.ABC):
 
 
 class BaseKnownVLR(BaseVLR, IKnownVLR):
-    """ Base Class to factorize common code between the different type of Known VLRs
-    """
+    """Base Class to factorize common code between the different type of Known VLRs"""
 
     def __init__(self, record_id=None, description=""):
         super().__init__(
-            self.official_user_id(), self.official_record_ids()[0] if record_id is None else record_id, description,
+            self.official_user_id(),
+            self.official_record_ids()[0] if record_id is None else record_id,
+            description,
         )
 
     @classmethod
@@ -87,7 +91,7 @@ class BaseKnownVLR(BaseVLR, IKnownVLR):
 
 
 class ClassificationLookupVlr(BaseKnownVLR):
-    """ This vlr maps class numbers to short descriptions / names
+    """This vlr maps class numbers to short descriptions / names
 
     >>> lookup = ClassificationLookupVlr()
     >>> lookup[0] = "never_classified"
@@ -111,7 +115,9 @@ class ClassificationLookupVlr(BaseKnownVLR):
             )
 
         for i in range(len(record_data) // self._lookup_struct.size):
-            class_id, desc = self._lookup_struct.unpack_from(record_data, self._lookup_struct.size * i)
+            class_id, desc = self._lookup_struct.unpack_from(
+                record_data, self._lookup_struct.size * i
+            )
             self.lookups[class_id] = desc.split(b"\x00")[0].decode("ascii")
 
     def record_data_bytes(self):
@@ -126,7 +132,10 @@ class ClassificationLookupVlr(BaseKnownVLR):
                     )
                 yield class_id, description_bytes
 
-        return b"".join(self._lookup_struct.pack(class_id, desc) for class_id, desc in lookup_converter(self.lookups))
+        return b"".join(
+            self._lookup_struct.pack(class_id, desc)
+            for class_id, desc in lookup_converter(self.lookups)
+        )
 
     def __getitem__(self, class_id):
         return self.lookups[class_id]
@@ -147,7 +156,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
 
 
 class LasZipVlr(BaseKnownVLR):
-    """ Contains the informations needed by laszip & lazperf
+    """Contains the informations needed by laszip & lazperf
     to compress the point records.
     """
 
@@ -244,7 +253,9 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         return ctypes.sizeof(ExtraBytesStruct)
 
     def __repr__(self):
-        return "<ExtraBytesStruct({}, {}, {})>".format(*self.type_tuple(), self.description)
+        return "<ExtraBytesStruct({}, {}, {})>".format(
+            *self.type_tuple(), self.description
+        )
 
 
 class ExtraBytesVlr(BaseKnownVLR):
@@ -254,7 +265,11 @@ class ExtraBytesVlr(BaseKnownVLR):
 
     def parse_record_data(self, data):
         if (len(data) % ExtraBytesStruct.size()) != 0:
-            raise ValueError("Data length of ExtraBytes vlr must be a multiple of {}".format(ExtraBytesStruct.size()))
+            raise ValueError(
+                "Data length of ExtraBytes vlr must be a multiple of {}".format(
+                    ExtraBytesStruct.size()
+                )
+            )
         num_extra_bytes_structs = len(data) // ExtraBytesStruct.size()
         self.extra_bytes_structs = [None] * num_extra_bytes_structs
         for i in range(num_extra_bytes_structs):
@@ -263,13 +278,17 @@ class ExtraBytesVlr(BaseKnownVLR):
             )
 
     def record_data_bytes(self):
-        return b"".join(bytes(extra_struct) for extra_struct in self.extra_bytes_structs)
+        return b"".join(
+            bytes(extra_struct) for extra_struct in self.extra_bytes_structs
+        )
 
     def type_of_extra_dims(self):
         return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
 
     def __repr__(self):
-        return "<ExtraBytesVlr(extra bytes structs: {})>".format(len(self.extra_bytes_structs))
+        return "<ExtraBytesVlr(extra bytes structs: {})>".format(
+            len(self.extra_bytes_structs)
+        )
 
     @staticmethod
     def official_user_id():
@@ -317,7 +336,9 @@ class WaveformPacketVlr(BaseKnownVLR):
 
     @classmethod
     def from_raw(cls, raw_vlr):
-        vlr = cls(raw_vlr.header.record_id, description=raw_vlr.header.description.decode())
+        vlr = cls(
+            raw_vlr.header.record_id, description=raw_vlr.header.description.decode()
+        )
         vlr.description = raw_vlr.header.description
         vlr.parse_record_data(raw_vlr.record_data)
         return vlr
@@ -352,7 +373,9 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
     ]
 
     def __init__(self):
-        super().__init__(key_directory_version=1, key_revision=1, minor_revision=0, number_of_kets=0)
+        super().__init__(
+            key_directory_version=1, key_revision=1, minor_revision=0, number_of_kets=0
+        )
 
     @staticmethod
     def size():
@@ -360,7 +383,10 @@ class GeoKeysHeaderStructs(ctypes.LittleEndianStructure):
 
     def __repr__(self):
         return "<GeoKeysHeader(vers: {}, rev:{}, minor: {}, num_keys: {})>".format(
-            self.key_direction_version, self.key_revision, self.minor_revision, self.number_of_keys,
+            self.key_direction_version,
+            self.key_revision,
+            self.minor_revision,
+            self.number_of_keys,
         )
 
 
@@ -376,13 +402,17 @@ class GeoKeyDirectoryVlr(BaseKnownVLR):
         self.geo_keys_header = GeoKeysHeaderStructs.from_buffer(header_data)
         self.geo_keys = []
         keys_data = record_data[GeoKeysHeaderStructs.size() :]
-        num_keys = len(record_data[GeoKeysHeaderStructs.size() :]) // GeoKeyEntryStruct.size()
+        num_keys = (
+            len(record_data[GeoKeysHeaderStructs.size() :]) // GeoKeyEntryStruct.size()
+        )
         if num_keys != self.geo_keys_header.number_of_keys:
             # print("Mismatch num keys")
             self.geo_keys_header.number_of_keys = num_keys
 
         for i in range(self.geo_keys_header.number_of_keys):
-            data = keys_data[(i * GeoKeyEntryStruct.size()) : (i + 1) * GeoKeyEntryStruct.size()]
+            data = keys_data[
+                (i * GeoKeyEntryStruct.size()) : (i + 1) * GeoKeyEntryStruct.size()
+            ]
             self.geo_keys.append(GeoKeyEntryStruct.from_buffer(data))
 
     def record_data_bytes(self):
@@ -490,7 +520,7 @@ class WktMathTransformVlr(BaseKnownVLR):
 
 
 class WktCoordinateSystemVlr(BaseKnownVLR):
-    """ Replaces Coordinates Reference System for new las files (point fmt >= 5)
+    """Replaces Coordinates Reference System for new las files (point fmt >= 5)
     "LAS is not using the “ESRI WKT”
     """
 
@@ -517,14 +547,17 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
 
 
 def vlr_factory(raw_vlr):
-    """ Given a raw_vlr tries to find its corresponding KnownVLR class
+    """Given a raw_vlr tries to find its corresponding KnownVLR class
     that can parse its data.
     If no KnownVLR implementation is found, returns a VLR (record_data will still be bytes)
     """
     user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
     known_vlrs = BaseKnownVLR.__subclasses__()
     for known_vlr in known_vlrs:
-        if known_vlr.official_user_id() == user_id and raw_vlr.header.record_id in known_vlr.official_record_ids():
+        if (
+            known_vlr.official_user_id() == user_id
+            and raw_vlr.header.record_id in known_vlr.official_record_ids()
+        ):
             return known_vlr.from_raw(raw_vlr)
     else:
         return VLR.from_raw(raw_vlr)

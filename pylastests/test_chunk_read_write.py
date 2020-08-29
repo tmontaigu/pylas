@@ -36,7 +36,7 @@ def test_chunked_laz(all_laz_path, laz_backend):
     if not laz_backend:
         pytest.skip("No LazBackend installed")
     with pylas.open(all_laz_path) as las_reader:
-        with pylas.open(all_laz_path, laz_backends=(laz_backend,)) as laz_reader:
+        with pylas.open(all_laz_path, laz_backend=laz_backend) as laz_reader:
             expected_las = las_reader.read()
             check_chunked_reading_is_gives_expected_points(expected_las, laz_reader, iter_size=50)
 

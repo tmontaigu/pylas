@@ -4,13 +4,12 @@ import numpy as np
 
 
 def least_significant_bit(val):
-    """ Return the least significant bit
-    """
+    """Return the least significant bit"""
     return (val & -val).bit_length() - 1
 
 
 def unpack(source_array, mask, dtype=np.uint8):
-    """ Unpack sub field using its mask
+    """Unpack sub field using its mask
 
     Parameters:
     ----------
@@ -28,7 +27,7 @@ def unpack(source_array, mask, dtype=np.uint8):
 
 
 def pack(array, sub_field_array, mask, inplace=False):
-    """ Packs a sub field's array into another array using a mask
+    """Packs a sub field's array into another array using a mask
 
     Parameters:
     ----------
@@ -50,7 +49,11 @@ def pack(array, sub_field_array, mask, inplace=False):
     lsb = least_significant_bit(mask)
     max_value = int(mask >> lsb)
     if sub_field_array.max() > max_value:
-        raise OverflowError("value ({}) is greater than allowed (max: {})".format(sub_field_array.max(), max_value))
+        raise OverflowError(
+            "value ({}) is greater than allowed (max: {})".format(
+                sub_field_array.max(), max_value
+            )
+        )
     if inplace:
         array[:] = array & ~mask
         array[:] = array | ((sub_field_array << lsb) & mask).astype(array.dtype)

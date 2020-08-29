@@ -17,11 +17,13 @@ def is_in_bounds_of_type(array, type_info):
     return array.max() < type_info.max and array.min() > type_info.min
 
 
-OVERFLOW_ERR_MSG = "Values given for '{}' won't fit in an {} array, with the current scale ({})"
+OVERFLOW_ERR_MSG = (
+    "Values given for '{}' won't fit in an {} array, with the current scale ({})"
+)
 
 
 class LasBase(object):
-    """ LasBase is the base of all the different LasData classes.
+    """LasBase is the base of all the different LasData classes.
     These classes are objects that the user will interact with to manipulate las data.
 
     It connects the point record, header, vlrs together.
@@ -51,20 +53,17 @@ class LasBase(object):
 
     @property
     def x(self):
-        """ Returns the scaled x positions of the points as doubles
-        """
+        """Returns the scaled x positions of the points as doubles"""
         return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
 
     @property
     def y(self):
-        """ Returns the scaled y positions of the points as doubles
-        """
+        """Returns the scaled y positions of the points as doubles"""
         return scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
 
     @property
     def z(self):
-        """ Returns the scaled z positions of the points as doubles
-        """
+        """Returns the scaled z positions of the points as doubles"""
         return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
     @x.setter
@@ -75,7 +74,9 @@ class LasBase(object):
         X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
         dim_info = self.point_format.dimension_type_info("X")
         if not is_in_bounds_of_type(X, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format("x", dim_info.dtype, self.header.x_scale))
+            raise OverflowError(
+                OVERFLOW_ERR_MSG.format("x", dim_info.dtype, self.header.x_scale)
+            )
         self.X = X
 
     @y.setter
@@ -86,7 +87,9 @@ class LasBase(object):
         Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
         dim_info = self.point_format.dimension_type_info("Y")
         if not is_in_bounds_of_type(Y, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format("y", dim_info.dtype, self.header.y_scale))
+            raise OverflowError(
+                OVERFLOW_ERR_MSG.format("y", dim_info.dtype, self.header.y_scale)
+            )
         self.Y = Y
 
     @z.setter
@@ -97,7 +100,9 @@ class LasBase(object):
         Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
         dim_info = self.point_format.dimension_type_info("Z")
         if not is_in_bounds_of_type(Z, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format("z", dim_info.dtype, self.header.z_scale))
+            raise OverflowError(
+                OVERFLOW_ERR_MSG.format("z", dim_info.dtype, self.header.z_scale)
+            )
         self.Z = Z
 
     @property
@@ -106,7 +111,7 @@ class LasBase(object):
 
     @property
     def points(self):
-        """ returns the numpy array representing the points
+        """returns the numpy array representing the points
 
         Returns
         -------
@@ -117,7 +122,7 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        """ Setter for the points property,
+        """Setter for the points property,
         Takes care of changing the point_format of the file
         (as long as the point format of the new points it compatible with the file version)
 
@@ -127,14 +132,20 @@ class LasBase(object):
 
         """
         if value.dtype != self.points.dtype:
-            raise errors.IncompatibleDataFormat("Cannot set points with a different point format, convert first")
-        new_point_record = record.PackedPointRecord(value, self.points_data.point_format)
-        dims.raise_if_version_not_compatible_with_fmt(new_point_record.point_format.id, self.header.version)
+            raise errors.IncompatibleDataFormat(
+                "Cannot set points with a different point format, convert first"
+            )
+        new_point_record = record.PackedPointRecord(
+            value, self.points_data.point_format
+        )
+        dims.raise_if_version_not_compatible_with_fmt(
+            new_point_record.point_format.id, self.header.version
+        )
         self.points_data = new_point_record
         self.update_header()
 
     def __getattr__(self, item):
-        """ Automatically called by Python when the attribute
+        """Automatically called by Python when the attribute
         named 'item' is no found. We use this function to forward the call the
         point record. This is the mechanism used to allow the users to access
         the points dimensions directly through a LasData.
@@ -152,7 +163,7 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        """ This is called on every access to an attribute of the instance.
+        """This is called on every access to an attribute of the instance.
         Again we use this to forward the call the the points record
 
         But this time checking if the key is actually a dimension name
@@ -174,7 +185,7 @@ class LasBase(object):
         self.points_data[key] = value
 
     def add_extra_dim(self, name, type, description=""):
-        """ Adds a new extra dimension to the point record
+        """Adds a new extra dimension to the point record
 
         Parameters
         ----------
@@ -187,7 +198,9 @@ class LasBase(object):
         """
         name = name.replace(" ", "_")
         type_id = extradims.get_id_for_extra_dim_type(type)
-        extra_byte = ExtraBytesStruct(data_type=type_id, name=name.encode(), description=description.encode())
+        extra_byte = ExtraBytesStruct(
+            data_type=type_id, name=name.encode(), description=description.encode()
+        )
 
         try:
             extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
@@ -199,7 +212,7 @@ class LasBase(object):
             self.points_data.add_extra_dims([(name, type)])
 
     def update_header(self):
-        """ Update the information stored in the header
+        """Update the information stored in the header
         to be in sync with the actual data.
 
         This method is called automatically when you save a file using
@@ -221,8 +234,10 @@ class LasBase(object):
             unique, counts = np.unique(self.return_number, return_counts=True)
             self.header.number_of_points_by_return = counts
 
-    def write_to(self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()):
-        """ writes the data to a stream
+    def write_to(
+        self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()
+    ):
+        """writes the data to a stream
 
         Parameters
         ----------
@@ -232,7 +247,12 @@ class LasBase(object):
             Flag to indicate if you want the date to be compressed
         """
         with LasWriter(
-            out_stream, self.header, self.vlrs, do_compress=do_compress, closefd=False, laz_backends=laz_backends
+            out_stream,
+            self.header,
+            self.vlrs,
+            do_compress=do_compress,
+            closefd=False,
+            laz_backends=laz_backends,
         ) as writer:
             writer.write(self.points_data)
 
@@ -240,11 +260,13 @@ class LasBase(object):
     def _raise_if_not_expected_pos(stream, expected_pos):
         if not stream.tell() == expected_pos:
             raise RuntimeError(
-                "Writing, expected to be at pos {} but stream is at pos {}".format(expected_pos, stream.tell())
+                "Writing, expected to be at pos {} but stream is at pos {}".format(
+                    expected_pos, stream.tell()
+                )
             )
 
     def write_to_file(self, filename, do_compress=None):
-        """ Writes the las data into a file
+        """Writes the las data into a file
 
         Parameters
         ----------
@@ -262,8 +284,10 @@ class LasBase(object):
         with open(filename, mode="wb+") as out:
             self.write_to(out, do_compress=do_compress)
 
-    def write(self, destination, do_compress=None, laz_backend=LazBackend.detect_available()):
-        """ Writes to a stream or file
+    def write(
+        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
+    ):
+        """Writes to a stream or file
 
         When destination is a string, it will be interpreted as the path were the file should be written to,
         also if do_compress is None, the compression will be guessed from the file extension:
@@ -297,7 +321,9 @@ class LasBase(object):
         else:
             if do_compress is None:
                 do_compress = False
-            self.write_to(destination, do_compress=do_compress, laz_backends=laz_backend)
+            self.write_to(
+                destination, do_compress=do_compress, laz_backends=laz_backend
+            )
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(

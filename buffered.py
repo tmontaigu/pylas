@@ -1,88 +1,83 @@
-import pylas
-import io
 import numpy as np
-from pylas import LazBackend
-import logging
 
-from pylas.lib import write_then_read_again
-from pylas.vlrs.vlrlist import VLRList
+import pylas
+from pathlib import Path
+import argparse
+import io
 
 
-# las = pylas.read("pylastests/test1_4.las")
-# las.vlrs = VLRList()
-# assert las.evlrs == []
-#
-# evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
-# evlr.record_data = b"While he grinds his own hands"
-# las.evlrs.append(evlr)
-#
-# # las.points = las.points[:1]
-# # las = write_then_read_again(las, do_compress=True)
-# #
-# name = "with_evlr_no_vlrs.laz"
-# las.write(name)
-#
-#
-# def print_header(path):
-#     print("-" * 80)
-#     # with pylas.open(path, laz_backends=[LazBackend.Laszip]) as f:
-#     #     print("version", f.header.version)
-#     #     print("point count", f.header.point_count)
-#     #     print("compressed:", f.header.are_points_compressed)
-#     #     print("num_vlrs:", f.header.number_of_vlr)
-#     #     print("offset to points", f.header.offset_to_point_data)
-#     #     print("evlrs", f.header.number_of_evlr)
-#     #     print("start evlrs", f.header.start_of_first_evlr)
-#
-#     with open(path, mode='rb') as file:
-#         header = pylas.HeaderFactory.read_from_stream(file)
-#         print("version", header.version)
-#         print("point count", header.point_count)
-#         print("compressed:", header.are_points_compressed)
-#         print("num_vlrs:", header.number_of_vlr)
-#         print("offset to points", header.offset_to_point_data)
-#         print("evlrs", header.number_of_evlr)
-#         print("start evlrs", header.start_of_first_evlr)
-#         print("size", header.size)
-#         print("point_data_record_length", header.point_data_record_length)
-#         print("legacy_point_count", header.legacy_point_count)
-#         print("legacy_number_of_points_by_return", list(header.legacy_number_of_points_by_return))
-#         print("scales", header.scales)
-#         print("offsets", header.offsets)
-#         print("max", header.maxs)
-#         print("min", header.mins)
-#
-#         file.seek(header.offset_to_point_data)
-#         offset_to_chunk_table = int.from_bytes(file.read(8), 'little', signed=True)
-#         print("offset to chunk_table", offset_to_chunk_table)
-#
-#
-# with open(name, mode='rb') as f:
-#     b1 = f.read()
-#
-# with open("pylastests/groundtruth.laz", mode='rb') as f:
-#     b2 = f.read()
-#
-# print(len(b1), len(b2))
-#
-# for i, (c, cc) in enumerate(zip(b1, b2)):
-#     if c != cc:
-#         print(f"bytes {i} are not equal")
-#
-# print_header(name)
-# print_header("pylastests/groundtruth.laz")
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path")
+    parser.add_argument("--ilaz", default=None)
+    parser.add_argument("--olaz", default=None)
 
-# with io.BytesIO() as o:
-#     las.write_to(o, do_compress=True)
-#
-#     with open("ayaya.laz", mode="wb") as f:
-#         f.write(o.getvalue())
-# with open("pylastests/groundtruth.laz", mode='rb') as f:
-#     b = f.read()
-#     # for b in f:
-#     #     print(len(b))
-# las = pylas.read(b)
-#las = pylas.read("with_evlr_no_vlrs.laz")
-with pylas.open("pylastests/groundtruth.laz", laz_backends=[LazBackend.Laszip]) as f:
-    print("opened now reading")
-    f.read()
+    args = parser.parse_args()
+
+    if args.olaz is not None:
+        olaz_backend = (getattr(pylas.LazBackend, args.olaz),)
+        do_compress = True
+    else:
+        olaz_backend = None
+        do_compress = False
+
+    if args.ilaz is not None:
+        ilaz_backend = (getattr(pylas.LazBackend, args.ilaz),)
+        all_files = Path(args.path).rglob("*.la[sz]")
+    else:
+        ilaz_backend = None
+        all_files = Path(args.path).rglob("*.las")
+
+    for file_path in all_files:
+        print(f"checking {file_path}")
+        # with io.BytesIO() as output:
+        # # with open('lol.laz', mode="w+b") as output:
+        #     with pylas.open(str(file_path), laz_backends=ilaz_backend) as las_file:
+        #         with pylas.open(output,
+        #                         mode='w',
+        #                         header=las_file.header,
+        #                         do_compress=do_compress,
+        #                         closefd=False,
+        #                         laz_backends=olaz_backend) as las_out:
+        #             las_out.vlrs = las_file.vlrs
+        #             for points in las_file.chunk_iterator(1_216_418):
+        #                 las_out.write(points)
+        #                 # break
+        #
+        #     output.seek(0, io.SEEK_END)
+        #     print(f"output is {output.tell()}")
+        #     output.seek(0, io.SEEK_SET)
+        #
+        #     with open("dump.laz", mode="wb") as dumpf:
+        #         dumpf.write(output.getbuffer())
+        #
+        #     original_las = pylas.read(str(file_path), laz_blackends=ilaz_backend)
+        #     written_las = pylas.read(output, laz_blackends=ilaz_backend)
+        #
+        #     assert original_las.points.dtype == written_las.points.dtype
+        #     for dim_name in original_las.points.dtype.names:
+        #         assert np.allclose(original_las.points[dim_name],
+        #                            written_las.points[dim_name]), f"{dim_name} dimensions are not equal"
+
+
+        original_las = pylas.read(str(file_path), laz_blackends=ilaz_backend)
+        with io.BytesIO() as output:
+        # with open('lol.laz', mode="w+b") as output:
+            original_las.write(output, do_compress=True, laz_backend=olaz_backend)
+
+            print(output.tell())
+            print(output.seek(0, io.SEEK_SET))
+
+            original_las = pylas.read(str(file_path), laz_blackends=ilaz_backend)
+            written_las = pylas.read(output, laz_blackends=ilaz_backend)
+
+            assert original_las.points.dtype == written_las.points.dtype
+            for dim_name in original_las.points.dtype.names:
+                assert np.allclose(original_las.points[dim_name],
+                                   written_las.points[dim_name]), f"{dim_name} dimensions are not equal"
+
+        break
+
+
+if __name__ == '__main__':
+    main()

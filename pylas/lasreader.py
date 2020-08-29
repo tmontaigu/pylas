@@ -2,7 +2,7 @@ import abc
 import logging
 import os
 import subprocess
-from typing import Optional, BinaryIO, Iterable, Union
+from typing import Optional, BinaryIO, Iterable, Union, Tuple
 
 import numpy as np
 
@@ -13,7 +13,7 @@ from .lasdatas import las14, las12
 from .point import record, PointFormat
 from .point.dims import size_of_point_format_id
 from .utils import ConveyorThread
-from .vlrs.known import LasZipVlr
+from .vlrs.known import LasZipVlr, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList
 
 try:
@@ -25,14 +25,15 @@ logger = logging.getLogger(__name__)
 
 
 class LasReader:
-    """ The reader class handles LAS and LAZ via one of the supported backend
-    """
+    """The reader class handles LAS and LAZ via one of the supported backend"""
 
     def __init__(
         self,
         source: BinaryIO,
         closefd: bool = True,
-        laz_backends: Union[LazBackend, Iterable[LazBackend]] = LazBackend.detect_available(),
+        laz_backends: Union[
+            LazBackend, Iterable[LazBackend]
+        ] = LazBackend.detect_available(),
     ):
         self.closefd = closefd
         self.laz_backends = laz_backends
@@ -40,16 +41,21 @@ class LasReader:
 
         if self.header.are_points_compressed:
             if not laz_backends:
-                raise errors.PylasError("No LazBackend selected, cannot decompress data")
+                raise errors.PylasError(
+                    "No LazBackend selected, cannot decompress data"
+                )
             self.point_source = self._create_laz_backend(source)
             if self.point_source is None:
-                raise errors.PylasError("Data is compressed, but no LazBacked could be initialized")
+                raise errors.PylasError(
+                    "Data is compressed, but no LazBacked could be initialized"
+                )
         else:
             self.point_source = UncompressedPointReader(source, self.header.point_size)
 
         self.points_read = 0
-        self.extra_dims = self._get_extra_dims()
-        self.point_format = PointFormat(self.header.point_format_id, extra_dims=self.extra_dims)
+        self.point_format = PointFormat(
+            self.header.point_format_id, extra_dims=self._get_extra_dims()
+        )
 
     def read_n_points(self, n: int) -> Optional[record.ScaleAwarePointRecord]:
         points_left = self.header.point_count - self.points_read
@@ -61,21 +67,26 @@ class LasReader:
         else:
             n = min(n, points_left)
 
-        r = record.PackedPointRecord.from_buffer(bytearray(self.point_source.read_n_points(n)), self.point_format, n)
-        points = record.ScaleAwarePointRecord(r.array, r.point_format, self.header.scales, self.header.offsets)
+        r = record.PackedPointRecord.from_buffer(
+            bytearray(self.point_source.read_n_points(n)), self.point_format, n
+        )
+        points = record.ScaleAwarePointRecord(
+            r.array, r.point_format, self.header.scales, self.header.offsets
+        )
         self.points_read += n
         return points
 
     def read(self):
-        """ Reads all the points not read and returns a LasData object
-        """
+        """Reads all the points not read and returns a LasData object"""
         points = self.read_n_points(-1)
         if points is None:
             points = record.PackedPointRecord.empty(self.point_format)
 
         if self.header.version >= "1.4":
             evlrs = self._read_evlrs(self.point_source.source)
-            las_data = las14.LasData(header=self.header, vlrs=self.vlrs, points=points, evlrs=evlrs)
+            las_data = las14.LasData(
+                header=self.header, vlrs=self.vlrs, points=points, evlrs=evlrs
+            )
         else:
             las_data = las12.LasData(header=self.header, vlrs=self.vlrs, points=points)
 
@@ -83,7 +94,7 @@ class LasReader:
         return las_data
 
     def chunk_iterator(self, points_per_iteration: int) -> "PointChunkIterator":
-        """ Returns an iterator, that will read points by chunks
+        """Returns an iterator, that will read points by chunks
         of the requested size
 
         :param points_per_iteration: number of points to be read with each iteration
@@ -92,8 +103,7 @@ class LasReader:
         return PointChunkIterator(self, points_per_iteration)
 
     def close(self):
-        """ closes the file object used by the reader
-        """
+        """closes the file object used by the reader"""
         if self.closefd:
             self.point_source.close()
 
@@ -114,8 +124,12 @@ class LasReader:
                 elif backend == LazBackend.Lazrs:
                     return LazrsPointReader(source, laszip_vlr, parallel=False)
                 elif backend == LazBackend.Laszip:
-                    point_source = LasZipProcessPointReader(source, self.header, self.vlrs)
-                    self._read_header_and_vlrs(point_source.process.stdout, seekable=False)
+                    point_source = LasZipProcessPointReader(
+                        source, self.header, self.vlrs
+                    )
+                    self._read_header_and_vlrs(
+                        point_source.process.stdout, seekable=False
+                    )
                     return point_source
                 else:
                     raise errors.PylasError("Unknown LazBackend: {}".format(backend))
@@ -123,17 +137,19 @@ class LasReader:
             except errors.LazError as e:
                 logger.error(e)
 
-    def _get_extra_dims(self):
+    def _get_extra_dims(self) -> Optional[Tuple[Tuple[str, str], ...]]:
         try:
             extra_dims = self.vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
         except IndexError:
-            extra_dims = None
+            return None
 
-        point_size_without_extra_bytes = size_of_point_format_id(self.header.point_format_id)
-        if extra_dims is not None and self.header.point_size == point_size_without_extra_bytes:
+        point_size_without_extra_bytes = size_of_point_format_id(
+            self.header.point_format_id
+        )
+        if self.header.point_size == point_size_without_extra_bytes:
             logger.warning(
                 "There is an ExtraByteVlr but the header.point_size matches the "
-                "point size without extra bytes. The extrabytes vlr info will be ignored"
+                "point size without extra bytes. The extra bytes vlr info will be ignored"
             )
             self.vlrs.extract("ExtraBytesVlr")
             extra_dims = None
@@ -152,7 +168,7 @@ class LasReader:
         return header, vlrs
 
     def _read_evlrs(self, source, seekable=False):
-        """ Reads the EVLRs of the file, will fail if the file version
+        """Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """
         if self.header.version >= "1.4" and self.points_read == self.header.point_count:
@@ -185,7 +201,7 @@ class PointChunkIterator:
 
 
 class IPointReader(abc.ABC):
-    """ The interface to be implemented by the class that actually reads
+    """The interface to be implemented by the class that actually reads
     points from as LAS/LAZ file so that the LasReader can use it.
 
     It is used to manipulate LAS/LAZ (with different LAZ backends) in the
@@ -202,8 +218,7 @@ class IPointReader(abc.ABC):
 
 
 class UncompressedPointReader(IPointReader):
-    """ Implementation of IPointReader for the simple uncompressed case
-    """
+    """Implementation of IPointReader for the simple uncompressed case"""
 
     def __init__(self, source, point_size) -> None:
         self.source = source
@@ -217,7 +232,7 @@ class UncompressedPointReader(IPointReader):
 
 
 class LasZipProcessPointReader(IPointReader):
-    """ Implementation when using laszip executable as the LAZ backend.
+    """Implementation when using laszip executable as the LAZ backend.
 
     The compressed LAZ data (the whole file actually) is piped to laszip
     via its stdin and we get the uncompressed LAS data via its stdout
@@ -234,7 +249,9 @@ class LasZipProcessPointReader(IPointReader):
         laszip_binary = find_laszip_executable()
         self.point_size: int = header.point_size
         if header.version >= "1.4" and header.number_of_evlr > 0:
-            raise errors.PylasError("Reading a LAZ file that contains EVLR using laszip is not supported")
+            raise errors.PylasError(
+                "Reading a LAZ file that contains EVLR using laszip is not supported"
+            )
         try:
             fileno = source.fileno()
         except OSError:
@@ -246,7 +263,9 @@ class LasZipProcessPointReader(IPointReader):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
-            self.conveyor = ConveyorThread(self.source, self.process.stdin, close_output=True)
+            self.conveyor = ConveyorThread(
+                self.source, self.process.stdin, close_output=True
+            )
             self.conveyor.start()
         else:
             os.lseek(fileno, 0, os.SEEK_SET)
@@ -286,13 +305,15 @@ class LasZipProcessPointReader(IPointReader):
             error_msg = self.process.stderr.read().decode()
             raise RuntimeError(
                 "Laszip failed to {} with error code {}:\n\t{}".format(
-                    "compress", self.process.returncode, "\n\t".join(error_msg.splitlines())
+                    "compress",
+                    self.process.returncode,
+                    "\n\t".join(error_msg.splitlines()),
                 )
             )
 
 
 class LazrsPointReader(IPointReader):
-    """ Implementation for the laz-rs backend, supports single-threaded decompression
+    """Implementation for the laz-rs backend, supports single-threaded decompression
     as well as multi-threaded decompression
     """
 
@@ -300,9 +321,13 @@ class LazrsPointReader(IPointReader):
         self.source = source
         self.vlr = lazrs.LazVlr(laszip_vlr.record_data)
         if parallel:
-            self.decompressor = lazrs.ParLasZipDecompressor(source, laszip_vlr.record_data)
+            self.decompressor = lazrs.ParLasZipDecompressor(
+                source, laszip_vlr.record_data
+            )
         else:
-            self.decompressor = lazrs.LasZipDecompressor(laszip_vlr.record_data, self.source)
+            self.decompressor = lazrs.LasZipDecompressor(
+                laszip_vlr.record_data, self.source
+            )
 
     def read_n_points(self, n) -> bytes:
         point_bytes = np.zeros(n * self.vlr.item_size(), np.uint8)

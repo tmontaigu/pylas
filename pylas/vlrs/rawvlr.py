@@ -6,7 +6,7 @@ NULL_BYTE = b"\x00"
 
 
 class RawVLRHeader(ctypes.LittleEndianStructure):
-    """ Close representation of a VLR Header as it is written
+    """Close representation of a VLR Header as it is written
     in the LAS file.
     """
 
@@ -24,11 +24,13 @@ class RawVLRHeader(ctypes.LittleEndianStructure):
 
 
 VLR_HEADER_SIZE = ctypes.sizeof(RawVLRHeader)
-MAX_VLR_RECORD_DATA_LEN = utils.ctypes_max_limit(RawVLRHeader.record_length_after_header.size)
+MAX_VLR_RECORD_DATA_LEN = utils.ctypes_max_limit(
+    RawVLRHeader.record_length_after_header.size
+)
 
 
 class RawVLR:
-    """ As close as possible to the underlying data
+    """As close as possible to the underlying data
     No parsing of the record_data is made,
     every piece of data are still bytes.
     """
@@ -45,7 +47,9 @@ class RawVLR:
     def record_data(self, value):
         if len(value) > MAX_VLR_RECORD_DATA_LEN:
             raise OverflowError(
-                "VLR record data length ({}) exceeds maximum ({})".format(len(value), MAX_VLR_RECORD_DATA_LEN)
+                "VLR record data length ({}) exceeds maximum ({})".format(
+                    len(value), MAX_VLR_RECORD_DATA_LEN
+                )
             )
         self.header.record_length_after_header = len(value)
         self._record_data = value
@@ -54,7 +58,7 @@ class RawVLR:
         return VLR_HEADER_SIZE + self.header.record_length_after_header
 
     def write_to(self, out):
-        """ Write the raw header content to the out stream
+        """Write the raw header content to the out stream
 
         Parameters:
         ----------
@@ -67,7 +71,7 @@ class RawVLR:
 
     @classmethod
     def read_from(cls, data_stream):
-        """ Instantiate a RawVLR by reading the content from the
+        """Instantiate a RawVLR by reading the content from the
         data stream
 
         Parameters:
@@ -88,7 +92,9 @@ class RawVLR:
 
     def __repr__(self):
         return "<RawVLR(user_id: {}, record_id: {}, len: {})>".format(
-            self.header.user_id, self.header.record_id, self.header.record_length_after_header,
+            self.header.user_id,
+            self.header.record_id,
+            self.header.record_length_after_header,
         )
 
 
