@@ -201,6 +201,7 @@ class LasWriter:
         except TypeError:
             laz_backends = (laz_backends,)
 
+        last_error = None
         for backend in laz_backends:
             try:
                 if not backend.is_available():
@@ -220,7 +221,10 @@ class LasWriter:
                 logger.error(e)
                 last_error = e
         else:
-            raise PylasError(f"No LazBackend could be initialized: {last_error}")
+            if last_error is not None:
+                raise PylasError("No LazBackend selected, cannot compress")
+            else:
+                raise PylasError(f"No LazBackend could be initialized: {last_error}")
 
     def __enter__(self):
         return self

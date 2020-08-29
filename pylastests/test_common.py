@@ -6,8 +6,6 @@ import pytest
 import pylas
 from pylas.lib import write_then_read_again
 
-do_compression = [False, True]
-
 simple_las = os.path.dirname(__file__) + "/" + "simple.las"
 simple_laz = os.path.dirname(__file__) + "/" + "simple.laz"
 vegetation1_3_las = os.path.dirname(__file__) + "/vegetation_1_3.las"
@@ -16,14 +14,28 @@ extra_bytes_las = os.path.dirname(__file__) + "/extrabytes.las"
 extra_bytes_laz = os.path.dirname(__file__) + "/extra.laz"
 plane_laz = os.path.dirname(__file__) + "/plane.laz"
 
+if not pylas.LazBackend.detect_available():
+    do_compression = [False]
+    all_file_paths = [simple_las, vegetation1_3_las, test1_4_las, extra_bytes_las]
+else:
+    do_compression = [False, True]
+    all_file_paths = [
+        simple_las,
+        simple_laz,
+        vegetation1_3_las,
+        test1_4_las,
+        plane_laz,
+        extra_bytes_laz,
+        extra_bytes_las,
+    ]
 
-@pytest.fixture(
-    params=[simple_las, simple_laz, vegetation1_3_las, test1_4_las, plane_laz, extra_bytes_laz, extra_bytes_las])
+
+@pytest.fixture(params=all_file_paths)
 def las(request):
     return pylas.read(request.param)
 
 
-@pytest.fixture(params=[simple_las, simple_laz, vegetation1_3_las])
+@pytest.fixture(params=[simple_las, vegetation1_3_las])
 def all_las_but_1_4(request):
     return pylas.read(request.param)
 
@@ -117,8 +129,8 @@ def test_change_format(las):
 
 
 def test_conversion_file_version():
-    las = pylas.create(point_format_id=0, file_version='1.4')
-    las2 = pylas.convert(las, file_version='1.2')
+    las = pylas.create(point_format_id=0, file_version="1.4")
+    las2 = pylas.convert(las, file_version="1.2")
 
     assert las.points_data.point_format == las2.points_data.point_format
     for dim_name in las.points_data.point_format.dimension_names:
@@ -200,8 +212,9 @@ def test_coords_when_using_create_from_header(las):
 
 
 def test_slicing(las):
-    las.points = las.points[len(las.points) // 2:]
+    las.points = las.points[len(las.points) // 2 :]
 
 
-def test_can_write_then_re_read_files(las):
-    _las = write_then_read_again(las, do_compress=las.points_data.point_format.id < 6)
+@pytest.mark.parametrize("do_compress", do_compression)
+def test_can_write_then_re_read_files(las, do_compress):
+    _las = write_then_read_again(las, do_compress=do_compress)

@@ -11,9 +11,11 @@ from pylastests.test_common import test1_4_las, write_then_read_again
 def las():
     return pylas.read(test1_4_las)
 
+
 @pytest.fixture(params=LazBackend.detect_available())
 def laz_backend(request):
     return request.param
+
 
 def test_classification(las):
     las.classification[:] = 234
@@ -55,8 +57,13 @@ def test_writing_laz_with_evlrs(laz_backend):
 
     if laz_backend == LazBackend.Laszip:
         with pytest.raises(PylasError) as exc_info:
-            las_1 = write_then_read_again(las, do_compress=True, laz_backend=(laz_backend,))
-        assert "Reading a LAZ file that contains EVLR using laszip is not supported" in exc_info.value
+            las_1 = write_then_read_again(
+                las, do_compress=True, laz_backend=(laz_backend,)
+            )
+        assert (
+            "Reading a LAZ file that contains EVLR using laszip is not supported"
+            in exc_info.value
+        )
     else:
         las_1 = write_then_read_again(las, do_compress=True, laz_backend=(laz_backend,))
         assert las_1.evlrs == [evlr]
