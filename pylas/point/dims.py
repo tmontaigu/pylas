@@ -10,7 +10,7 @@ from .. import errors
 
 
 def _point_format_to_dtype(point_format, dimensions):
-    """ build the numpy.dtype for a point format
+    """build the numpy.dtype for a point format
 
     Parameters:
     ----------
@@ -27,7 +27,7 @@ def _point_format_to_dtype(point_format, dimensions):
 
 
 def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
-    """ Builds the dict mapping point format id to numpy.dtype
+    """Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are still packed, and need to be unpacked each time
     you want to access them
     """
@@ -38,9 +38,9 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
 
 
 def _build_unpacked_point_formats_dtypes(
-        point_formats_dimensions, composed_fields_dict, dimensions_dict
+    point_formats_dimensions, composed_fields_dict, dimensions_dict
 ):
-    """ Builds the dict mapping point format id to numpy.dtype
+    """Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are unpacked and can be accessed directly
     """
     unpacked_dtypes = {}
@@ -232,7 +232,7 @@ UNPACKED_POINT_FORMATS_DTYPES = _build_unpacked_point_formats_dtypes(
 
 
 def np_dtype_to_point_format(dtype, unpacked=False):
-    """ Tries to find a matching point format id for the input numpy dtype
+    """Tries to find a matching point format id for the input numpy dtype
     To match, the input dtype has to be 100% equal to a point format dtype
     so all names & dimensions types must match
 
@@ -276,8 +276,7 @@ def size_of_point_format_id(point_format_id):
 
 
 def min_file_version_for_point_format(point_format_id):
-    """  Returns the minimum file version that supports the given point_format_id
-    """
+    """Returns the minimum file version that supports the given point_format_id"""
     for version, point_formats in sorted(VERSION_TO_POINT_FMT.items()):
         if point_format_id in point_formats:
             return version
@@ -286,20 +285,17 @@ def min_file_version_for_point_format(point_format_id):
 
 
 def supported_versions():
-    """ Returns the set of supported file versions
-    """
+    """Returns the set of supported file versions"""
     return set(VERSION_TO_POINT_FMT.keys())
 
 
 def supported_point_formats():
-    """ Returns a set of all the point formats supported in pylas
-    """
+    """Returns a set of all the point formats supported in pylas"""
     return set(POINT_FORMAT_DIMENSIONS.keys())
 
 
 def is_point_fmt_compatible_with_version(point_format_id, file_version):
-    """  Returns true if the file version support the point_format_id
-    """
+    """Returns true if the file version support the point_format_id"""
     try:
         return point_format_id in VERSION_TO_POINT_FMT[str(file_version)]
     except KeyError:

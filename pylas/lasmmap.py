@@ -1,7 +1,6 @@
 import mmap
 
 from . import headers
-from . import lasreader
 from .lasdatas import base
 from .point import PointFormat, record
 from .vlrs import vlrlist
@@ -10,7 +9,7 @@ WHOLE_FILE = 0
 
 
 class LasMMAP(base.LasBase):
-    """ Memory map a LAS file.
+    """Memory map a LAS file.
     It works like a regular LasData however the data is not actually read in memory
     which is useful for large files.
 
@@ -26,7 +25,6 @@ class LasMMAP(base.LasBase):
 
     def __init__(self, filename):
         fileref = open(filename, mode="r+b")
-        lasreader._raise_if_wrong_file_signature(fileref)
 
         m = mmap.mmap(fileref.fileno(), length=WHOLE_FILE, access=mmap.ACCESS_WRITE)
         header = headers.HeaderFactory.from_mmap(m)

@@ -5,27 +5,47 @@ Basic Manipulation
 
 Opening & Reading
 =================
-You have two ways to read LAS files with pylas.
 
-The easiest one is using :func:`pylas.read` function.
+Reading is done using :func:`pylas.read` function.
 This function will read everything in the file (Header, vlrs, point records, ...) and return an object
 that you can use to access to the data.
 
 .. code:: python
 
+    import pylas
+
     las = pylas.read('somefile.las')
     print(np.unique(las.classification))
 
+pylas can also :func:`pylas.open` files reading just the header and vlrs but not the points, this is useful
+if you need metada informations that are contained in the header.
+
+.. code:: python
+
     import s3fs
+    import pylas
+
     fs = s3fs.S3FileSystem()
     with fs.open('my-bucket/some_file.las', 'rb') as f:
-         las = pylas.read(f)
+         if f.header.point_count < 100_000_000:
+             las = pylas.read(f)
 
 
-The other way to read a las file is to use the :func:`pylas.open`.
-As the name suggest, this function does not read the whole file, but opens it and only read the header.
+Sometimes files are big, too big to be read entirely and fit into your RAM.
+The object returned by the :func:`pylas.open` function, :class:`pylas.lasreader.LasReader`
+can also be used to read points chunk by chunk, which will allow you to do some
+processing on large files (splitting, filtering, etc)
 
-This is useful if you only need to read the header without loading the whole file in memory.
+.. code:: python
+
+    import pylas
+
+    with pylas.open("some_big_file.laz") as f:
+        for points in f.chunk_iterator(1_000_000):
+            do_something_with(points)
+
+
+
 
 
 Converting
@@ -49,6 +69,20 @@ Writing
 To be able to write a las file you will need a :class:`pylas.lasdatas.base.LasBase` (or one if its subclasses).
 You obtain this type of object by using one of the function above,
 use its method :meth:`pylas.lasdatas.base.LasBase.write` to write to a file or a stream.
+
+
+Similar to :class:`pylas.lasreader.LasReader` there exists a way to write a file
+chunk by chunk.
+
+
+.. code:: python
+
+    import pylas
+
+    with pylas.open("some_big_file.laz") as f:
+        with pylas.open("grounds.laz", mode="w", header=f.header) as writer:
+            for points in f.chunk_iterator(1_234_567):
+                writer.write_points(points[points.classification == 2]
 
 .. _accessing_header:
 

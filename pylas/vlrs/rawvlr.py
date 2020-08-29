@@ -6,7 +6,7 @@ NULL_BYTE = b"\x00"
 
 
 class RawVLRHeader(ctypes.LittleEndianStructure):
-    """ Close representation of a VLR Header as it is written
+    """Close representation of a VLR Header as it is written
     in the LAS file.
     """
 
@@ -30,7 +30,7 @@ MAX_VLR_RECORD_DATA_LEN = utils.ctypes_max_limit(
 
 
 class RawVLR:
-    """ As close as possible to the underlying data
+    """As close as possible to the underlying data
     No parsing of the record_data is made,
     every piece of data are still bytes.
     """
@@ -58,7 +58,7 @@ class RawVLR:
         return VLR_HEADER_SIZE + self.header.record_length_after_header
 
     def write_to(self, out):
-        """ Write the raw header content to the out stream
+        """Write the raw header content to the out stream
 
         Parameters:
         ----------
@@ -71,7 +71,7 @@ class RawVLR:
 
     @classmethod
     def read_from(cls, data_stream):
-        """ Instantiate a RawVLR by reading the content from the
+        """Instantiate a RawVLR by reading the content from the
         data stream
 
         Parameters:
@@ -122,6 +122,14 @@ class VLR(BaseVLR):
         )
         vlr.record_data = raw_vlr.record_data
         return vlr
+
+    def __eq__(self, other):
+        return (
+            self.record_id == other.record_id
+            and self.user_id == other.user_id
+            and self.description == other.description
+            and self.record_data == other.record_data
+        )
 
     def __repr__(self):
         return "<{}(user_id: '{}', record_id: '{}', data len: {})>".format(

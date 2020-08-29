@@ -9,11 +9,15 @@ import struct
 from abc import abstractmethod
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
-from ..extradims import get_type_for_extra_dim, get_signedness_for_extra_dim, DimensionSignedness
+from ..extradims import (
+    get_type_for_extra_dim,
+    get_signedness_for_extra_dim,
+    DimensionSignedness,
+)
 
 
 class IKnownVLR(abc.ABC):
-    """ Interface that any KnownVLR must implement.
+    """Interface that any KnownVLR must implement.
     A KnownVLR is a VLR for which we know how to parse its record_data
 
     Implementing this interfaces allows to automatically call the
@@ -23,14 +27,13 @@ class IKnownVLR(abc.ABC):
     @staticmethod
     @abstractmethod
     def official_user_id():
-        """ Shall return the official user_id as described in the documentation
-        """
+        """Shall return the official user_id as described in the documentation"""
         pass
 
     @staticmethod
     @abstractmethod
     def official_record_ids():
-        """ Shall return the official record_id for the VLR
+        """Shall return the official record_id for the VLR
 
         .. note::
 
@@ -45,7 +48,7 @@ class IKnownVLR(abc.ABC):
 
     @abstractmethod
     def record_data_bytes(self):
-        """ Shall return the bytes corresponding to the record_data part of the VLR
+        """Shall return the bytes corresponding to the record_data part of the VLR
         as they should be written in the file.
 
         Returns
@@ -58,7 +61,7 @@ class IKnownVLR(abc.ABC):
 
     @abstractmethod
     def parse_record_data(self, record_data):
-        """ Shall parse the given record_data into a user-friendlier structure
+        """Shall parse the given record_data into a user-friendlier structure
 
         Parameters
         ----------
@@ -70,8 +73,7 @@ class IKnownVLR(abc.ABC):
 
 
 class BaseKnownVLR(BaseVLR, IKnownVLR):
-    """ Base Class to factorize common code between the different type of Known VLRs
-    """
+    """Base Class to factorize common code between the different type of Known VLRs"""
 
     def __init__(self, record_id=None, description=""):
         super().__init__(
@@ -89,7 +91,7 @@ class BaseKnownVLR(BaseVLR, IKnownVLR):
 
 
 class ClassificationLookupVlr(BaseKnownVLR):
-    """ This vlr maps class numbers to short descriptions / names
+    """This vlr maps class numbers to short descriptions / names
 
     >>> lookup = ClassificationLookupVlr()
     >>> lookup[0] = "never_classified"
@@ -97,6 +99,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
     >>> lookup[0]
     'never_classified'
     """
+
     _lookup_struct = struct.Struct("<B15s")
 
     def __init__(self):
@@ -153,7 +156,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
 
 
 class LasZipVlr(BaseKnownVLR):
-    """ Contains the informations needed by laszip & lazperf
+    """Contains the informations needed by laszip & lazperf
     to compress the point records.
     """
 
@@ -200,7 +203,6 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
     _uint64t_struct = struct.Struct("<Q")
     _int64t_struct = struct.Struct("<q")
     _double_struct = struct.Struct("<d")
-
 
     def _struct_parser_for_type_signedness(self):
         signedness = get_signedness_for_extra_dim(self.data_type)
@@ -518,7 +520,7 @@ class WktMathTransformVlr(BaseKnownVLR):
 
 
 class WktCoordinateSystemVlr(BaseKnownVLR):
-    """ Replaces Coordinates Reference System for new las files (point fmt >= 5)
+    """Replaces Coordinates Reference System for new las files (point fmt >= 5)
     "LAS is not using the “ESRI WKT”
     """
 
@@ -545,7 +547,7 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
 
 
 def vlr_factory(raw_vlr):
-    """ Given a raw_vlr tries to find its corresponding KnownVLR class
+    """Given a raw_vlr tries to find its corresponding KnownVLR class
     that can parse its data.
     If no KnownVLR implementation is found, returns a VLR (record_data will still be bytes)
     """

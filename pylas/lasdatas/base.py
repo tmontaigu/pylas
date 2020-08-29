@@ -1,41 +1,29 @@
 import logging
-import struct
 
 import numpy as np
 
-from pylas import extradims
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
-from .. import errors
-from ..compression import (
-    uncompressed_id_to_compressed,
-    lazperf_compress_points,
-    lazrs_compress_points,
-    LasZipProcess
-)
+from .. import errors, extradims
+from ..laswriter import LasWriter
 from ..point import record, dims, PointFormat
-from ..utils import ConveyorThread
-from ..vlrs import known, vlrlist
+from ..point.record import scale_dimension, unscale_dimension
+from ..vlrs import vlrlist
+from ..compression import LazBackend
 
 logger = logging.getLogger(__name__)
-
-
-def scale_dimension(array_dim, scale, offset):
-    return (array_dim * scale) + offset
-
-
-def unscale_dimension(array_dim, scale, offset):
-    return np.round((np.array(array_dim) - offset) / scale)
 
 
 def is_in_bounds_of_type(array, type_info):
     return array.max() < type_info.max and array.min() > type_info.min
 
 
-OVERFLOW_ERR_MSG = "Values given for '{}' won't fit in an {} array, with the current scale ({})"
+OVERFLOW_ERR_MSG = (
+    "Values given for '{}' won't fit in an {} array, with the current scale ({})"
+)
 
 
 class LasBase(object):
-    """ LasBase is the base of all the different LasData classes.
+    """LasBase is the base of all the different LasData classes.
     These classes are objects that the user will interact with to manipulate las data.
 
     It connects the point record, header, vlrs together.
@@ -65,20 +53,17 @@ class LasBase(object):
 
     @property
     def x(self):
-        """ Returns the scaled x positions of the points as doubles
-        """
+        """Returns the scaled x positions of the points as doubles"""
         return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
 
     @property
     def y(self):
-        """ Returns the scaled y positions of the points as doubles
-        """
+        """Returns the scaled y positions of the points as doubles"""
         return scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
 
     @property
     def z(self):
-        """ Returns the scaled z positions of the points as doubles
-        """
+        """Returns the scaled z positions of the points as doubles"""
         return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
 
     @x.setter
@@ -87,9 +72,11 @@ class LasBase(object):
             self.header.x_offset = np.min(value)
 
         X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
-        dim_info = self.point_format.dimension_type_info('X')
+        dim_info = self.point_format.dimension_type_info("X")
         if not is_in_bounds_of_type(X, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format('x', dim_info.dtype, self.header.x_scale))
+            raise OverflowError(
+                OVERFLOW_ERR_MSG.format("x", dim_info.dtype, self.header.x_scale)
+            )
         self.X = X
 
     @y.setter
@@ -98,9 +85,11 @@ class LasBase(object):
             self.header.y_offset = np.min(value)
 
         Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
-        dim_info = self.point_format.dimension_type_info('Y')
+        dim_info = self.point_format.dimension_type_info("Y")
         if not is_in_bounds_of_type(Y, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format('y', dim_info.dtype, self.header.y_scale))
+            raise OverflowError(
+                OVERFLOW_ERR_MSG.format("y", dim_info.dtype, self.header.y_scale)
+            )
         self.Y = Y
 
     @z.setter
@@ -109,9 +98,11 @@ class LasBase(object):
             self.header.z_offset = np.min(value)
 
         Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
-        dim_info = self.point_format.dimension_type_info('Z')
+        dim_info = self.point_format.dimension_type_info("Z")
         if not is_in_bounds_of_type(Z, dim_info):
-            raise OverflowError(OVERFLOW_ERR_MSG.format('z', dim_info.dtype, self.header.z_scale))
+            raise OverflowError(
+                OVERFLOW_ERR_MSG.format("z", dim_info.dtype, self.header.z_scale)
+            )
         self.Z = Z
 
     @property
@@ -120,7 +111,7 @@ class LasBase(object):
 
     @property
     def points(self):
-        """ returns the numpy array representing the points
+        """returns the numpy array representing the points
 
         Returns
         -------
@@ -131,7 +122,7 @@ class LasBase(object):
 
     @points.setter
     def points(self, value):
-        """ Setter for the points property,
+        """Setter for the points property,
         Takes care of changing the point_format of the file
         (as long as the point format of the new points it compatible with the file version)
 
@@ -141,8 +132,12 @@ class LasBase(object):
 
         """
         if value.dtype != self.points.dtype:
-            raise errors.IncompatibleDataFormat('Cannot set points with a different point format, convert first')
-        new_point_record = record.PackedPointRecord(value, self.points_data.point_format)
+            raise errors.IncompatibleDataFormat(
+                "Cannot set points with a different point format, convert first"
+            )
+        new_point_record = record.PackedPointRecord(
+            value, self.points_data.point_format
+        )
         dims.raise_if_version_not_compatible_with_fmt(
             new_point_record.point_format.id, self.header.version
         )
@@ -150,7 +145,7 @@ class LasBase(object):
         self.update_header()
 
     def __getattr__(self, item):
-        """ Automatically called by Python when the attribute
+        """Automatically called by Python when the attribute
         named 'item' is no found. We use this function to forward the call the
         point record. This is the mechanism used to allow the users to access
         the points dimensions directly through a LasData.
@@ -168,7 +163,7 @@ class LasBase(object):
         return self.points_data[item]
 
     def __setattr__(self, key, value):
-        """ This is called on every access to an attribute of the instance.
+        """This is called on every access to an attribute of the instance.
         Again we use this to forward the call the the points record
 
         But this time checking if the key is actually a dimension name
@@ -190,7 +185,7 @@ class LasBase(object):
         self.points_data[key] = value
 
     def add_extra_dim(self, name, type, description=""):
-        """ Adds a new extra dimension to the point record
+        """Adds a new extra dimension to the point record
 
         Parameters
         ----------
@@ -217,7 +212,7 @@ class LasBase(object):
             self.points_data.add_extra_dims([(name, type)])
 
     def update_header(self):
-        """ Update the information stored in the header
+        """Update the information stored in the header
         to be in sync with the actual data.
 
         This method is called automatically when you save a file using
@@ -239,8 +234,10 @@ class LasBase(object):
             unique, counts = np.unique(self.return_number, return_counts=True)
             self.header.number_of_points_by_return = counts
 
-    def write_to(self, out_stream, do_compress=False):
-        """ writes the data to a stream
+    def write_to(
+        self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()
+    ):
+        """writes the data to a stream
 
         Parameters
         ----------
@@ -249,59 +246,15 @@ class LasBase(object):
         do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
         """
-
-        self.update_header()
-
-        if (
-                self.vlrs.get("ExtraBytesVlr")
-                and not self.points_data.extra_dimensions_names
-        ):
-            logger.error(
-                "Las contains an ExtraBytesVlr, but no extra bytes were found in the point_record, "
-                "removing the vlr"
-            )
-            self.vlrs.extract("ExtraBytesVlr")
-
-        if do_compress:
-            try:
-                compressed_points_buf, vlr_data = lazrs_compress_points(self.points_data)
-            except errors.LazError as e:
-                try:
-                    logger.error("pylaz failed to compress: {}".format(e))
-                    compressed_points_buf, vlr_data = lazperf_compress_points(self.points_data)
-                except errors.LazError as e:
-                    logger.error("lazperf failed to compress: {}".format(e))
-                    self._compress_with_laszip_executable(out_stream)
-                    return
-            self.vlrs.append(known.LasZipVlr(vlr_data))
-            raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
-
-            self.header.offset_to_point_data = (
-                    self.header.size + raw_vlrs.total_size_in_bytes()
-            )
-            self.header.point_format_id = uncompressed_id_to_compressed(
-                self.header.point_format_id
-            )
-            self.header.number_of_vlr = len(raw_vlrs)
-
-            # Update Chunk table offset from being from the start of point data
-            # to the start of the file
-            points_bytes = bytearray(compressed_points_buf.tobytes())
-            offset_to_chunk_table = struct.unpack_from("<q", points_bytes, 0)[0]
-            struct.pack_into("<q", points_bytes, 0, self.header.offset_to_point_data + offset_to_chunk_table)
-        else:
-            raw_vlrs = vlrlist.RawVLRList.from_list(self.vlrs)
-            self.header.number_of_vlr = len(raw_vlrs)
-            self.header.offset_to_point_data = (
-                    self.header.size + raw_vlrs.total_size_in_bytes()
-            )
-            points_bytes = self.points_data.memoryview()
-
-        self.header.write_to(out_stream)
-        self._raise_if_not_expected_pos(out_stream, self.header.size)
-        raw_vlrs.write_to(out_stream)
-        self._raise_if_not_expected_pos(out_stream, self.header.offset_to_point_data)
-        out_stream.write(points_bytes)
+        with LasWriter(
+            out_stream,
+            self.header,
+            self.vlrs,
+            do_compress=do_compress,
+            closefd=False,
+            laz_backends=laz_backends,
+        ) as writer:
+            writer.write(self.points_data)
 
     @staticmethod
     def _raise_if_not_expected_pos(stream, expected_pos):
@@ -313,7 +266,7 @@ class LasBase(object):
             )
 
     def write_to_file(self, filename, do_compress=None):
-        """ Writes the las data into a file
+        """Writes the las data into a file
 
         Parameters
         ----------
@@ -327,11 +280,14 @@ class LasBase(object):
         is_ext_laz = filename.split(".")[-1].lower() == "laz"
         if is_ext_laz and do_compress is None:
             do_compress = True
-        with open(filename, mode="wb") as out:
+
+        with open(filename, mode="wb+") as out:
             self.write_to(out, do_compress=do_compress)
 
-    def write(self, destination, do_compress=None):
-        """ Writes to a stream or file
+    def write(
+        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
+    ):
+        """Writes to a stream or file
 
         When destination is a string, it will be interpreted as the path were the file should be written to,
         also if do_compress is None, the compression will be guessed from the file extension:
@@ -365,27 +321,9 @@ class LasBase(object):
         else:
             if do_compress is None:
                 do_compress = False
-            self.write_to(destination, do_compress=do_compress)
-
-    def _compress_with_laszip_executable(self, out_stream):
-        try:
-            out_stream.fileno()
-        except OSError:
-            laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress)
-            out_stream.seek(0)
-            t = ConveyorThread(laszip_prc.stdout, out_stream)
-            t.start()
-            self.write_to(laszip_prc.stdin, do_compress=False)
-            laszip_prc.stdin.close()
-            t.join()
-            laszip_prc.wait()
-            laszip_prc.raise_if_bad_err_code()
-        else:
-            # The ouput is a file
-            # let laszip write directly to it, to avoid copies
-            laszip_prc = LasZipProcess(LasZipProcess.Actions.Compress, stdout=out_stream)
-            self.write_to(laszip_prc.stdin)
-            laszip_prc.wait_until_finished()
+            self.write_to(
+                destination, do_compress=do_compress, laz_backends=laz_backend
+            )
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(

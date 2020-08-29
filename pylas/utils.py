@@ -7,38 +7,47 @@ def ctypes_max_limit(byte_size, signed=False):
 
 
 def files_have_same_point_format_id(las_files):
-    """ Returns true if all the files have the same points format id
-    """
+    """Returns true if all the files have the same points format id"""
     point_format_found = {las.header.point_format_id for las in las_files}
     return len(point_format_found) == 1
 
 
 def files_have_same_dtype(las_files):
-    """ Returns true if all the files have the same numpy datatype
-    """
+    """Returns true if all the files have the same numpy datatype"""
     dtypes = {las.points.dtype for las in las_files}
     return len(dtypes) == 1
 
 
 class ConveyorThread(threading.Thread):
-    """ class to be used as a separate thread by calling start()
+    """class to be used as a separate thread by calling start()
 
     This class convey data from the input stream into the output stream.
     This is used when piping data into laszip.exe using python's subprocess.Popen
     when both of the stdin & stdout are in memory io objects because in such cases
-    there is a deadlock ocuring because we fill up the os stdout buffer
+    there is a deadlock occuring because we fill up the os stdout/stdin buffer
 
-    So we need a thread to read data from the stdout using another thread
-    to avoid deadlocking
+    So we need a separate thread to convey / move data from one source into another
+    so that the main thread can read and we avoid deadlocks
     """
-    def __init__(self, input_stream, output_stream):
+
+    def __init__(self, input_stream, output_stream, close_output=False):
         super().__init__()
         self.input_stream = input_stream
         self.output_stream = output_stream
+        self.close_output = close_output
+        self.should_end = False
 
     def run(self) -> None:
         for data in self.input_stream:
             if data:
                 self.output_stream.write(data)
+            elif self.should_end:
+                break
             else:
                 break
+
+        if self.close_output:
+            self.output_stream.close()
+
+    def ask_for_termination(self) -> None:
+        self.should_end = True

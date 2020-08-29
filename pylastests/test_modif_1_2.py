@@ -10,7 +10,11 @@ from pylastests.test_common import (
 )
 
 
-@pytest.fixture(params=[simple_las, simple_laz])
+@pytest.fixture(
+    params=[simple_las, simple_laz]
+    if pylas.LazBackend.detect_available()
+    else [simple_las]
+)
 def las(request):
     return pylas.read(request.param)
 

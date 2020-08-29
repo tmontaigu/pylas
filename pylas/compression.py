@@ -4,9 +4,9 @@ when compression/decompression is actually needed
 
 There are also functions to use Laszip (meant to be used as a fallback)
 """
+import enum
 import os
-import subprocess
-from enum import Enum, auto
+from typing import Tuple
 
 import numpy as np
 
@@ -16,12 +16,10 @@ HAS_LAZPERF = False
 
 try:
     import lazperf
-
-    HAS_LAZPERF = True
-    # we should capture ModuleNotFoundError but it's a python3.6 exception type
-    # and ReadTheDocs uses 3.5
-except:
+except ModuleNotFoundError:
     HAS_LAZPERF = False
+else:
+    HAS_LAZPERF = True
 
 
 def raise_if_no_lazperf():
@@ -33,6 +31,51 @@ def raise_if_no_lazperf():
         )
 
 
+class LazBackend(enum.Enum):
+    """Supported backends for reading and writing LAS/LAZ"""
+
+    # type_hint = Union[LazBackend, Iterable[LazBackend]]
+
+    LazrsParallel = 0
+    Lazrs = 1
+    Laszip = 2  # laszip executable, used through a Popen
+
+    def is_available(self) -> bool:
+        """Returns true if the backend is available"""
+        if self == LazBackend.Lazrs or self == LazBackend.LazrsParallel:
+            try:
+                import lazrs
+            except ModuleNotFoundError:
+                return False
+            else:
+                return True
+        elif self == LazBackend.Laszip:
+            try:
+                find_laszip_executable()
+            except FileNotFoundError:
+                return False
+            else:
+                return True
+        else:
+            return False
+
+    @staticmethod
+    def detect_available() -> Tuple["LazBackend"]:
+        """Returns a tuple containing the available backends in the current
+        python environment
+        """
+        available_backends = []
+
+        if LazBackend.LazrsParallel.is_available():
+            available_backends.append(LazBackend.LazrsParallel)
+            available_backends.append(LazBackend.Lazrs)
+
+        if LazBackend.Laszip.is_available():
+            available_backends.append(LazBackend.Laszip)
+
+        return tuple(available_backends)
+
+
 def is_point_format_compressed(point_format_id):
     compression_bit_7 = (point_format_id & 0x80) >> 7
     compression_bit_6 = (point_format_id & 0x40) >> 6
@@ -42,14 +85,16 @@ def is_point_format_compressed(point_format_id):
 
 
 def compressed_id_to_uncompressed(point_format_id):
-    return point_format_id & 0x3f
+    return point_format_id & 0x3F
 
 
 def uncompressed_id_to_compressed(point_format_id):
     return (2 ** 7) | point_format_id
 
 
-def lazrs_decompress_buffer(compressed_buffer, point_size, point_count, laszip_vlr, parallel=True):
+def lazrs_decompress_buffer(
+    compressed_buffer, point_size, point_count, laszip_vlr, parallel=True
+):
     try:
         import lazrs
     except Exception as e:
@@ -61,7 +106,9 @@ def lazrs_decompress_buffer(compressed_buffer, point_size, point_count, laszip_v
 
         point_decompressed = np.zeros(point_count * point_size, np.uint8)
 
-        lazrs.decompress_points(point_compressed, vlr_data, point_decompressed, parallel)
+        lazrs.decompress_points(
+            point_compressed, vlr_data, point_decompressed, parallel
+        )
     except lazrs.LazrsError as e:
         raise LazError("lazrs error: {}".format(e)) from e
     else:
@@ -76,12 +123,11 @@ def lazrs_compress_points(points_data, parallel=True):
 
     try:
         vlr = lazrs.LazVlr.new_for_compression(
-            points_data.point_format.id, points_data.point_format.num_extra_bytes)
+            points_data.point_format.id, points_data.point_format.num_extra_bytes
+        )
 
         compressed_data = lazrs.compress_points(
-            vlr,
-            np.frombuffer(points_data.array, np.uint8),
-            parallel
+            vlr, np.frombuffer(points_data.array, np.uint8), parallel
         )
     except lazrs.LazrsError as e:
         raise LazError("lazrs error: {}".format(e)) from e
@@ -96,15 +142,14 @@ def lazperf_decompress_buffer(compressed_buffer, point_size, point_count, laszip
         point_compressed = np.frombuffer(compressed_buffer, dtype=np.uint8)
 
         vlr_data = np.frombuffer(laszip_vlr.record_data, dtype=np.uint8)
-        decompressor = lazperf.VLRDecompressor(
-            point_compressed, point_size, vlr_data
-        )
+        decompressor = lazperf.VLRDecompressor(point_compressed, point_size, vlr_data)
 
         point_uncompressed = decompressor.decompress_points(point_count)
 
         return point_uncompressed
     except RuntimeError as e:
         raise LazError("lazperf error: {}".format(e))
+
 
 def lazperf_create_laz_vlr(points_record):
     raise_if_no_lazperf()
@@ -161,68 +206,3 @@ def find_laszip_executable():
 
     else:
         raise FileNotFoundError("Could not find laszip executable")
-
-
-class LasZipProcess:
-    class Actions(Enum):
-        Compress = auto()
-        Decompress = auto()
-
-    def __init__(self, action, stdin=subprocess.PIPE, stdout=subprocess.PIPE):
-        """ Creates a Popen to the laszip executable.
-
-        This tries to be a wrapper for
-        https://docs.python.org/fr/3/library/subprocess.html#subprocess.Popen
-
-        Valid inputs for `stdin` and `stdout` are file objects supporting
-        the fileno() method. For example files opened with  `open`.
-
-        The usage is kinda tricky:
-        """
-        laszip_binary = find_laszip_executable()
-
-        if action == LasZipProcess.Actions.Decompress:
-            out_t = "-olas"
-        elif action == LasZipProcess.Actions.Compress:
-            out_t = "-olaz"
-        else:
-            raise ValueError("Invalid Action")
-
-        self.prc = subprocess.Popen(
-            [laszip_binary, "-stdin", out_t, "-stdout"],
-            stdin=stdin,
-            stdout=stdout,
-            stderr=subprocess.PIPE,
-        )
-
-    @property
-    def stdin(self):
-        return self.prc.stdin
-
-    @property
-    def stdout(self):
-        return self.prc.stdout
-
-    def wait(self):
-        return self.prc.wait()
-
-    def communicate(self):
-        stdout_data, stderr_data = self.prc.communicate()
-        self.raise_if_bad_err_code(stderr_data.decode())
-        return stdout_data
-
-    def raise_if_bad_err_code(self, error_msg=None):
-        if error_msg is None:
-            error_msg = self.prc.stderr.read().decode()
-        if self.prc.returncode != 0:
-            raise RuntimeError(
-                "Laszip failed to {} with error code {}\n\t{}".format(
-                    "compress", self.prc.returncode, "\n\t".join(error_msg.splitlines())
-                )
-            )
-
-    def wait_until_finished(self):
-        self.stdin.close()
-        self.prc.wait()
-        self.raise_if_bad_err_code(self.prc.stderr.read().decode())
-

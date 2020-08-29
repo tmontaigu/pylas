@@ -4,10 +4,20 @@ import numpy as np
 import pytest
 
 import pylas
-from pylastests.test_common import simple_las, simple_laz, write_then_read_again
+from pylastests.test_common import (
+    simple_las,
+    simple_laz,
+    write_then_read_again,
+    do_compression,
+)
 
 
-@pytest.fixture(params=[simple_las, simple_laz], scope="session")
+@pytest.fixture(
+    params=[simple_las, simple_laz]
+    if pylas.LazBackend.detect_available()
+    else [simple_las],
+    scope="session",
+)
 def read_simple(request):
     return pylas.read(request.param)
 
@@ -176,15 +186,14 @@ def test_blue(read_simple):
     assert f.blue.min() == 56
 
 
-def test_read_write_read(read_simple):
-    _ = write_then_read_again(read_simple)
+@pytest.mark.parametrize("do_compress", do_compression)
+def test_read_write_read(read_simple, do_compress):
+    _ = write_then_read_again(read_simple, do_compress=do_compress)
 
 
-# TODO factorize with test above
-def test_read_write_read_laz(read_simple):
-    _ = write_then_read_again(read_simple, do_compress=True)
-
-
+@pytest.mark.skipif(
+    len(pylas.LazBackend.detect_available()) == 0, reason="No Laz Backend installed"
+)
 def test_decompression_is_same_as_uncompressed():
     u_las = pylas.read(simple_las)
     c_las = pylas.read(simple_laz)

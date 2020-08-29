@@ -6,7 +6,7 @@ import uuid
 
 import numpy as np
 
-from .. import compression
+from .. import compression, utils
 from .. import errors
 
 logger = logging.getLogger(__name__)
@@ -96,8 +96,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def point_count(self):
-        """ Returns the number of points in the file
-        """
+        """Returns the number of points in the file"""
         return self.legacy_point_count
 
     @point_count.setter
@@ -141,7 +140,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def date(self):
-        """ Returns the creation date stored in the las file
+        """Returns the creation date stored in the las file
 
         Returns
         -------
@@ -157,8 +156,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @date.setter
     def date(self, date):
-        """ Returns the date of file creation as a python date object
-        """
+        """Returns the date of file creation as a python date object"""
         self.creation_year = date.year
         self.creation_day_of_year = date.timetuple().tm_yday
 
@@ -168,14 +166,12 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @point_format_id.setter
     def point_format_id(self, value):
-        """ Returns the point format id of the points
-        """
+        """Returns the point format id of the points"""
         self._point_data_format_id = value
 
     @property
     def point_size(self):
-        """ Returns the number of bits each point takes
-        """
+        """Returns the number of bits each point takes"""
         return self.point_data_record_length
 
     @point_size.setter
@@ -192,38 +188,32 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def are_points_compressed(self):
-        """ Returns True if the point_format_id indicates that the points are stored compressed
-        """
+        """Returns True if the point_format_id indicates that the points are stored compressed"""
         return compression.is_point_format_compressed(self._point_data_format_id)
 
     @property
     def mins(self):
-        """ Returns de minimum values of x, y, z as a numpy array
-        """
+        """Returns de minimum values of x, y, z as a numpy array"""
         return np.array([self.x_min, self.y_min, self.z_min])
 
     @mins.setter
     def mins(self, value):
-        """ Sets de minimum values of x, y, z as a numpy array
-        """
+        """Sets de minimum values of x, y, z as a numpy array"""
         self.x_min, self.y_min, self.z_min = value
 
     @property
     def maxs(self):
-        """ Returns de maximum values of x, y, z as a numpy array
-        """
+        """Returns de maximum values of x, y, z as a numpy array"""
         return np.array([self.x_max, self.y_max, self.z_max])
 
     @maxs.setter
     def maxs(self, value):
-        """ Sets de maximum values of x, y, z as a numpy array
-        """
+        """Sets de maximum values of x, y, z as a numpy array"""
         self.x_max, self.y_max, self.z_max = value
 
     @property
     def scales(self):
-        """ Returns the scaling values of x, y, z as a numpy array
-        """
+        """Returns the scaling values of x, y, z as a numpy array"""
         return np.array([self.x_scale, self.y_scale, self.z_scale])
 
     @scales.setter
@@ -232,8 +222,7 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     @property
     def offsets(self):
-        """ Returns the offsets values of x, y, z as a numpy array
-        """
+        """Returns the offsets values of x, y, z as a numpy array"""
         return np.array([self.x_offset, self.y_offset, self.z_offset])
 
     @offsets.setter
@@ -243,27 +232,65 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def write_to(self, out_stream):
         out_stream.write(bytes(self))
 
+    def partial_reset(self):
+        self.generating_software = PROJECT_NAME
+        self.date = datetime.date.today()
+        self.offset_to_point_data = LAS_HEADERS_SIZE[self._version_]
+        self.point_count = 0
+        self.number_of_vlr = 0
+        self.number_of_points_by_return = (0, 0, 0, 0, 0)
+        self.mins = [0.0, 0.0, 0.0]
+        self.maxs = [0.0, 0.0, 0.0]
+
+    def set_point_count_to_max(self):
+        self.point_count = np.iinfo(np.uint32).max
+
+    def set_compressed(self, compressed: bool):
+        if compressed:
+            self._point_data_format_id = compression.uncompressed_id_to_compressed(
+                self._point_data_format_id
+            )
+        else:
+            self._point_data_format_id = compression.compressed_id_to_uncompressed(
+                self._point_data_format_id
+            )
+
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)
 
 
 class RawHeader1_2(RawHeader1_1):
+    _pack_ = 1
     _version_ = "1.2"
 
 
 class RawHeader1_3(RawHeader1_2):
+    _pack_ = 1
     _version_ = "1.3"
     _fields_ = [("start_of_waveform_data_packet_record", ctypes.c_uint64)]
 
 
 class RawHeader1_4(RawHeader1_3):
+    _pack_ = 1
     _version_ = "1.4"
     _fields_ = [
         ("start_of_first_evlr", ctypes.c_uint64),
         ("number_of_evlr", ctypes.c_uint32),
-        ("point_count", ctypes.c_uint64),
+        ("_point_count", ctypes.c_uint64),
         ("_number_of_points_by_return", ctypes.c_uint64 * 15),
     ]
+
+    @property
+    def point_count(self):
+        return self._point_count
+
+    @point_count.setter
+    def point_count(self, value):
+        if value > utils.ctypes_max_limit(ctypes.sizeof(ctypes.c_uint32)):
+            self.legacy_point_count = 0
+        else:
+            self.legacy_point_count = value
+        self._point_count = value
 
     @property
     def number_of_points_by_return(self):
@@ -272,22 +299,39 @@ class RawHeader1_4(RawHeader1_3):
     @number_of_points_by_return.setter
     def number_of_points_by_return(self, value):
         value = tuple(value)
-        self.legacy_number_of_points_by_return = value[:5]
         if len(value) > 15:
             logger.warning(
                 "Received return numbers up to {}, truncating to 15 for header.".format(
                     len(value)
                 )
             )
+            self.legacy_number_of_points_by_return = [0] * 5
+        else:
+            self.legacy_number_of_points_by_return = value[:5]
+
         self._number_of_points_by_return = value[:15]
 
     def update_evlrs_info_in_stream(self, stream, start=0):
-        stream.seek(start + self.start_of_first_evlr)
-        stream.write(bytes(self.start_of_first_evlr))
-        stream.write(bytes(self.number_of_evlr))
+        current_pos = stream.tell()
+        stream.seek(start + RawHeader1_4.start_of_first_evlr.offset)
+        stream.write(self.start_of_first_evlr.to_bytes(8, "little"))
+        stream.write(self.number_of_evlr.to_bytes(4, "little"))
+        stream.seek(current_pos)
+
+    def set_point_count_to_max(self):
+        super().set_point_count_to_max()
+        self._point_count = np.iinfo(np.uint64).max
+
+    def partial_reset(self):
+        super().partial_reset()
+        self.start_of_first_evlr = 0
+        self.number_of_evlr = 0
+        self.point_count = 0
+        self.number_of_points_by_return = [0] * 15
+
 
 class HeaderFactory:
-    """ Factory to create a new header by specifying the version.
+    """Factory to create a new header by specifying the version.
     This Factory also handles converting headers between different
     versions.
     """
@@ -323,7 +367,7 @@ class HeaderFactory:
 
     @classmethod
     def new(cls, version):
-        """ Returns a new instance of a header.
+        """Returns a new instance of a header.
 
         Parameters
         ----------
@@ -342,11 +386,29 @@ class HeaderFactory:
 
     @classmethod
     def read_from_stream(cls, stream):
-        version = cls.peek_file_version(stream)
-        header_class = cls.header_class_for_version(version)
-        return header_class.from_buffer(
-            bytearray(stream.read(ctypes.sizeof(header_class)))
+        sizeof_u8 = ctypes.sizeof(ctypes.c_uint8)
+        header_bytes = bytearray(
+            stream.read(cls._offset_to_major_version + (sizeof_u8 * 2))
         )
+
+        if header_bytes[:4] != LAS_FILE_SIGNATURE:
+            raise errors.PylasError(
+                "File Signature ({}) is not {}".format(
+                    header_bytes[:4], LAS_FILE_SIGNATURE
+                )
+            )
+
+        major = ctypes.c_uint8.from_buffer(
+            header_bytes, cls._offset_to_major_version
+        ).value
+        minor = ctypes.c_uint8.from_buffer(
+            header_bytes, cls._offset_to_major_version + sizeof_u8
+        ).value
+        version = "{}.{}".format(major, minor)
+
+        header_class = cls.header_class_for_version(version)
+        header_bytes += stream.read(ctypes.sizeof(header_class) - len(header_bytes))
+        return header_class.from_buffer(header_bytes)
 
     @classmethod
     def from_mmap(cls, mmap):
@@ -355,7 +417,7 @@ class HeaderFactory:
 
     @classmethod
     def peek_file_version(cls, stream):
-        """ seeks to the position of the las version header fields
+        """seeks to the position of the las version header fields
         in the stream and returns it as a str
 
         Parameters
@@ -377,7 +439,7 @@ class HeaderFactory:
 
     @classmethod
     def convert_header(cls, old_header, new_version):
-        """ Converts a header to a another version
+        """Converts a header to a another version
 
         Parameters
         ----------

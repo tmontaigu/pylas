@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class RawVLRList:
-    """ A RawVLRList is like a VLR list but it should only
+    """A RawVLRList is like a VLR list but it should only
     hold RawVLRs.
 
     This class is meant to make it easier to write VLRS the the file and know in advance
@@ -31,7 +31,7 @@ class RawVLRList:
         return sum(v.size_in_bytes() for v in self.vlrs)
 
     def write_to(self, out_stream):
-        """ Writes all the raw vlrs contained in list to
+        """Writes all the raw vlrs contained in list to
         the out_stream
 
         Parameters
@@ -43,9 +43,12 @@ class RawVLRList:
         for vlr in self.vlrs:
             vlr.write_to(out_stream)
 
+    def __iter__(self):
+        return iter(self.vlrs)
+
     @classmethod
     def from_list(cls, vlrs):
-        """ Construct a RawVLR list from a list of vlrs
+        """Construct a RawVLR list from a list of vlrs
 
         Parameters
         ----------
@@ -68,14 +71,13 @@ class RawVLRList:
 
 
 class VLRList:
-    """ Class responsible for managing the vlrs
-    """
+    """Class responsible for managing the vlrs"""
 
     def __init__(self):
         self.vlrs = []
 
     def append(self, vlr):
-        """ append a vlr to the list
+        """append a vlr to the list
 
         Parameters
         ----------
@@ -88,12 +90,11 @@ class VLRList:
         self.vlrs.append(vlr)
 
     def extend(self, vlr_list):
-        """ append all elements of the vlr_list into self
-        """
+        """append all elements of the vlr_list into self"""
         self.vlrs.extend(vlr_list)
 
     def get_by_id(self, user_id="", record_ids=(None,)):
-        """ Function to get vlrs by user_id and/or record_ids.
+        """Function to get vlrs by user_id and/or record_ids.
         Always returns a list even if only one vlr matches the user_id and record_id
 
         >>> import pylas
@@ -138,7 +139,7 @@ class VLRList:
             ]
 
     def get(self, vlr_type):
-        """ Returns the list of vlrs of the requested type
+        """Returns the list of vlrs of the requested type
         Always returns a list even if there is only one VLR of type vlr_type.
 
         >>> import pylas
@@ -170,7 +171,7 @@ class VLRList:
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
     def extract(self, vlr_type):
-        """ Returns the list of vlrs of the requested type
+        """Returns the list of vlrs of the requested type
         The difference with get is that the returned vlrs will be removed from the list
 
         Parameters
@@ -221,7 +222,7 @@ class VLRList:
 
     @classmethod
     def read_from(cls, data_stream, num_to_read):
-        """ Reads vlrs and parse them if possible from the stream
+        """Reads vlrs and parse them if possible from the stream
 
         Parameters
         ----------

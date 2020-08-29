@@ -1,9 +1,8 @@
+from collections import namedtuple
 from typing import List
 
 from pylas.vlrs import vlrlist
 from pylas.vlrs.known import GeoAsciiParamsVlr, GeoDoubleParamsVlr, GeoKeyDirectoryVlr
-
-from collections import namedtuple
 
 GeoTiffKey = namedtuple("GeoTiffKey", ("id", "value"))
 
@@ -21,7 +20,7 @@ ProjLinearUnitsGeoKey = 3076
 
 
 def parse_geo_tiff_keys_from_vlrs(vlr_list: vlrlist.VLRList) -> List[GeoTiffKey]:
-    """ Gets the 3 GeoTiff vlrs from the vlr_list and parse them into
+    """Gets the 3 GeoTiff vlrs from the vlr_list and parse them into
     a nicer structure
 
     Parameters
@@ -54,8 +53,7 @@ def parse_geo_tiff(
     double_vlr: GeoDoubleParamsVlr,
     ascii_vlr: GeoAsciiParamsVlr,
 ) -> List[GeoTiffKey]:
-    """ Parses the GeoTiff VLRs information into nicer structs
-    """
+    """Parses the GeoTiff VLRs information into nicer structs"""
     geotiff_keys = []
 
     for k in key_dir_vlr.geo_keys:

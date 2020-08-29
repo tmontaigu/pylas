@@ -44,10 +44,10 @@ _extra_dims_style_2_array_3 = tuple(
 )
 
 _extra_dims_style_1 = (
-        _extra_dims_base_style_1 + _extra_dims_style_1_array_2 + _extra_dims_style_1_array_3
+    _extra_dims_base_style_1 + _extra_dims_style_1_array_2 + _extra_dims_style_1_array_3
 )
 _extra_dims_style_2 = (
-        _extra_dims_base_style_2 + _extra_dims_style_1_array_2 + _extra_dims_style_2_array_3
+    _extra_dims_base_style_2 + _extra_dims_style_1_array_2 + _extra_dims_style_2_array_3
 )
 
 _type_to_extra_dim_id_style_1 = {
@@ -59,13 +59,13 @@ _type_to_extra_dim_id_style_2 = {
 
 
 class DimensionSignedness(Enum):
-    FLOATING = 0,
-    SIGNED = 1,
+    FLOATING = (0,)
+    SIGNED = (1,)
     UNSIGNED = 2
 
 
 def get_signedness_for_extra_dim(type_index):
-    """ Returns the signedness foe the given type index
+    """Returns the signedness foe the given type index
 
     Parameters
     ----------
@@ -90,7 +90,7 @@ def get_signedness_for_extra_dim(type_index):
 
 
 def get_type_for_extra_dim(type_index):
-    """ Returns the type str ('u1" or "u2", etc) for the given type index
+    """Returns the type str ('u1" or "u2", etc) for the given type index
     Parameters
     ----------
     type_index: int
@@ -109,7 +109,7 @@ def get_type_for_extra_dim(type_index):
 
 
 def get_id_for_extra_dim_type(type_str):
-    """ Returns the index of the type as defined in the LAS Specification
+    """Returns the index of the type as defined in the LAS Specification
 
     Parameters
     ----------
@@ -127,4 +127,4 @@ def get_id_for_extra_dim_type(type_str):
         try:
             return _type_to_extra_dim_id_style_2[type_str]
         except KeyError:
-            raise errors.UnknownExtraType(type_str)
+            raise errors.UnknownExtraType(type_str) from None

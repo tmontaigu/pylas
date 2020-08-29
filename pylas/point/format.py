@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 
 from . import dims
@@ -5,13 +7,15 @@ from .. import errors
 
 
 class PointFormat:
-    """ Class that handles all the information about a point format
+    """Class that handles all the information about a point format
 
     Most of the methods/properties will throw a
     pylas.errors.PointFormatNotSupported if the point format id is not supported
     """
 
-    def __init__(self, point_format_id, extra_dims=None):
+    def __init__(
+        self, point_format_id: int, extra_dims: Tuple[Tuple[str, str], ...] = None
+    ):
         """
         Parameters
         ----------
@@ -27,7 +31,7 @@ class PointFormat:
 
     @property
     def dimension_names(self):
-        """ Returns the names of the dimensions contained in the point format
+        """Returns the names of the dimensions contained in the point format
 
         Returns
         -------
@@ -38,8 +42,12 @@ class PointFormat:
         return self.unpacked_dtype.names
 
     @property
+    def size(self):
+        return self.dtype.itemsize
+
+    @property
     def dtype(self):
-        """ Returns the numpy.dtype used to store the point records in a numpy array
+        """Returns the numpy.dtype used to store the point records in a numpy array
 
         .. note::
 
@@ -53,7 +61,7 @@ class PointFormat:
 
     @property
     def unpacked_dtype(self):
-        """ Returns the numpy.dtype used to store the point records in a numpy array
+        """Returns the numpy.dtype used to store the point records in a numpy array
 
         .. note::
 
@@ -66,7 +74,7 @@ class PointFormat:
 
     @property
     def composed_fields(self):
-        """ Returns the dict of composed fields defined for the point format
+        """Returns the dict of composed fields defined for the point format
 
         Returns
         -------
@@ -78,7 +86,7 @@ class PointFormat:
 
     @property
     def sub_fields(self):
-        """ Returns a dict of the sub fields for this point format
+        """Returns a dict of the sub fields for this point format
 
         Returns
         -------
@@ -94,20 +102,17 @@ class PointFormat:
 
     @property
     def extra_dimension_names(self):
-        """ Returns the list of extra dimensions attached to this point format
-        """
+        """Returns the list of extra dimensions attached to this point format"""
         return [extd[0] for extd in self.extra_dims]
 
     @property
     def num_extra_bytes(self):
-        """ Returns the number of extra bytes
-        """
+        """Returns the number of extra bytes"""
         return sum(np.dtype(extra_dim[1]).itemsize for extra_dim in self.extra_dims)
 
     @property
     def has_waveform_packet(self):
-        """ Returns True if the point format has waveform packet dimensions
-        """
+        """Returns True if the point format has waveform packet dimensions"""
         dimensions = set(self.dimension_names)
         return all(name in dimensions for name in dims.WAVEFORM_FIELDS_NAMES)
 
@@ -141,14 +146,16 @@ class PointFormat:
         return self.id
 
     def __repr__(self):
-        return "<PointFormat({})>".format(self.id)
+        return "<PointFormat({}, {} bytes of extra dims)>".format(
+            self.id, self.num_extra_bytes
+        )
 
     def is_supported(self):
         return self.id in dims.ALL_POINT_FORMATS_DIMENSIONS
 
 
 def lost_dimensions(point_fmt_in, point_fmt_out):
-    """  Returns a list of the names of the dimensions that will be lost
+    """Returns a list of the names of the dimensions that will be lost
     when converting from point_fmt_in to point_fmt_out
     """
 
