@@ -8,6 +8,7 @@ import numpy as np
 
 from .. import compression, utils
 from .. import errors
+from ..point.record import PointRecord
 
 logger = logging.getLogger(__name__)
 
@@ -254,6 +255,38 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             self._point_data_format_id = compression.compressed_id_to_uncompressed(
                 self._point_data_format_id
             )
+
+    def update(self, points: PointRecord) -> None:
+        self.x_max = max(
+            self.x_max,
+            (points["X"].max() * self.x_scale) + self.x_offset,
+        )
+        self.y_max = max(
+            self.y_max,
+            (points["Y"].max() * self.y_scale) + self.y_offset,
+        )
+        self.z_max = max(
+            self.z_max,
+            (points["Z"].max() * self.z_scale) + self.z_offset,
+        )
+        self.x_min = min(
+            self.x_min,
+            (points["X"].min() * self.x_scale) + self.x_offset,
+        )
+        self.y_min = min(
+            self.y_min,
+            (points["Y"].min() * self.y_scale) + self.y_offset,
+        )
+        self.z_min = min(
+            self.z_min,
+            (points["Z"].min() * self.z_scale) + self.z_offset,
+        )
+
+        for i, count in zip(*np.unique(points.return_number, return_counts=True)):
+            if i >= len(self.number_of_points_by_return):
+                break  # np.unique sorts unique values
+            self.number_of_points_by_return[i - 1] += count
+        self.point_count += len(points)
 
     def __repr__(self):
         return "<LasHeader({})>".format(self.version)

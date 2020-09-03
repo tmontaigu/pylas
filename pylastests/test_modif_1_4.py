@@ -46,7 +46,7 @@ def test_writing_las_with_evlrs():
     assert las_1.evlrs == [evlr]
 
 
-@pytest.mark.skip(reason="Writing LAZ wit EVLRs is not well supported")
+@pytest.mark.skip(reason="Writing LAZ with EVLRs is not well supported")
 def test_writing_laz_with_evlrs(laz_backend):
     las = pylas.read(test1_4_las)
     assert las.evlrs == []

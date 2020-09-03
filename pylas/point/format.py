@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 
@@ -14,7 +14,9 @@ class PointFormat:
     """
 
     def __init__(
-        self, point_format_id: int, extra_dims: Tuple[Tuple[str, str], ...] = None
+        self,
+        point_format_id: int,
+        extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
     ):
         """
         Parameters

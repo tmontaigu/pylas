@@ -135,7 +135,7 @@ class LasWriter:
         elif points.point_format != self.point_format:
             raise PylasError("Incompatible point formats")
 
-        self._update_header(points)
+        self.header.update(points)
         self.point_writer.write_points(points)
 
     def write_evlrs(self, evlrs: EVLRList) -> None:
@@ -160,38 +160,6 @@ class LasWriter:
             self.point_writer.write_updated_header(self.header)
         if self.closefd:
             self.dest.close()
-
-    def _update_header(self, points: PointRecord) -> None:
-        self.header.x_max = max(
-            self.header.x_max,
-            (points["X"].max() * self.header.x_scale) + self.header.x_offset,
-        )
-        self.header.y_max = max(
-            self.header.y_max,
-            (points["Y"].max() * self.header.y_scale) + self.header.y_offset,
-        )
-        self.header.z_max = max(
-            self.header.z_max,
-            (points["Z"].max() * self.header.z_scale) + self.header.z_offset,
-        )
-        self.header.x_min = min(
-            self.header.x_min,
-            (points["X"].min() * self.header.x_scale) + self.header.x_offset,
-        )
-        self.header.y_min = min(
-            self.header.y_min,
-            (points["Y"].min() * self.header.y_scale) + self.header.y_offset,
-        )
-        self.header.z_min = min(
-            self.header.z_min,
-            (points["Z"].min() * self.header.z_scale) + self.header.z_offset,
-        )
-
-        for i, count in zip(*np.unique(points.return_number, return_counts=True)):
-            if i >= len(self.header.number_of_points_by_return):
-                break  # np.unique sorts unique values
-            self.header.number_of_points_by_return[i - 1] += count
-        self.header.point_count += len(points)
 
     def _create_laz_backend(
         self, laz_backends: Union[LazBackend, Iterable[LazBackend]]

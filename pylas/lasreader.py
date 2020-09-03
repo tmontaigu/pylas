@@ -1,4 +1,5 @@
 import abc
+import io
 import logging
 import os
 import subprocess
@@ -13,7 +14,7 @@ from .lasdatas import las14, las12
 from .point import record, PointFormat
 from .point.dims import size_of_point_format_id
 from .utils import ConveyorThread
-from .vlrs.known import LasZipVlr, ExtraBytesVlr
+from .vlrs.known import LasZipVlr
 from .vlrs.vlrlist import VLRList
 
 try:
@@ -24,16 +25,33 @@ except ModuleNotFoundError:
 logger = logging.getLogger(__name__)
 
 
+def get_extra_dims_info_tuple(header, vlrs) -> Optional[Tuple[Tuple[str, str], ...]]:
+    try:
+        extra_dims = vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
+    except IndexError:
+        return None
+
+    point_size_without_extra_bytes = size_of_point_format_id(header.point_format_id)
+    if header.point_size == point_size_without_extra_bytes:
+        logger.warning(
+            "There is an ExtraByteVlr but the header.point_size matches the "
+            "point size without extra bytes. The extra bytes vlr info will be ignored"
+        )
+        vlrs.extract("ExtraBytesVlr")
+        extra_dims = None
+    return extra_dims
+
+
 class LasReader:
     """The reader class handles LAS and LAZ via one of the supported backend"""
 
     def __init__(
-        self,
-        source: BinaryIO,
-        closefd: bool = True,
-        laz_backends: Union[
-            LazBackend, Iterable[LazBackend]
-        ] = LazBackend.detect_available(),
+            self,
+            source: BinaryIO,
+            closefd: bool = True,
+            laz_backends: Union[
+                LazBackend, Iterable[LazBackend]
+            ] = LazBackend.detect_available(),
     ):
         self.closefd = closefd
         self.laz_backends = laz_backends
@@ -54,7 +72,8 @@ class LasReader:
 
         self.points_read = 0
         self.point_format = PointFormat(
-            self.header.point_format_id, extra_dims=self._get_extra_dims()
+            self.header.point_format_id,
+            extra_dims=get_extra_dims_info_tuple(self.header, self.vlrs),
         )
 
     def read_n_points(self, n: int) -> Optional[record.ScaleAwarePointRecord]:
@@ -83,7 +102,11 @@ class LasReader:
             points = record.PackedPointRecord.empty(self.point_format)
 
         if self.header.version >= "1.4":
-            evlrs = self._read_evlrs(self.point_source.source)
+            if self.header.are_points_compressed and not self.point_source.source.seekable():
+                # We explicitly require seekable stream because we have to seek
+                # past the chunk table of LAZ file
+                raise errors.PylasError("source must be seekable, to read evlrs form LAZ file")
+            evlrs = self._read_evlrs(self.point_source.source, seekable=True)
             las_data = las14.LasData(
                 header=self.header, vlrs=self.vlrs, points=points, evlrs=evlrs
             )
@@ -137,24 +160,6 @@ class LasReader:
             except errors.LazError as e:
                 logger.error(e)
 
-    def _get_extra_dims(self) -> Optional[Tuple[Tuple[str, str], ...]]:
-        try:
-            extra_dims = self.vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
-        except IndexError:
-            return None
-
-        point_size_without_extra_bytes = size_of_point_format_id(
-            self.header.point_format_id
-        )
-        if self.header.point_size == point_size_without_extra_bytes:
-            logger.warning(
-                "There is an ExtraByteVlr but the header.point_size matches the "
-                "point size without extra bytes. The extra bytes vlr info will be ignored"
-            )
-            self.vlrs.extract("ExtraBytesVlr")
-            extra_dims = None
-        return extra_dims
-
     @staticmethod
     def _read_header_and_vlrs(source, seekable=True):
         header = headers.HeaderFactory().read_from_stream(source)
@@ -162,7 +167,7 @@ class LasReader:
         if seekable:
             offset = header.offset_to_point_data - source.tell()
             if offset >= 0:
-                source.read(offset)
+                source.seek(offset, io.SEEK_CUR)
             else:
                 raise RuntimeError("Read past point data")  # TODO
         return header, vlrs
@@ -325,9 +330,7 @@ class LazrsPointReader(IPointReader):
                 source, laszip_vlr.record_data
             )
         else:
-            self.decompressor = lazrs.LasZipDecompressor(
-                laszip_vlr.record_data, self.source
-            )
+            self.decompressor = lazrs.LasZipDecompressor(source, laszip_vlr.record_data)
 
     def read_n_points(self, n) -> bytes:
         point_bytes = np.zeros(n * self.vlr.item_size(), np.uint8)

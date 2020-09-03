@@ -16,6 +16,7 @@ from .lasdatas import las12, las14
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .laswriter import LasWriter
+from .lasappender import LasAppender
 from .point import dims, record, PointFormat
 
 USE_UNPACKED = False
@@ -29,7 +30,7 @@ def open_las(
     laz_backend=LazBackend.detect_available(),
     header=None,
     do_compress=None,
-) -> Union[LasReader, LasWriter]:
+) -> Union[LasReader, LasWriter, LasAppender]:
     """Opens and reads the header of the las content in the source
 
         >>> with open_las('pylastests/simple.las') as f:
@@ -125,6 +126,15 @@ def open_las(
             laz_backends=laz_backend,
             closefd=closefd,
         )
+    elif mode == "a":
+        if isinstance(source, str):
+            stream = open(source, mode="rb+", closefd=closefd)
+        elif isinstance(source, bytes):
+            stream = io.BytesIO(source)
+        else:
+            stream = source
+        return LasAppender(stream, closefd=closefd, laz_backend=laz_backend)
+
     else:
         raise ValueError("Unknown mode '{}'".format(mode))
 
