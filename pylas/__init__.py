@@ -6,6 +6,7 @@ from . import errors, vlrs
 from .evlrs import EVLR
 from .headers import HeaderFactory
 from .laswriter import LasWriter
+from .errors import PylasError
 from .lib import LazBackend
 from .lib import convert, create_from_header
 from .lib import create_las as create

@@ -22,7 +22,7 @@ def check_chunked_reading_is_gives_expected_points(groundtruth_las, reader, iter
     for i, points in enumerate(reader.chunk_iterator(iter_size)):
         expected_points = groundtruth_las.points[i * iter_size : (i + 1) * iter_size]
         for dim_name in points.array.dtype.names:
-            assert np.allclose(expected_points[dim_name], points[dim_name])
+            assert np.allclose(expected_points[dim_name], points[dim_name]), f"{dim_name} not equal"
 
 
 def test_that_chunked_reading_gives_expected_points(las_path_fixture):
