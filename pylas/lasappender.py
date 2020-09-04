@@ -87,13 +87,13 @@ class LazrsAppender:
 
 class LasAppender:
     def __init__(
-            self,
-            dest,
-            laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-                    LazBackend.LazrsParallel,
-                    LazBackend.Lazrs,
-            ),
-            closefd: bool = True,
+        self,
+        dest,
+        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
+            LazBackend.LazrsParallel,
+            LazBackend.Lazrs,
+        ),
+        closefd: bool = True,
     ) -> None:
         if not dest.seekable():
             raise TypeError("Expected the 'dest' to be a seekable file object")
@@ -110,14 +110,17 @@ class LasAppender:
         if not header.are_points_compressed:
             self.points_writer = UncompressedPointWriter(self.dest)
             self.dest.seek(
-                (self.header.point_count * self.header.point_size) + self.header.offset_to_point_data,
-                io.SEEK_SET
+                (self.header.point_count * self.header.point_size)
+                + self.header.offset_to_point_data,
+                io.SEEK_SET,
             )
         else:
             self.points_writer = self._create_laz_backend(laz_backend)
 
         if header.version >= "1.4" and header.number_of_evlr > 0:
-            assert self.dest.tell() <= self.header.start_of_first_evlr, "The position is past the start of evlrs"
+            assert (
+                self.dest.tell() <= self.header.start_of_first_evlr
+            ), "The position is past the start of evlrs"
             pos = self.dest.tell()
             self.dest.seek(self.header.start_of_first_evlr, io.SEEK_SET)
             self.evlrs = EVLRList.read_from(self.dest, self.header.number_of_evlr)
@@ -157,11 +160,11 @@ class LasAppender:
         self.dest.seek(pos, io.SEEK_SET)
 
     def _create_laz_backend(
-            self,
-            laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-                    LazBackend.LazrsParallel,
-                    LazBackend.Lazrs,
-            ),
+        self,
+        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
+            LazBackend.LazrsParallel,
+            LazBackend.Lazrs,
+        ),
     ) -> LazrsAppender:
         try:
             laz_backend = iter(laz_backend)
@@ -173,14 +176,24 @@ class LasAppender:
             if backend == LazBackend.Laszip:
                 raise PylasError("Laszip backend does not support appending")
             elif backend == LazBackend.LazrsParallel:
-                return LazrsAppender(self.dest, self.header, self.vlrs, parallel=True)
+                try:
+                    return LazrsAppender(
+                        self.dest, self.header, self.vlrs, parallel=True
+                    )
+                except Exception as e:
+                    last_error = e
             elif backend == LazBackend.Lazrs:
-                return LazrsAppender(self.dest, self.header, self.vlrs, parallel=False)
+                try:
+                    return LazrsAppender(
+                        self.dest, self.header, self.vlrs, parallel=False
+                    )
+                except Exception as e:
+                    last_error = e
+
+        if last_error is not None:
+            raise PylasError(f"Could not initialize a laz backend: {last_error}")
         else:
-            if last_error is not None:
-                raise PylasError(f"Could not initialize a laz backend: {last_error}")
-            else:
-                raise PylasError(f"No valid laz backend selected")
+            raise PylasError(f"No valid laz backend selected")
 
     def __enter__(self):
         return self

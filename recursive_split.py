@@ -6,7 +6,6 @@ from typing import Optional
 import numpy as np
 
 import pylas
-from pylas import LazBackend
 
 
 def recursive_split(x_min, y_min, x_max, y_max, max_x_size, max_y_size):
@@ -29,7 +28,7 @@ def tuple_size(string):
     try:
         return tuple(map(float, string.split("x")))
     except:
-        raise argparse.ArgumentError("Size must be in the form of 50.0x65.14")
+        raise ValueError("Size must be in the form of numberxnumber eg: 50.0x65.14")
 
 
 def main():
@@ -61,7 +60,7 @@ def main():
                         if writers[i] is None:
                             writers[i] = pylas.open(f"{sys.argv[2]}/output_{i}.laz",
                                                     mode='w',
-                                                    laz_backends=[LazBackend.LazrsParallel],
+                                                    laz_backends=[pylas.LazBackend.LazrsParallel],
                                                     header=file.header)
                         sub_points = points[mask]
                         writers[i].write(sub_points)

@@ -41,7 +41,6 @@ class LasMMAP(base.LasBase):
         except IndexError:
             extra_dims = None
 
-        point_format = PointFormat(self.header.point_format_id, extra_dims=extra_dims)
         self.points_data = record.PackedPointRecord.from_buffer(
             self.mmap,
             self.header.point_format_id,

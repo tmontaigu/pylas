@@ -203,6 +203,4 @@ def find_laszip_executable():
         )
         if any(in_path):
             return binary
-
-    else:
-        raise FileNotFoundError("Could not find laszip executable")
+    raise FileNotFoundError("Could not find laszip executable")

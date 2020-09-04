@@ -201,8 +201,7 @@ class VLRList:
         for i, v in enumerate(self.vlrs):
             if v.__class__.__name__ == vlr_type:
                 return i
-        else:
-            raise ValueError("{} is not in the VLR list".format(vlr_type))
+        raise ValueError("{} is not in the VLR list".format(vlr_type))
 
     def __iter__(self):
         yield from iter(self.vlrs)

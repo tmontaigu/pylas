@@ -6,7 +6,6 @@
 import abc
 import ctypes
 import struct
-from abc import abstractmethod
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
 from ..extradims import (
@@ -14,6 +13,8 @@ from ..extradims import (
     get_signedness_for_extra_dim,
     DimensionSignedness,
 )
+
+abstractmethod = abc.abstractmethod
 
 
 class IKnownVLR(abc.ABC):
@@ -559,5 +560,4 @@ def vlr_factory(raw_vlr):
             and raw_vlr.header.record_id in known_vlr.official_record_ids()
         ):
             return known_vlr.from_raw(raw_vlr)
-    else:
-        return VLR.from_raw(raw_vlr)
+    return VLR.from_raw(raw_vlr)

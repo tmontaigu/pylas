@@ -46,12 +46,12 @@ class LasReader:
     """The reader class handles LAS and LAZ via one of the supported backend"""
 
     def __init__(
-            self,
-            source: BinaryIO,
-            closefd: bool = True,
-            laz_backends: Union[
-                LazBackend, Iterable[LazBackend]
-            ] = LazBackend.detect_available(),
+        self,
+        source: BinaryIO,
+        closefd: bool = True,
+        laz_backends: Union[
+            LazBackend, Iterable[LazBackend]
+        ] = LazBackend.detect_available(),
     ):
         self.closefd = closefd
         self.laz_backends = laz_backends
@@ -102,10 +102,15 @@ class LasReader:
             points = record.PackedPointRecord.empty(self.point_format)
 
         if self.header.version >= "1.4":
-            if self.header.are_points_compressed and not self.point_source.source.seekable():
+            if (
+                self.header.are_points_compressed
+                and not self.point_source.source.seekable()
+            ):
                 # We explicitly require seekable stream because we have to seek
                 # past the chunk table of LAZ file
-                raise errors.PylasError("source must be seekable, to read evlrs form LAZ file")
+                raise errors.PylasError(
+                    "source must be seekable, to read evlrs form LAZ file"
+                )
             evlrs = self._read_evlrs(self.point_source.source, seekable=True)
             las_data = las14.LasData(
                 header=self.header, vlrs=self.vlrs, points=points, evlrs=evlrs

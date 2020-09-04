@@ -258,28 +258,22 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     def update(self, points: PointRecord) -> None:
         self.x_max = max(
-            self.x_max,
-            (points["X"].max() * self.x_scale) + self.x_offset,
+            self.x_max, (points["X"].max() * self.x_scale) + self.x_offset,
         )
         self.y_max = max(
-            self.y_max,
-            (points["Y"].max() * self.y_scale) + self.y_offset,
+            self.y_max, (points["Y"].max() * self.y_scale) + self.y_offset,
         )
         self.z_max = max(
-            self.z_max,
-            (points["Z"].max() * self.z_scale) + self.z_offset,
+            self.z_max, (points["Z"].max() * self.z_scale) + self.z_offset,
         )
         self.x_min = min(
-            self.x_min,
-            (points["X"].min() * self.x_scale) + self.x_offset,
+            self.x_min, (points["X"].min() * self.x_scale) + self.x_offset,
         )
         self.y_min = min(
-            self.y_min,
-            (points["Y"].min() * self.y_scale) + self.y_offset,
+            self.y_min, (points["Y"].min() * self.y_scale) + self.y_offset,
         )
         self.z_min = min(
-            self.z_min,
-            (points["Z"].min() * self.z_scale) + self.z_offset,
+            self.z_min, (points["Z"].min() * self.z_scale) + self.z_offset,
         )
 
         for i, count in zip(*np.unique(points.return_number, return_counts=True)):

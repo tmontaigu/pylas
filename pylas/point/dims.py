@@ -260,12 +260,12 @@ def np_dtype_to_point_format(dtype, unpacked=False):
     for format_id, fmt_dtype in all_dtypes.items():
         if fmt_dtype == dtype:
             return format_id
-    else:
-        raise errors.IncompatibleDataFormat(
-            "Data type of array is not compatible with any point format (array dtype: {})".format(
-                dtype
-            )
+
+    raise errors.IncompatibleDataFormat(
+        "Data type of array is not compatible with any point format (array dtype: {})".format(
+            dtype
         )
+    )
 
 
 def size_of_point_format_id(point_format_id):
@@ -280,8 +280,7 @@ def min_file_version_for_point_format(point_format_id):
     for version, point_formats in sorted(VERSION_TO_POINT_FMT.items()):
         if point_format_id in point_formats:
             return version
-    else:
-        raise errors.PointFormatNotSupported(point_format_id)
+    raise errors.PointFormatNotSupported(point_format_id)
 
 
 def supported_versions():
