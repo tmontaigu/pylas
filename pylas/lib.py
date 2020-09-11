@@ -5,6 +5,7 @@ import copy
 import io
 import logging
 import os
+from pathlib import Path
 from typing import Union
 
 import numpy as np
@@ -97,7 +98,7 @@ def open_las(
                 "do_compress argument is not used when opening in read mode, "
                 "did you meant to open in write mode ?"
             )
-        if isinstance(source, str):
+        if isinstance(source, (str, Path)):
             stream = open(source, mode="rb", closefd=closefd)
         elif isinstance(source, bytes):
             stream = io.BytesIO(source)
@@ -108,7 +109,7 @@ def open_las(
         if header is None:
             raise ValueError("A header is needed when opening a file for writing")
 
-        if isinstance(source, str):
+        if isinstance(source, (str, Path)):
             if do_compress is None:
                 do_compress = os.path.splitext(source)[1].lower() == ".laz"
             stream = open(source, mode="wb+", closefd=closefd)
@@ -127,7 +128,7 @@ def open_las(
             closefd=closefd,
         )
     elif mode == "a":
-        if isinstance(source, str):
+        if isinstance(source, (str, Path)):
             stream = open(source, mode="rb+", closefd=closefd)
         elif isinstance(source, bytes):
             stream = io.BytesIO(source)
