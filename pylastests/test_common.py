@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -6,13 +7,13 @@ import pytest
 import pylas
 from pylas.lib import write_then_read_again
 
-simple_las = os.path.dirname(__file__) + "/" + "simple.las"
-simple_laz = os.path.dirname(__file__) + "/" + "simple.laz"
-vegetation1_3_las = os.path.dirname(__file__) + "/vegetation_1_3.las"
-test1_4_las = os.path.dirname(__file__) + "/" + "test1_4.las"
-extra_bytes_las = os.path.dirname(__file__) + "/extrabytes.las"
-extra_bytes_laz = os.path.dirname(__file__) + "/extra.laz"
-plane_laz = os.path.dirname(__file__) + "/plane.laz"
+simple_las = Path(__file__).parent / "simple.las"
+simple_laz = Path(__file__).parent / "simple.laz"
+vegetation1_3_las = Path(__file__).parent / "vegetation_1_3.las"
+test1_4_las = Path(__file__).parent / "test1_4.las"
+extra_bytes_las = Path(__file__).parent / "extrabytes.las"
+extra_bytes_laz = Path(__file__).parent / "extra.laz"
+plane_laz = Path(__file__).parent / "plane.laz"
 
 if not pylas.LazBackend.detect_available():
     do_compression = [False]
