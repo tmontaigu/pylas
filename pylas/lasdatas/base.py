@@ -4,22 +4,13 @@ import numpy as np
 
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .. import errors, extradims
+from ..compression import LazBackend
 from ..laswriter import LasWriter
 from ..point import record, dims, PointFormat
-from ..point.record import scale_dimension, unscale_dimension
+from ..point.dims import ScaledArrayView
 from ..vlrs import vlrlist
-from ..compression import LazBackend
 
 logger = logging.getLogger(__name__)
-
-
-def is_in_bounds_of_type(array, type_info):
-    return array.max() < type_info.max and array.min() > type_info.min
-
-
-OVERFLOW_ERR_MSG = (
-    "Values given for '{}' won't fit in an {} array, with the current scale ({})"
-)
 
 
 class LasBase(object):
@@ -54,56 +45,35 @@ class LasBase(object):
     @property
     def x(self):
         """Returns the scaled x positions of the points as doubles"""
-        return scale_dimension(self.X, self.header.x_scale, self.header.x_offset)
+        return ScaledArrayView(self.X, self.header.x_scale, self.header.x_offset)
 
     @property
     def y(self):
         """Returns the scaled y positions of the points as doubles"""
-        return scale_dimension(self.Y, self.header.y_scale, self.header.y_offset)
+        return ScaledArrayView(self.Y, self.header.y_scale, self.header.y_offset)
 
     @property
     def z(self):
         """Returns the scaled z positions of the points as doubles"""
-        return scale_dimension(self.Z, self.header.z_scale, self.header.z_offset)
+        return ScaledArrayView(self.Z, self.header.z_scale, self.header.z_offset)
 
     @x.setter
     def x(self, value):
-        if self.header.x_offset == 0.0:
-            self.header.x_offset = np.min(value)
-
-        X = unscale_dimension(value, self.header.x_scale, self.header.x_offset)
-        dim_info = self.point_format.dimension_type_info("X")
-        if not is_in_bounds_of_type(X, dim_info):
-            raise OverflowError(
-                OVERFLOW_ERR_MSG.format("x", dim_info.dtype, self.header.x_scale)
-            )
-        self.X = X
+        if len(value) > len(self.points_data):
+            self.points_data.resize(len(value))
+        self.x[:] = value
 
     @y.setter
     def y(self, value):
-        if self.header.y_offset == 0.0:
-            self.header.y_offset = np.min(value)
-
-        Y = unscale_dimension(value, self.header.y_scale, self.header.y_offset)
-        dim_info = self.point_format.dimension_type_info("Y")
-        if not is_in_bounds_of_type(Y, dim_info):
-            raise OverflowError(
-                OVERFLOW_ERR_MSG.format("y", dim_info.dtype, self.header.y_scale)
-            )
-        self.Y = Y
+        if len(value) > len(self.points_data):
+            self.points_data.resize(len(value))
+        self.y[:] = value
 
     @z.setter
     def z(self, value):
-        if self.header.z_offset == 0.0:
-            self.header.z_offset = np.min(value)
-
-        Z = unscale_dimension(value, self.header.z_scale, self.header.z_offset)
-        dim_info = self.point_format.dimension_type_info("Z")
-        if not is_in_bounds_of_type(Z, dim_info):
-            raise OverflowError(
-                OVERFLOW_ERR_MSG.format("z", dim_info.dtype, self.header.z_scale)
-            )
-        self.Z = Z
+        if len(value) > len(self.points_data):
+            self.points_data.resize(len(value))
+        self.z[:] = value
 
     @property
     def point_format(self):
@@ -235,7 +205,7 @@ class LasBase(object):
             self.header.number_of_points_by_return = counts
 
     def write_to(
-        self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()
+            self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()
     ):
         """writes the data to a stream
 
@@ -247,12 +217,12 @@ class LasBase(object):
             Flag to indicate if you want the date to be compressed
         """
         with LasWriter(
-            out_stream,
-            self.header,
-            self.vlrs,
-            do_compress=do_compress,
-            closefd=False,
-            laz_backends=laz_backends,
+                out_stream,
+                self.header,
+                self.vlrs,
+                do_compress=do_compress,
+                closefd=False,
+                laz_backends=laz_backends,
         ) as writer:
             writer.write(self.points_data)
 
@@ -285,7 +255,7 @@ class LasBase(object):
             self.write_to(out, do_compress=do_compress)
 
     def write(
-        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
+            self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
     ):
         """Writes to a stream or file
 

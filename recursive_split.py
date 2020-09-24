@@ -6,7 +6,6 @@ from typing import Optional
 import numpy as np
 
 import pylas
-from pylas import LazBackend
 
 
 def recursive_split(x_min, y_min, x_max, y_max, max_x_size, max_y_size):
@@ -29,7 +28,7 @@ def tuple_size(string):
     try:
         return tuple(map(float, string.split("x")))
     except:
-        raise argparse.ArgumentError("Size must be in the form of 50.0x65.14")
+        raise ValueError("Size must be in the form of numberxnumber eg: 50.0x65.14")
 
 
 def main():
@@ -37,6 +36,7 @@ def main():
     parser.add_argument("input_file")
     parser.add_argument("output_dir")
     parser.add_argument("size", type=tuple_size, help="eg: 50x64.17")
+    parser.add_argument("--points_per_iter", default=10**6)
 
     args = parser.parse_args()
 
@@ -52,19 +52,31 @@ def main():
 
         writers: List[Optional[pylas.LasWriter]] = [None] * len(sub_bounds)
         try:
-            for points in file.chunk_iterator(10 ** 6):
-                print(f"{len(points) / file.header.point_count * 100}%")
+            count = 0
+            for points in file.chunk_iterator(args.points_per_iter):
+                print(f"{count / file.header.point_count * 100}%")
+
+                # For performance we need to use copy
+                # so that the arrays underlying arrays are contiguous
+                x, y = points.x.copy(), points.y.copy()
+
+                point_piped = 0
+
                 for i, (x_min, y_min, x_max, y_max) in enumerate(sub_bounds):
-                    mask = (points.x >= x_min) & (points.x <= x_max) & (points.y >= y_min) & (points.y <= y_max)
+                    mask = (x >= x_min) & (x <= x_max) & (y >= y_min) & (y <= y_max)
 
                     if np.any(mask):
                         if writers[i] is None:
                             writers[i] = pylas.open(f"{sys.argv[2]}/output_{i}.laz",
                                                     mode='w',
-                                                    laz_backends=[LazBackend.LazrsParallel],
                                                     header=file.header)
                         sub_points = points[mask]
                         writers[i].write(sub_points)
+
+                    point_piped += np.sum(mask)
+                    if point_piped == len(points):
+                        break
+                count += len(points)
         finally:
             for writer in writers:
                 if writer is not None:
