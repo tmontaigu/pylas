@@ -49,16 +49,16 @@ class LasReader:
         self,
         source: BinaryIO,
         closefd: bool = True,
-        laz_backends: Union[
+        laz_backend: Union[
             LazBackend, Iterable[LazBackend]
         ] = LazBackend.detect_available(),
     ):
         self.closefd = closefd
-        self.laz_backends = laz_backends
+        self.laz_backend = laz_backend
         self.header, self.vlrs = self._read_header_and_vlrs(source)
 
         if self.header.are_points_compressed:
-            if not laz_backends:
+            if not laz_backend:
                 raise errors.PylasError(
                     "No LazBackend selected, cannot decompress data"
                 )
@@ -137,9 +137,9 @@ class LasReader:
 
     def _create_laz_backend(self, source):
         try:
-            backends = iter(self.laz_backends)
+            backends = iter(self.laz_backend)
         except TypeError:
-            backends = (self.laz_backends,)
+            backends = (self.laz_backend,)
 
         laszip_vlr = self.vlrs.pop(self.vlrs.index("LasZipVlr"))
         for backend in backends:

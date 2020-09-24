@@ -25,7 +25,7 @@ class LasData(LasBase):
             self.header.legacy_point_count = len(self.points_data)
 
     def write_to(
-        self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()
+        self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
     ):
         with LasWriter(
             out_stream,
@@ -33,7 +33,7 @@ class LasData(LasBase):
             self.vlrs,
             do_compress=do_compress,
             closefd=False,
-            laz_backends=laz_backends,
+            laz_backend=laz_backend,
         ) as writer:
             writer.write(self.points_data)
             writer.write_evlrs(self.evlrs)

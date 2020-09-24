@@ -205,7 +205,7 @@ class LasBase(object):
             self.header.number_of_points_by_return = counts
 
     def write_to(
-            self, out_stream, do_compress=False, laz_backends=LazBackend.detect_available()
+            self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
     ):
         """writes the data to a stream
 
@@ -222,7 +222,7 @@ class LasBase(object):
                 self.vlrs,
                 do_compress=do_compress,
                 closefd=False,
-                laz_backends=laz_backends,
+                laz_backend=laz_backend,
         ) as writer:
             writer.write(self.points_data)
 
@@ -292,7 +292,7 @@ class LasBase(object):
             if do_compress is None:
                 do_compress = False
             self.write_to(
-                destination, do_compress=do_compress, laz_backends=laz_backend
+                destination, do_compress=do_compress, laz_backend=laz_backend
             )
 
     def __repr__(self):

@@ -103,7 +103,7 @@ def open_las(
             stream = io.BytesIO(source)
         else:
             stream = source
-        return LasReader(stream, closefd=closefd, laz_backends=laz_backend)
+        return LasReader(stream, closefd=closefd, laz_backend=laz_backend)
     elif mode == "w":
         if header is None:
             raise ValueError("A header is needed when opening a file for writing")
@@ -123,7 +123,7 @@ def open_las(
             stream,
             header=header,
             do_compress=do_compress,
-            laz_backends=laz_backend,
+            laz_backend=laz_backend,
             closefd=closefd,
         )
     elif mode == "a":

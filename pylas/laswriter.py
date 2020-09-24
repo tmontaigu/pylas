@@ -62,7 +62,7 @@ class LasWriter:
         header,
         vlrs: Optional[VLRList] = None,
         do_compress: bool = False,
-        laz_backends: Union[
+        laz_backend: Union[
             LazBackend, Iterable[LazBackend]
         ] = LazBackend.detect_available(),
         closefd: bool = True,
@@ -74,7 +74,7 @@ class LasWriter:
         self.header.mins = [np.finfo("f8").max] * 3
 
         self.do_compress = do_compress
-        self.laz_backends = laz_backends
+        self.laz_backend = laz_backend
         self.dest = dest
 
         if vlrs is None:
@@ -127,7 +127,7 @@ class LasWriter:
                     self.vlrs.append(extra_bytes_vlr)
 
             if self.do_compress:
-                self.point_writer = self._create_laz_backend(self.laz_backends)
+                self.point_writer = self._create_laz_backend(self.laz_backend)
             else:
                 self.point_writer = UncompressedPointWriter(self.dest)
 
