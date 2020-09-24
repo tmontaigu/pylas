@@ -20,7 +20,6 @@ from .laswriter import LasWriter
 from .lasappender import LasAppender
 from .point import dims, record, PointFormat
 
-USE_UNPACKED = False
 logger = logging.getLogger(__name__)
 
 
@@ -147,7 +146,7 @@ def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
 
     >>> las = read_las("pylastests/simple.las")
     >>> las.classification
-    array([1, 1, 1, ..., 1, 1, 1], dtype=uint8)
+    <SubFieldView([1 1 1 ... 1 1 1])>
 
     Parameters
     ----------

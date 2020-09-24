@@ -121,12 +121,6 @@ To access point records using the dimension name, you have 2 options:
 >>> np.all(las.user_data == las['user_data'])
 True
 
-However if you wish to retrieve the x, y, z coordinates with scale and offset applied
-your only option is the first method.
-
->>> las.x.max().dtype
-dtype('float64')
-
 The dimensions available in a file are dictated by the point format id.
 The tables in the introduction section contains the list of dimensions for each of the
 point format.

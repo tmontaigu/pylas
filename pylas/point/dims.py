@@ -2,10 +2,12 @@
 the mapping between dimension names and their type, mapping between point format and
 compatible file version
 """
+import operator
 from collections import namedtuple
 
 import numpy as np
 
+from . import packing
 from .. import errors
 
 
@@ -38,7 +40,7 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
 
 
 def _build_unpacked_point_formats_dtypes(
-    point_formats_dimensions, composed_fields_dict, dimensions_dict
+        point_formats_dimensions, composed_fields_dict, dimensions_dict
 ):
     """Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are unpacked and can be accessed directly
@@ -308,3 +310,228 @@ def raise_if_version_not_compatible_with_fmt(point_format_id, file_version):
                 point_format_id, file_version
             )
         )
+
+
+class SubFieldView:
+    def __init__(self, array: np.ndarray, bit_mask):
+        self.array = array
+        self.bit_mask = self.array.dtype.type(bit_mask)
+        self.lsb = packing.least_significant_bit_set(bit_mask)
+        self.max_value_allowed = int(self.bit_mask >> self.lsb)
+
+    def masked_array(self):
+        return (self.array & self.bit_mask) >> self.lsb
+
+    def copy(self):
+        return SubFieldView(self.array.copy(), int(self.bit_mask))
+
+    def _do_comparison(self, value, comp):
+        if isinstance(value, (int, self.array.dtype)):
+            if value > self.max_value_allowed:
+                return np.zeros_likes(self.array, np.bool)
+        return comp(self.array & self.bit_mask, value << self.lsb)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        inpts = []
+        for inpt in inputs:
+            if isinstance(inpt, self.__class__):
+                inpts.append(inpt.masked_array())
+            else:
+                inpts.append(inpt)
+        ret = getattr(ufunc, method)(*inpts, **kwargs)
+        if ret is not None and isinstance(ret, np.ndarray):
+            if ret.dtype == np.bool:
+                return ret
+            return self.__class__(ret, int(self.bit_mask))
+        return ret
+
+    def __array_function__(self, func, types, args, kwargs):
+        if func == np.allclose:
+            argslist = []
+            for i in range(len(args)):
+                if isinstance(args[i], SubFieldView):
+                    argslist.append(args[i].masked_array())
+                else:
+                    argslist.append(args[i])
+            return np.allclose(*argslist, **kwargs)
+        elif func == np.amax or func == np.max:
+            return np.max(self.masked_array())
+        elif func == np.amin or func == np.min:
+            return np.min(self.masked_array())
+        else:
+            return func(self.masked_array(), *args[1:], **kwargs)
+
+    def __array__(self, **kwargs):
+        return self.masked_array()
+
+    def max(self, **unused_kwargs):
+        return self.masked_array().max()
+
+    def min(self, **unused_kwargs):
+        return self.masked_array().min()
+
+    def __len__(self):
+        return len(self.array)
+
+    def __lt__(self, other):
+        return self._do_comparison(other, operator.lt)
+
+    def __le__(self, other):
+        return self._do_comparison(other, operator.le)
+
+    def __ge__(self, other):
+        return self._do_comparison(other, operator.ge)
+
+    def __gt__(self, other):
+        return self._do_comparison(other, operator.gt)
+
+    def __eq__(self, other):
+        if isinstance(other, SubFieldView):
+            return self.bit_mask == other.bit_mask and self.masked_array() == other
+        else:
+            return self._do_comparison(other, operator.eq)
+
+    def __ne__(self, other):
+        if isinstance(other, SubFieldView):
+            return self.bit_mask != other.bit_mask and self.masked_array() != other
+        else:
+            return self._do_comparison(other, operator.ne)
+
+    def __setitem__(self, key, value):
+        if np.max(value) > self.max_value_allowed:
+            raise OverflowError(
+                f"value {np.max(value)} is greater than allowed (max: {self.max_value_allowed})"
+            )
+        self.array[key] &= ~self.bit_mask
+        self.array[key] |= (value << self.lsb)
+
+    def __getitem__(self, item):
+        return SubFieldView(self.array[item], int(self.bit_mask))
+
+    def __repr__(self):
+        return f"<SubFieldView({self.masked_array()})>"
+
+
+class ScaledArrayView:
+    def __init__(self, array, scale: float, offset: float) -> None:
+        self.array = array
+        self.scale = scale
+        self.offset = offset
+
+    def scaled_array(self):
+        return self._apply_scale(self.array)
+
+    def copy(self):
+        return ScaledArrayView(self.array.copy(), self.scale, self.offset)
+
+    def _apply_scale(self, value):
+        return (value * self.scale) + self.offset
+
+    def _remove_scale(self, value):
+        return np.round((value - self.offset) / self.scale)
+
+    def max(self, **unused_kwargs):
+        return self._apply_scale(self.array.max())
+
+    def min(self, **unused_kwargs):
+        return self._apply_scale(self.array.min())
+
+    def __array__(self):
+        return self.scaled_array()
+
+    def __array_function__(self, func, types, args, kwargs):
+        args = tuple(arg.array if isinstance(arg, ScaledArrayView) else arg for arg in args)
+        ret = func(*args, **kwargs)
+        if ret is not None:
+            if isinstance(ret, np.ndarray) and ret.dtype != np.bool:
+                return self.__class__(ret, self.scale, self.offset)
+            if isinstance(ret, (bool, np.bool)):
+                return ret
+            else:
+                return self._apply_scale(ret)
+        return ret
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        inpts = []
+        for inpt in inputs:
+            if isinstance(inpt, self.__class__):
+                inpts.append(inpt.array)
+            else:
+                inpts.append(inpt)
+        ret = getattr(ufunc, method)(*inpts, **kwargs)
+        if ret is not None:
+            if isinstance(ret, np.ndarray):
+                return self.__class__(ret, self.scale, self.offset)
+            elif ret.dtype != np.bool:
+                return self._apply_scale(ret)
+            else:
+                return ret
+        return ret
+
+    def __len__(self):
+        return len(self.array)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return (
+                    self.scale == other.scale
+                    and self.offset == other.offset
+                    and np.all(self.array == other.array)
+            )
+        else:
+            return self.scaled_array() == other
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return (
+                    self.scale != other.scale
+                    and self.offset != other.offset
+                    and np.all(self.array != other.array)
+            )
+        else:
+            return self.scaled_array() != other
+
+    def __lt__(self, other):
+        return self.array < self._remove_scale(other)
+
+    def __gt__(self, other):
+        return self.array > self._remove_scale(other)
+
+    def __ge__(self, other):
+        return self.array >= self._remove_scale(other)
+
+    def __le__(self, other):
+        return self.array <= self._remove_scale(other)
+
+    def __sub__(self, other):
+        return ScaledArrayView(self.array - self._remove_scale(other), self.scale, self.offset)
+
+    def __add__(self, other):
+        return ScaledArrayView(self.array + self._remove_scale(other), self.scale, self.offset)
+
+
+    def __getitem__(self, item):
+        if isinstance(item, int):
+            return self._apply_scale(self.array[item])
+        return self.__class__(self.array[item], self.scale, self.offset)
+
+    def __setitem__(self, key, value):
+        if isinstance(value, ScaledArrayView):
+            iinfo = np.iinfo(self.array.dtype)
+            if value.array.max() > iinfo.max or value.array.min() < iinfo.min:
+                raise OverflowError(
+                    "Values given do not fit after applying offest and scale"
+                )
+            self.array[key] = value.array[key]
+        else:
+            iinfo = np.iinfo(self.array.dtype)
+            new_max = self._remove_scale(np.max(value))
+            new_min = self._remove_scale(np.min(value))
+            if new_max > iinfo.max or new_min < iinfo.min:
+                raise OverflowError(
+                    "Values given do not fit after applying offest and scale"
+                )
+            self.array[key] = self._remove_scale(value)
+
+    def __repr__(self):
+        return f"<ScaledArrayView({self.scaled_array()})>"

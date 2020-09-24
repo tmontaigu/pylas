@@ -3,9 +3,20 @@
 import numpy as np
 
 
-def least_significant_bit(val):
-    """Return the least significant bit"""
-    return (val & -val).bit_length() - 1
+def least_significant_bit_set(mask: int) -> int:
+    """Return the least significant bit set
+
+    The index is 0-indexed.
+    Returns -1 is no bit is set
+
+    >>> least_significant_bit_set(0b0000_0001)
+    0
+    >>> least_significant_bit_set(0b0001_0000)
+    4
+    >>> least_significant_bit_set(0b0000_0000)
+    -1
+    """
+    return (mask & -mask).bit_length() - 1
 
 
 def unpack(source_array, mask, dtype=np.uint8):
@@ -22,7 +33,7 @@ def unpack(source_array, mask, dtype=np.uint8):
     numpy.ndarray
         The sub field array
     """
-    lsb = least_significant_bit(mask)
+    lsb = least_significant_bit_set(mask)
     return ((source_array & mask) >> lsb).astype(dtype)
 
 
@@ -46,9 +57,9 @@ def pack(array, sub_field_array, mask, inplace=False):
         If the values contained in the sub field array are greater than its mask's number of bits
         allows
     """
-    lsb = least_significant_bit(mask)
+    lsb = least_significant_bit_set(mask)
     max_value = int(mask >> lsb)
-    if sub_field_array.max() > max_value:
+    if np.max(sub_field_array) > max_value:
         raise OverflowError(
             "value ({}) is greater than allowed (max: {})".format(
                 sub_field_array.max(), max_value

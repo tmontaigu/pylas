@@ -10,6 +10,7 @@ from typing import NoReturn
 import numpy as np
 
 from . import dims, packing
+from .dims import SubFieldView, ScaledArrayView
 from .. import errors
 from ..point import PointFormat
 
@@ -138,7 +139,7 @@ class PointRecord(IPointRecord, ABC):
         """Tries to copy the values of the current dimensions from other_record"""
         for dim_name in self.dimensions_names:
             try:
-                self[dim_name] = other_record[dim_name]
+                self[dim_name] = np.array(other_record[dim_name])
             except ValueError:
                 pass
 
@@ -159,17 +160,24 @@ class PointRecord(IPointRecord, ABC):
 
     def __setitem__(self, key, value):
         self._append_zeros_if_too_small(value)
-        self.array[key] = value
+        self.array[key] = np.array(value)
+
+    def resize(self, new_size):
+        size_diff = new_size - len(self.array)
+        if size_diff > 0:
+            self._array = np.append(
+                self.array, np.zeros(size_diff, dtype=self.array.dtype)
+            )
+        elif size_diff < 0:
+            self._array = self._array[:new_size].copy()
 
     def _append_zeros_if_too_small(self, value):
         """Appends zeros to the points stored if the value we are trying to
         fit is bigger
         """
         size_diff = len(value) - len(self.array)
-        if size_diff:
-            self._array = np.append(
-                self.array, np.zeros(size_diff, dtype=self.array.dtype)
-            )
+        if size_diff > 0:
+            self.resize(size_diff)
 
     def __getattr__(self, item):
         try:
@@ -187,19 +195,14 @@ class PackedPointRecord(PointRecord):
     are still packed together and are only de-packed and re-packed when accessed.
 
     This uses of less memory than if the sub-fields were unpacked
-    However some operations on sub-fields require extra steps:
 
     >>> #return number is a sub-field
     >>> from pylas import PointFormat
     >>> packed_point_record = PackedPointRecord.zeros(PointFormat(0), 10)
-    >>> packed_point_record['return_number'][:] = 1
-    >>> np.alltrue(packed_point_record == 1)
-    False
-
-    >>> packed_point_record = PackedPointRecord.zeros(PointFormat(0), 10)
-    >>> rn = packed_point_record['return_number']
-    >>> rn[:] = 1
-    >>> packed_point_record['return_number'] = rn
+    >>> return_number = packed_point_record['return_number']
+    >>> return_number
+    <SubFieldView([0 0 0 0 0 0 0 0 0 0])>
+    >>> return_number[:] = 1
     >>> np.alltrue(packed_point_record['return_number'] == 1)
     True
     """
@@ -306,21 +309,13 @@ class PackedPointRecord(PointRecord):
         """ Writes the points to the output stream"""
         out.write(self.raw_bytes())
 
-    def to_unpacked(self):
-        arr = np.zeros_like(self.array, self.point_format.unpacked_dtype)
-        record = UnpackedPointRecord(arr, self.point_format)
-        record.copy_fields_from(self)
-        return record
-
     def __getitem__(self, item):
         """Gives access to the underlying numpy array
         Unpack the dimension if item is the name a sub-field
         """
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
-            return packing.unpack(
-                self.array[composed_dim], sub_field.mask, dtype=sub_field.type
-            )
+            return dims.SubFieldView(self.array[composed_dim], sub_field.mask)
         except KeyError:
             return self.array[item]
 
@@ -329,6 +324,8 @@ class PackedPointRecord(PointRecord):
         self._append_zeros_if_too_small(value)
         try:
             composed_dim, sub_field = self.sub_fields_dict[key]
+            if isinstance(value, SubFieldView):
+                value = np.array(value)
             try:
                 packing.pack(
                     self.array[composed_dim], value, sub_field.mask, inplace=True
@@ -340,7 +337,7 @@ class PackedPointRecord(PointRecord):
                     )
                 )
         except KeyError:
-            self.array[key] = value
+            self.array[key] = np.array(value)
 
     def __repr__(self):
         return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
@@ -361,56 +358,13 @@ class ScaleAwarePointRecord(PackedPointRecord):
             )
 
         if item == "x":
-            return (self["X"] * self.scales[0]) + self.offsets[0]
+            return ScaledArrayView(self.array["X"], self.scales[0], self.offsets[0])
         elif item == "y":
-            return (self["Y"] * self.scales[1]) + self.offsets[1]
+            return ScaledArrayView(self.array["Y"], self.scales[1], self.offsets[1])
         elif item == "z":
-            return (self["Z"] * self.scales[2]) + self.offsets[2]
+            return ScaledArrayView(self.array["Z"], self.scales[2],  self.offsets[2])
         else:
-            return super(ScaleAwarePointRecord, self).__getitem__(item)
-
-
-class UnpackedPointRecord(PointRecord):
-    """
-    In the Unpacked Point Record, all the sub-fields are un-packed meaning that they are in their
-    own array.
-    Because the minimum size for the elements of an array is 8 bits, and sub-fields are only a few bits
-    (less than 8) the resulting unpacked array uses more memory, especially if the point format has lots of sub-fields
-    """
-
-    def __init__(self, data, point_fmt_id=None):
-        if point_fmt_id is None:
-            point_fmt_id = dims.np_dtype_to_point_format(data.dtype, unpacked=True)
-        super().__init__(data, point_fmt_id)
-
-    @property
-    def point_size(self):
-        return self.point_format.dtype.itemsize
-
-    def write_to(self, out):
-        out.write(self.to_packed().raw_bytes())
-
-    @classmethod
-    def from_stream(cls, stream, point_format_id, count, extra_dims=None):
-        return UnpackedPointRecord.from_stream(
-            stream, point_format_id, count, extra_dims=extra_dims
-        ).to_unpacked()
-
-    @classmethod
-    def from_compressed_buffer(
-        cls, compressed_buffer, point_format_id, count, laszip_vlr
-    ):
-        return PackedPointRecord.from_compressed_buffer(
-            compressed_buffer, point_format_id, count, laszip_vlr
-        ).to_unpacked()
-
-    @classmethod
-    def empty(cls, point_format):
-        data = np.zeros(0, dtype=point_format.dtype)
-        return cls(data, point_format)
-
-    def to_packed(self):
-        return PackedPointRecord.from_point_record(self, self.point_format)
+            return super().__getitem__(item)
 
 
 def scale_dimension(array_dim, scale, offset):

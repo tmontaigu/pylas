@@ -158,9 +158,7 @@ def test_conversion_copies_fields(all_las_but_1_4):
 
 def test_rw_all_set_one(las):
     for dim_name in las.points_data.dimensions_names:
-        field = las[dim_name]
-        field[:] = 1
-        las[dim_name] = field
+        las[dim_name][:] = 1
 
     for dim_name in las.points_data.dimensions_names:
         assert np.alltrue(las[dim_name] == 1), "{} not equal".format(dim_name)

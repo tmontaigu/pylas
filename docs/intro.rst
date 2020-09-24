@@ -69,13 +69,6 @@ your code.
     The dimensions 'X', 'Y', 'Z' are signed integers without the scale and
     offset applied. To access the coordinates as doubles simply use 'x', 'y' , 'z'
 
-    >>> import pylas
-    >>> las = pylas.read('pylastests/simple.las')
-    >>> las.X.dtype
-    dtype('int32')
-    >>> las.x.dtype
-    dtype('float64')
-
 
 Point Format 0
 ++++++++++++++

@@ -20,15 +20,9 @@ def las(request):
 
 
 def test_classification_overflows(las):
-    if not pylas.lib.USE_UNPACKED:
-        c = las.classification
+    c = las.classification
+    with pytest.raises(OverflowError):
         c[0] = 54
-        with pytest.raises(OverflowError):
-            las.classification = c
-    else:
-        las.classification[0] = 54
-        with pytest.raises(OverflowError):
-            las.points_data.repack_sub_fields()
 
 
 @pytest.mark.parametrize("do_compress", do_compression)
