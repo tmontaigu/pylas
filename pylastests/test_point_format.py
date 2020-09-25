@@ -13,5 +13,5 @@ def test_extra_dims_not_equal():
     not same extra dimension are not equal
     """
     las = pylas.read(extra_bytes_laz)
-    i = las.points_data.point_format.id
-    assert las.points_data.point_format != PointFormat(i)
+    i = las.points.point_format.id
+    assert las.points.point_format != PointFormat(i)

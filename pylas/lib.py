@@ -312,7 +312,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         pylas.lasdatas.base.LasBase
     """
     if point_format_id is None:
-        point_format_id = source_las.points_data.point_format.id
+        point_format_id = source_las.points.point_format.id
 
     if file_version is None:
         file_version = max(
@@ -327,10 +327,10 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header.point_format_id = point_format_id
 
     point_format = PointFormat(
-        point_format_id, source_las.points_data.point_format.extra_dims
+        point_format_id, source_las.points.point_format.extra_dims
     )
     points = record.PackedPointRecord.from_point_record(
-        source_las.points_data, point_format
+        source_las.points, point_format
     )
 
     try:
@@ -389,7 +389,7 @@ def merge_las(*las_files):
     merged = create_from_header(header)
     # TODO extra dimensions should be managed better here
 
-    for dim_name, dim_type in las_files[0].points_data.point_format.extra_dims:
+    for dim_name, dim_type in las_files[0].points.point_format.extra_dims:
         merged.add_extra_dim(dim_name, dim_type)
 
     merged.points = np.zeros(num_pts_merged, merged.points.dtype)

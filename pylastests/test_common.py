@@ -74,14 +74,14 @@ def test_change_format(las):
 
     las = pylas.convert(las, point_format_id=2)
     las = write_then_read_again(las)
-    assert las.points_data.point_format.id == 2
+    assert las.points.point_format.id == 2
     assert las.header.point_format_id == 2
     assert las.header.version == in_version
     assert dim_does_not_exists(las, "gps_time")
 
     las = pylas.convert(las, point_format_id=1)
     las = write_then_read_again(las)
-    assert las.points_data.point_format.id == 1
+    assert las.points.point_format.id == 1
     assert las.header.point_format_id == 1
     assert las.header.version == in_version
     assert dim_does_not_exists(las, "red")
@@ -90,7 +90,7 @@ def test_change_format(las):
 
     las = pylas.convert(las, point_format_id=0)
     las = write_then_read_again(las)
-    assert las.points_data.point_format.id == 0
+    assert las.points.point_format.id == 0
     assert las.header.point_format_id == 0
     assert las.header.version == in_version
     assert dim_does_not_exists(las, "red")
@@ -101,7 +101,7 @@ def test_change_format(las):
     las = pylas.convert(las, point_format_id=8)
     las = write_then_read_again(las)
     assert las.header.version == "1.4"
-    assert las.points_data.point_format.id == 8
+    assert las.points.point_format.id == 8
     assert las.header.point_format_id == 8
     assert dim_does_exists(las, "red")
     assert dim_does_exists(las, "green")
@@ -111,7 +111,7 @@ def test_change_format(las):
     las = pylas.convert(las, point_format_id=7)
     las = write_then_read_again(las)
     assert las.header.version == "1.4"
-    assert las.points_data.point_format.id == 7
+    assert las.points.point_format.id == 7
     assert las.header.point_format_id == 7
     assert dim_does_exists(las, "red")
     assert dim_does_exists(las, "green")
@@ -121,7 +121,7 @@ def test_change_format(las):
     las = pylas.convert(las, point_format_id=6)
     las = write_then_read_again(las)
     assert las.header.version == "1.4"
-    assert las.points_data.point_format.id == 6
+    assert las.points.point_format.id == 6
     assert las.header.point_format_id == 6
     assert dim_does_not_exists(las, "red")
     assert dim_does_not_exists(las, "green")
@@ -133,39 +133,39 @@ def test_conversion_file_version():
     las = pylas.create(point_format_id=0, file_version="1.4")
     las2 = pylas.convert(las, file_version="1.2")
 
-    assert las.points_data.point_format == las2.points_data.point_format
-    for dim_name in las.points_data.point_format.dimension_names:
+    assert las.points.point_format == las2.points.point_format
+    for dim_name in las.points.point_format.dimension_names:
         assert np.allclose(
-            las.points_data[dim_name], las2.points_data[dim_name]
+            las.points[dim_name], las2.points[dim_name]
         ), "{} not equal".format(dim_name)
 
 
 def test_conversion_copies_fields(all_las_but_1_4):
     las = all_las_but_1_4
     for i in (0, 1, 2, 3, 2, 1, 0):
-        old_record = las.points_data
+        old_record = las.points
         las = pylas.convert(las, point_format_id=i)
         las = write_then_read_again(las)
 
         for dim_name in old_record.dimensions_names:
             try:
                 assert np.allclose(
-                    las.points_data[dim_name], old_record[dim_name]
+                    las.points[dim_name], old_record[dim_name]
                 ), "{} not equal".format(dim_name)
             except ValueError:
                 pass  # dim exists in old_record but not new
 
 
 def test_rw_all_set_one(las):
-    for dim_name in las.points_data.dimensions_names:
+    for dim_name in las.points.dimensions_names:
         las[dim_name][:] = 1
 
-    for dim_name in las.points_data.dimensions_names:
+    for dim_name in las.points.dimensions_names:
         assert np.alltrue(las[dim_name] == 1), "{} not equal".format(dim_name)
 
     las2 = write_then_read_again(las)
 
-    for dim_name in las.points_data.dimensions_names:
+    for dim_name in las.points.dimensions_names:
         assert np.alltrue(las[dim_name] == las2[dim_name]), "{} not equal".format(
             dim_name
         )

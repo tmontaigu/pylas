@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
-from .. import errors, extradims
+from .. import extradims, errors
 from ..compression import LazBackend
 from ..laswriter import LasWriter
 from ..point import record, dims, PointFormat
@@ -38,7 +38,7 @@ class LasBase(object):
     def __init__(self, *, header, vlrs=None, points=None):
         if points is None:
             points = record.PackedPointRecord.empty(PointFormat(header.point_format_id))
-        self.__dict__["points_data"] = points
+        self.__dict__["_points"] = points
         self.header = header
         self.vlrs = vlrs if vlrs is not None else vlrlist.VLRList()
 
@@ -59,59 +59,37 @@ class LasBase(object):
 
     @x.setter
     def x(self, value):
-        if len(value) > len(self.points_data):
-            self.points_data.resize(len(value))
+        if len(value) > len(self.points):
+            self.points.resize(len(value))
         self.x[:] = value
 
     @y.setter
     def y(self, value):
-        if len(value) > len(self.points_data):
-            self.points_data.resize(len(value))
+        if len(value) > len(self.points):
+            self.points.resize(len(value))
         self.y[:] = value
 
     @z.setter
     def z(self, value):
-        if len(value) > len(self.points_data):
-            self.points_data.resize(len(value))
+        if len(value) > len(self.points):
+            self.points.resize(len(value))
         self.z[:] = value
 
     @property
     def point_format(self):
-        return self.points_data.point_format
+        return self.points.point_format
 
     @property
     def points(self):
-        """returns the numpy array representing the points
-
-        Returns
-        -------
-        the Numpy structured array of points
-
-        """
-        return self.points_data.array
+        return self._points
 
     @points.setter
-    def points(self, value):
-        """Setter for the points property,
-        Takes care of changing the point_format of the file
-        (as long as the point format of the new points it compatible with the file version)
-
-        Parameters
-        ----------
-        value: numpy.array of the new points
-
-        """
-        if value.dtype != self.points.dtype:
+    def points(self, new_points):
+        if new_points.point_format != self._points.point_format:
             raise errors.IncompatibleDataFormat(
                 "Cannot set points with a different point format, convert first"
             )
-        new_point_record = record.PackedPointRecord(
-            value, self.points_data.point_format
-        )
-        dims.raise_if_version_not_compatible_with_fmt(
-            new_point_record.point_format.id, self.header.version
-        )
-        self.points_data = new_point_record
+        self._points = new_points
         self.update_header()
 
     def __getattr__(self, item):
@@ -130,7 +108,7 @@ class LasBase(object):
         The requested dimension if it exists
 
         """
-        return self.points_data[item]
+        return self.points[item]
 
     def __setattr__(self, key, value):
         """This is called on every access to an attribute of the instance.
@@ -143,16 +121,16 @@ class LasBase(object):
         an error is raised
 
         """
-        if key in dims.DIMENSIONS or key in self.points_data.all_dimensions_names:
-            self.points_data[key] = value
+        if key in dims.DIMENSIONS or key in self.points.all_dimensions_names:
+            self.points[key] = value
         else:
             super().__setattr__(key, value)
 
     def __getitem__(self, item):
-        return self.points_data[item]
+        return self.points[item]
 
     def __setitem__(self, key, value):
-        self.points_data[key] = value
+        self.points[key] = value
 
     def add_extra_dim(self, name, type, description=""):
         """Adds a new extra dimension to the point record
@@ -179,7 +157,7 @@ class LasBase(object):
             self.vlrs.append(extra_bytes_vlr)
         finally:
             extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
-            self.points_data.add_extra_dims([(name, type)])
+            self.points.add_extra_dims([(name, type)])
 
     def update_header(self):
         """Update the information stored in the header
@@ -188,11 +166,11 @@ class LasBase(object):
         This method is called automatically when you save a file using
         :meth:`pylas.lasdatas.base.LasBase.write`
         """
-        self.header.point_format_id = self.points_data.point_format.id
-        self.header.point_count = len(self.points_data)
-        self.header.point_data_record_length = self.points_data.point_size
+        self.header.point_format_id = self.points.point_format.id
+        self.header.point_count = len(self.points)
+        self.header.point_data_record_length = self.points.point_size
 
-        if len(self.points_data) > 0:
+        if len(self.points) > 0:
             self.header.x_max = self.x.max()
             self.header.y_max = self.y.max()
             self.header.z_max = self.z.max()
@@ -224,7 +202,7 @@ class LasBase(object):
                 closefd=False,
                 laz_backend=laz_backend,
         ) as writer:
-            writer.write(self.points_data)
+            writer.write(self.points)
 
     @staticmethod
     def _raise_if_not_expected_pos(stream, expected_pos):
@@ -299,7 +277,7 @@ class LasBase(object):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(
             self.header.version_major,
             self.header.version_minor,
-            self.points_data.point_format,
-            len(self.points_data),
+            self.points.point_format,
+            len(self.points),
             len(self.vlrs),
         )

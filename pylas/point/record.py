@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 def raise_not_enough_bytes_error(
-    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -178,6 +178,9 @@ class PointRecord(IPointRecord, ABC):
         size_diff = len(value) - len(self.array)
         if size_diff > 0:
             self.resize(size_diff)
+
+    def __eq__(self, other):
+        return self.point_format == other.point_format and np.all(self.array == other.array)
 
     def __getattr__(self, item):
         try:
@@ -362,7 +365,7 @@ class ScaleAwarePointRecord(PackedPointRecord):
         elif item == "y":
             return ScaledArrayView(self.array["Y"], self.scales[1], self.offsets[1])
         elif item == "z":
-            return ScaledArrayView(self.array["Z"], self.scales[2],  self.offsets[2])
+            return ScaledArrayView(self.array["Z"], self.scales[2], self.offsets[2])
         else:
             return super().__getitem__(item)
 

@@ -198,7 +198,7 @@ def test_decompression_is_same_as_uncompressed():
     u_las = pylas.read(simple_las)
     c_las = pylas.read(simple_laz)
 
-    u_point_buffer = u_las.points_data.raw_bytes()
-    c_points_buffer = c_las.points_data.raw_bytes()
+    u_point_buffer = u_las.points.raw_bytes()
+    c_points_buffer = c_las.points.raw_bytes()
 
     assert u_point_buffer == c_points_buffer

@@ -56,7 +56,7 @@ def test_that_chunked_las_writing_gives_expected_points(las_path_fixture):
             do_compress=False,
         ) as las:
             for i in range(int(math.ceil(len(original_las.points) / iter_size))):
-                original_points = original_las.points_data[
+                original_points = original_las.points[
                     i * iter_size : (i + 1) * iter_size
                 ]
                 las.write(original_points)

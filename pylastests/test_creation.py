@@ -16,21 +16,6 @@ def file():
     return pylas.read(simple_las)
 
 
-def test_incompatible_data_type():
-    las = pylas.create()
-    dtype = np.dtype(
-        [
-            ("X", "u4"),
-            ("Y", "u4"),
-            ("Z", "u4"),
-            ("codification", "u4"),
-            ("intensity", "i2"),
-        ]
-    )
-    with pytest.raises(pylas.errors.IncompatibleDataFormat):
-        las.points = np.zeros(120, dtype=dtype)
-
-
 def test_xyz():
     las = pylas.create()
     shape = (150,)

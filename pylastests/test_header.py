@@ -7,7 +7,7 @@ all_las_but_1_4 = test_common.all_las_but_1_4
 def test_number_of_points_return_is_updated(all_las_but_1_4):
     las = all_las_but_1_4
 
-    nb_points = len(las.points_data)
+    nb_points = len(las.points)
     nb_slice = 3
 
     r = las.return_number
@@ -41,7 +41,7 @@ def test_nb_points_return_1_4():
     las = test_common.write_then_read_again(las)
 
     assert tuple(las.header.number_of_points_by_return) == ((1,) * 14) + (
-        len(las.points_data) - 14,
+        len(las.points) - 14,
     )
 
 
@@ -113,8 +113,8 @@ def test_set_mins():
 
 def test_point_count_stays_synchronized():
     las = pylas.read(test_common.simple_las)
-    assert las.header.point_count == len(las.points_data)
+    assert las.header.point_count == len(las.points)
 
     las.points = las.points[:120]
     assert 120 == las.header.point_count
-    assert las.header.point_count == len(las.points_data)
+    assert las.header.point_count == len(las.points)

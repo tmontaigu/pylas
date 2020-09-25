@@ -32,7 +32,7 @@ def las1_4():
 
 
 def test_extra_names(extrab_las):
-    all_dims = set(extrab_las.points_data.array.dtype.names)
+    all_dims = set(extrab_las.points.array.dtype.names)
 
     assert "Colors" in all_dims
     assert "Intensity" in all_dims
@@ -50,10 +50,10 @@ def test_add_extra_bytes(las1_4):
     las1_4.test_array[:, 1] = 2.2
     las1_4.test_array[:, 2] = 333.6
 
-    assert np.alltrue(las1_4.points_data["test_dim"] == 150)
-    assert np.allclose(las1_4.points_data["test_array"][:, 0], 1.1)
-    assert np.allclose(las1_4.points_data["test_array"][:, 1], 2.2)
-    assert np.allclose(las1_4.points_data["test_array"][:, 2], 333.6)
+    assert np.alltrue(las1_4.points["test_dim"] == 150)
+    assert np.allclose(las1_4.points["test_array"][:, 0], 1.1)
+    assert np.allclose(las1_4.points["test_array"][:, 1], 2.2)
+    assert np.allclose(las1_4.points["test_array"][:, 2], 333.6)
 
     las1_4 = write_then_read_again(las1_4)
 
@@ -66,7 +66,7 @@ def test_add_extra_bytes(las1_4):
 def test_extra_bytes_well_saved(extrab_las):
     extrab_las.Time = np.zeros_like(extrab_las.Time)
 
-    assert np.alltrue(extrab_las.points_data["Time"] == 0)
+    assert np.alltrue(extrab_las.points["Time"] == 0)
 
     extrab_las = write_then_read_again(extrab_las)
 
@@ -75,7 +75,7 @@ def test_extra_bytes_well_saved(extrab_las):
 
 def test_extra_dimensions_names_property():
     simple = pylas.read(simple_las)
-    assert simple.points_data.extra_dimensions_names == []
+    assert simple.points.extra_dimensions_names == []
 
     extra = pylas.read(extra_bytes_las)
     expected_names = [
@@ -85,23 +85,23 @@ def test_extra_dimensions_names_property():
         "Intensity",
         "Time",
     ]
-    assert expected_names == extra.points_data.extra_dimensions_names
+    assert expected_names == extra.points.extra_dimensions_names
 
 
 def test_conversion_keeps_eb(extrab_las):
     eb_0 = pylas.convert(extrab_las, point_format_id=0)
 
     assert (
-        eb_0.points_data.extra_dimensions_names
-        == extrab_las.points_data.extra_dimensions_names
+        eb_0.points.extra_dimensions_names
+        == extrab_las.points.extra_dimensions_names
     )
-    for name in eb_0.points_data.extra_dimensions_names:
+    for name in eb_0.points.extra_dimensions_names:
         assert np.allclose(eb_0[name], extrab_las[name])
 
     eb_0 = pylas.lib.write_then_read_again(eb_0)
     assert (
-        eb_0.points_data.extra_dimensions_names
-        == extrab_las.points_data.extra_dimensions_names
+        eb_0.points.extra_dimensions_names
+        == extrab_las.points.extra_dimensions_names
     )
-    for name in eb_0.points_data.extra_dimensions_names:
+    for name in eb_0.points.extra_dimensions_names:
         assert np.allclose(eb_0[name], extrab_las[name])

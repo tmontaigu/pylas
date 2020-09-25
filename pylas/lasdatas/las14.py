@@ -17,12 +17,12 @@ class LasData(LasBase):
 
         self.header.start_of_waveform_data_packet_record = 0
 
-        if len(self.points_data) > ctypes_max_limit(
+        if len(self.points) > ctypes_max_limit(
             self.header.__class__.legacy_point_count.size
         ):
             self.header.legacy_point_count = 0
         else:
-            self.header.legacy_point_count = len(self.points_data)
+            self.header.legacy_point_count = len(self.points)
 
     def write_to(
         self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
@@ -35,5 +35,5 @@ class LasData(LasBase):
             closefd=False,
             laz_backend=laz_backend,
         ) as writer:
-            writer.write(self.points_data)
+            writer.write(self.points)
             writer.write_evlrs(self.evlrs)

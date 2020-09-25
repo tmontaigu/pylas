@@ -50,7 +50,7 @@ def test_adding_extra_bytes_vlr_by_hand():
     assert len(simple.vlrs.get("ExtraBytesVlr")) == 1
 
     las = pylas.lib.write_then_read_again(simple)
-    assert simple.points_data.point_size == las.points_data.point_size
+    assert simple.points.point_size == las.points.point_size
     assert len(las.vlrs.get("ExtraBytesVlr")) == 0
 
 
