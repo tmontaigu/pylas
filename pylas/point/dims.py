@@ -2,13 +2,28 @@
 the mapping between dimension names and their type, mapping between point format and
 compatible file version
 """
+import itertools
 import operator
-from collections import namedtuple
+from collections import UserDict
+from enum import Enum
+from typing import NamedTuple, Optional, Dict, Tuple
 
 import numpy as np
 
 from . import packing
 from .. import errors
+
+
+class PointFormatDict(UserDict):
+
+    def __init__(self, wrapped_dict):
+        super().__init__(wrapped_dict)
+
+    def __getitem__(self, key):
+        try:
+            return self.data[key]
+        except KeyError:
+            raise errors.PointFormatNotSupported(key) from None
 
 
 def _point_format_to_dtype(point_format, dimensions):
@@ -83,7 +98,7 @@ DIMENSIONS = {
     "z_t": ("z_t", "f4"),
     # Las 1.4
     "classification_flags": ("classification_flags", "u1"),
-    "scan_angle": ("scan_angle_rank", "i2"),
+    "scan_angle": ("scan_angle", "i2"),
     "classification": ("classification", "u1"),
     "nir": ("nir", "u2"),
 }
@@ -126,7 +141,7 @@ WAVEFORM_FIELDS_NAMES = (
 
 COLOR_FIELDS_NAMES = ("red", "green", "blue")
 
-POINT_FORMAT_DIMENSIONS = {
+POINT_FORMAT_DIMENSIONS = PointFormatDict({
     0: POINT_FORMAT_0,
     1: POINT_FORMAT_0 + ("gps_time",),
     2: POINT_FORMAT_0 + COLOR_FIELDS_NAMES,
@@ -138,7 +153,7 @@ POINT_FORMAT_DIMENSIONS = {
     8: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ("nir",),
     9: POINT_FORMAT_6 + WAVEFORM_FIELDS_NAMES,
     10: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ("nir",) + WAVEFORM_FIELDS_NAMES,
-}
+})
 
 # sub fields of the 'bit_fields' dimension
 RETURN_NUMBER_MASK_0 = 0b00000111
@@ -167,7 +182,13 @@ SCANNER_CHANNEL_MASK_6 = 0b00110000
 SCAN_DIRECTION_FLAG_MASK_6 = 0b01000000
 EDGE_OF_FLIGHT_LINE_MASK_6 = 0b10000000
 
-SubField = namedtuple("SubField", ("name", "mask", "type"))
+
+class SubField(NamedTuple):
+    name: str
+    mask: int
+    type: str
+
+
 COMPOSED_FIELDS_0 = {
     "bit_fields": [
         SubField("return_number", RETURN_NUMBER_MASK_0, "u1"),
@@ -199,7 +220,7 @@ COMPOSED_FIELDS_6 = {
 }
 
 # Dict giving the composed fields for each point_format_id
-COMPOSED_FIELDS = {
+COMPOSED_FIELDS = PointFormatDict({
     0: COMPOSED_FIELDS_0,
     1: COMPOSED_FIELDS_0,
     2: COMPOSED_FIELDS_0,
@@ -211,7 +232,7 @@ COMPOSED_FIELDS = {
     8: COMPOSED_FIELDS_6,
     9: COMPOSED_FIELDS_6,
     10: COMPOSED_FIELDS_6,
-}
+})
 
 VERSION_TO_POINT_FMT = {
     "1.2": (0, 1, 2, 3),
@@ -222,52 +243,123 @@ VERSION_TO_POINT_FMT = {
 POINT_FORMATS_DTYPE = _build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS)
 
 # This Dict maps point_format_ids to their dimensions names
-ALL_POINT_FORMATS_DIMENSIONS = {**POINT_FORMAT_DIMENSIONS}
+ALL_POINT_FORMATS_DIMENSIONS = PointFormatDict({**POINT_FORMAT_DIMENSIONS})
 # This Dict maps point_format_ids to their numpy.dtype
 # the dtype corresponds to the de packed data
-ALL_POINT_FORMATS_DTYPE = {**POINT_FORMATS_DTYPE}
-# This Dict maps point_format_ids to their numpy.dtype
-# the dtype corresponds to the unpacked data
-UNPACKED_POINT_FORMATS_DTYPES = _build_unpacked_point_formats_dtypes(
-    POINT_FORMAT_DIMENSIONS, COMPOSED_FIELDS, DIMENSIONS
-)
+ALL_POINT_FORMATS_DTYPE = PointFormatDict({**POINT_FORMATS_DTYPE})
 
 
-def np_dtype_to_point_format(dtype, unpacked=False):
-    """Tries to find a matching point format id for the input numpy dtype
-    To match, the input dtype has to be 100% equal to a point format dtype
-    so all names & dimensions types must match
+def get_sub_fields_dict(point_format_id: int) -> Dict[str, Tuple[str, SubField]]:
+    sub_fields_dict = {}
+    for composed_dim_name, sub_fields in COMPOSED_FIELDS[point_format_id].items():
+        for sub_field in sub_fields:
+            sub_fields_dict[sub_field.name] = (composed_dim_name, sub_field)
+    return sub_fields_dict
 
-    Parameters:
-    ----------
-    dtype : numpy.dtype
-        The input dtype
-    unpacked : bool, optional
-        [description] (the default is False, which [default_description])
 
-    Raises
-    ------
-    errors.IncompatibleDataFormat
-        If No compatible point format was found
+class DimensionKind(Enum):
+    SignedInteger = 0
+    UnsignedInteger = 1
+    FloatingPoint = 2
+    BitField = 3
 
-    Returns
-    -------
-    int
-        The compatible point format found
+    @classmethod
+    def from_letter(cls, letter: str) -> 'DimensionKind':
+        if letter == 'u':
+            return cls.UnsignedInteger
+        elif letter == 'i':
+            return cls.SignedInteger
+        elif letter == 'f':
+            return cls.FloatingPoint
+        else:
+            raise ValueError(f"Unknown type letter '{letter}'")
+
+    def letter(self) -> Optional[str]:
+        if self == DimensionKind.UnsignedInteger:
+            return "u"
+        elif self == DimensionKind.SignedInteger:
+            return "i"
+        elif self == DimensionKind.FloatingPoint:
+            return "f"
+        else:
+            return None
+
+
+def num_bit_set(n: int) -> int:
+    """Count the number of bits that are set (1) in the number n
+
+    Brian Kernighan's algorithm
     """
+    count = 0
+    while n != 0:
+        count += 1
+        n = n & (n - 1)
+    return count
 
-    all_dtypes = (
-        ALL_POINT_FORMATS_DTYPE if not unpacked else UNPACKED_POINT_FORMATS_DTYPES
-    )
-    for format_id, fmt_dtype in all_dtypes.items():
-        if fmt_dtype == dtype:
-            return format_id
 
-    raise errors.IncompatibleDataFormat(
-        "Data type of array is not compatible with any point format (array dtype: {})".format(
-            dtype
-        )
-    )
+class DimensionInfo(NamedTuple):
+    """ Tuple that contains information of a dimension
+
+    """
+    name: str
+    kind: DimensionKind
+    num_bits: int
+    num_elements: int = 1
+    is_standard: bool = True
+
+    @classmethod
+    def from_type_str(cls, name: str, type_str: str, is_standard: bool = True) -> 'DimensionInfo':
+        first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
+        if first_digits:
+            num_elements = int(first_digits)
+            type_str = type_str[len(first_digits):]
+        else:
+            num_elements = 1
+
+        kind = DimensionKind.from_letter(type_str[0])
+        num_bits = int(type_str[1:]) * 8 * num_elements
+
+        return cls(name, kind, num_bits, num_elements, is_standard)
+
+    @classmethod
+    def from_bitmask(cls, name: str, bit_mask: int, is_standard: bool = False) -> 'DimensionInfo':
+        kind = DimensionKind.BitField
+        bit_size = num_bit_set(bit_mask)
+        return cls(name, kind, bit_size, is_standard=is_standard)
+
+    @property
+    def num_bytes(self) -> int:
+        return int(self.num_bits // 8)
+
+    @property
+    def num_bytes_singular_element(self) -> int:
+        return int(self.num_bits // (8 * self.num_elements))
+
+    @property
+    def max(self):
+        if self.kind == DimensionKind.BitField:
+            return (2 ** self.num_bits) - 1
+        elif self.kind == DimensionKind.FloatingPoint:
+            return np.finfo(self.type_str()).max
+        else:
+            return np.iinfo(self.type_str()).max
+
+    @property
+    def min(self):
+        if self.kind == DimensionKind.BitField or self.kind == DimensionKind.UnsignedInteger:
+            return 0
+        elif self.kind == DimensionKind.FloatingPoint:
+            return np.finfo(self.type_str()).min
+        else:
+            return np.iinfo(self.type_str()).min
+
+    def type_str(self) -> Optional[str]:
+        if self.kind == DimensionKind.BitField:
+            return None
+
+        if self.num_elements == 1:
+            return f"{self.kind.letter()}{self.num_bytes_singular_element}"
+        return f"{self.num_elements}{self.kind.letter()}{self.num_bytes_singular_element}"
 
 
 def size_of_point_format_id(point_format_id):
@@ -508,7 +600,6 @@ class ScaledArrayView:
 
     def __add__(self, other):
         return ScaledArrayView(self.array + self._remove_scale(other), self.scale, self.offset)
-
 
     def __getitem__(self, item):
         if isinstance(item, int):

@@ -125,6 +125,7 @@ will be able to automatically parse the VLR when reading the file & write it whe
 ...     def __repr__(self):
 ...         return "<MyCustomVLR>"
 
+>>> import numpy as np
 >>> cvlr = CustomVLR()
 >>> cvlr.numbers
 []
@@ -133,6 +134,7 @@ will be able to automatically parse the VLR when reading the file & write it whe
 >>> las.vlrs.append(cvlr)
 >>> las.vlrs
 [<MyCustomVLR>]
+>>> las.x = np.array([1.0, 2.0])
 >>> las = pylas.lib.write_then_read_again(las)
 >>> las.vlrs
 [<MyCustomVLR>]

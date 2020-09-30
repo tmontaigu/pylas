@@ -138,7 +138,7 @@ def test_create_fmt_6(file1_4):
     new = pylas.create(point_format_id=6)
     assert new.header.version == "1.4"
 
-    dim_names_fmt_6 = PointFormat(6).dtype.names
+    dim_names_fmt_6 = PointFormat(6).dtype().names
 
     for dim_name in dim_names_fmt_6:
         new[dim_name] = file1_4[dim_name]
