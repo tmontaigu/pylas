@@ -9,4 +9,6 @@
     - pip install lazperf
 
   script:
+    - pytest pylas
     - pytest pylastests
+    - python -m pytest docs
