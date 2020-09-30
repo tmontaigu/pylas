@@ -148,7 +148,7 @@ If you wish to get only the extra dimension names the point format can give them
 ['X', 'Y', 'Z', 'intensity', 'return_number', 'number_of_returns', 'scan_direction_flag', 'edge_of_flight_line', 'classification', 'synthetic', 'key_point', 'withheld', 'scan_angle_rank', 'user_data', 'point_source_id', 'gps_time', 'red', 'green', 'blue']
 >>> list(point_format.extra_dimension_names)
 []
->>> las = pylas.read('pylastests/extra.laz')
+>>> las = pylas.read('pylastests/extrabytes.las')
 >>> list(las.point_format.extra_dimension_names)
 ['Colors', 'Reserved', 'Flags', 'Intensity', 'Time']
 
