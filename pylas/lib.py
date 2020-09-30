@@ -327,8 +327,9 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header.point_format_id = point_format_id
 
     point_format = PointFormat(
-        point_format_id, source_las.points.point_format.extra_dims
+        point_format_id
     )
+    point_format.dimensions.extend(source_las.point_format.extra_dimensions)
     points = record.PackedPointRecord.from_point_record(
         source_las.points, point_format
     )

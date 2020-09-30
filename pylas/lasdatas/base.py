@@ -157,7 +157,7 @@ class LasBase(object):
             self.vlrs.append(extra_bytes_vlr)
         finally:
             extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
-            self.points.add_extra_dims([(name, type)])
+            self.points.add_extra_dim(name, type)
 
     def update_header(self):
         """Update the information stored in the header

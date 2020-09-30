@@ -75,7 +75,7 @@ def test_extra_bytes_well_saved(extrab_las):
 
 def test_extra_dimensions_names_property():
     simple = pylas.read(simple_las)
-    assert simple.points.extra_dimensions_names == []
+    assert list(simple.points.extra_dimensions_names) == []
 
     extra = pylas.read(extra_bytes_las)
     expected_names = [
@@ -85,23 +85,23 @@ def test_extra_dimensions_names_property():
         "Intensity",
         "Time",
     ]
-    assert expected_names == extra.points.extra_dimensions_names
+    assert expected_names == list(extra.points.extra_dimensions_names)
 
 
 def test_conversion_keeps_eb(extrab_las):
     eb_0 = pylas.convert(extrab_las, point_format_id=0)
 
     assert (
-        eb_0.points.extra_dimensions_names
-        == extrab_las.points.extra_dimensions_names
+        list(eb_0.points.extra_dimensions_names)
+        == list(extrab_las.points.extra_dimensions_names)
     )
     for name in eb_0.points.extra_dimensions_names:
         assert np.allclose(eb_0[name], extrab_las[name])
 
     eb_0 = pylas.lib.write_then_read_again(eb_0)
     assert (
-        eb_0.points.extra_dimensions_names
-        == extrab_las.points.extra_dimensions_names
+        list(eb_0.points.extra_dimensions_names)
+        == list(extrab_las.points.extra_dimensions_names)
     )
     for name in eb_0.points.extra_dimensions_names:
         assert np.allclose(eb_0[name], extrab_las[name])

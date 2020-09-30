@@ -55,8 +55,8 @@ def test_classification(file):
 
 
 def test_scan_angle_rank(file):
-    assert file.scan_angle_rank.max() == 3173
-    assert file.scan_angle_rank.min() == 1837
+    assert file.scan_angle.max() == 3173
+    assert file.scan_angle.min() == 1837
 
 
 def test_user_data(file):

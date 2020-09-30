@@ -57,7 +57,7 @@ class IPointRecord(ABC):
     @property
     @abstractmethod
     def actual_point_size(self):
-        """Shall return the actual size in bytes that ta points take in memory"""
+        """Shall return the actual size in bytes that the points take in memory"""
         return self.array.dtype.itemsize
 
     @abstractmethod
@@ -130,7 +130,7 @@ class PointRecord(IPointRecord, ABC):
         """Construct a new PackedPointRecord from an existing one with the ability to change
         to point format while doing so
         """
-        array = np.zeros_like(other_point_record.array, dtype=new_point_format.dtype)
+        array = np.zeros_like(other_point_record.array, dtype=new_point_format.dtype())
         new_record = cls(array, new_point_format)
         new_record.copy_fields_from(other_point_record)
         return new_record
@@ -143,10 +143,10 @@ class PointRecord(IPointRecord, ABC):
             except ValueError:
                 pass
 
-    def add_extra_dims(self, type_tuples):
-        self.point_format.extra_dims.extend(type_tuples)
+    def add_extra_dim(self, name, type_tuple):
+        self.point_format.add_extra_dimension(name, type_tuple)
         old_array = self.array
-        self._array = np.zeros_like(old_array, dtype=self.point_format.dtype)
+        self._array = np.zeros_like(old_array, dtype=self.point_format.dtype())
         self.copy_fields_from(old_array)
 
     def memoryview(self):
@@ -210,11 +210,9 @@ class PackedPointRecord(PointRecord):
     True
     """
 
-    def __init__(self, data, point_format=None):
-        if point_format is None:
-            point_format = PointFormat(dims.np_dtype_to_point_format(data.dtype))
+    def __init__(self, data, point_format):
         super().__init__(data, point_format)
-        self.sub_fields_dict = point_format.sub_fields
+        self.sub_fields_dict = dims.get_sub_fields_dict(point_format.id)
 
     @property
     def all_dimensions_names(self):
@@ -251,7 +249,7 @@ class PackedPointRecord(PointRecord):
         PackedPointRecord
 
         """
-        data = np.zeros(point_count, point_format.dtype)
+        data = np.zeros(point_count, point_format.dtype())
         return cls(data, point_format)
 
     @classmethod
@@ -303,7 +301,7 @@ class PackedPointRecord(PointRecord):
 
     @classmethod
     def from_buffer(cls, buffer, point_format, count, offset=0):
-        points_dtype = point_format.dtype
+        points_dtype = point_format.dtype()
         data = np.frombuffer(buffer, dtype=points_dtype, offset=offset, count=count)
 
         return cls(data, point_format)

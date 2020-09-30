@@ -107,8 +107,9 @@ class LasWriter:
                 self.vlrs.index("ExtraBytesVlr")
             except ValueError:
                 extra_bytes_vlr = ExtraBytesVlr()
-                for name, type_str in self.point_format.extra_dims:
-                    name = name.replace(" ", "_")
+                for dim_info in self.point_format.extra_dimensions:
+                    name = dim_info.name.replace(" ", "_")
+                    type_str = dim_info.type_str()
                     if type_str.endswith("u1"):
                         extra_byte = ExtraBytesStruct(
                             data_type=0,
