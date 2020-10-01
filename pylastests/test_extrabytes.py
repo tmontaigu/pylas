@@ -42,7 +42,7 @@ def test_extra_names(extrab_las):
 
 
 def test_add_extra_bytes(las1_4):
-    las1_4.add_extra_dim("test_dim", "u1")
+    las1_4.add_extra_dim("test_dim", "uint8")
     las1_4.add_extra_dim("test_array", "3f8")
 
     las1_4.test_dim[:] = 150

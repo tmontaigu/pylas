@@ -7,18 +7,17 @@ from typing import BinaryIO, Optional, Union, Iterable
 
 import numpy as np
 
-from .headers import HeaderFactory
 from .compression import LazBackend
 from .compression import find_laszip_executable
 from .errors import PylasError, LazError
 from .evlrs import EVLRList, RawEVLRList
+from .headers import HeaderFactory
 from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord
 from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr, ExtraBytesStruct, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
-from . import extradims
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +56,15 @@ class PointWriter(abc.ABC):
 
 class LasWriter:
     def __init__(
-        self,
-        dest,
-        header,
-        vlrs: Optional[VLRList] = None,
-        do_compress: bool = False,
-        laz_backend: Union[
-            LazBackend, Iterable[LazBackend]
-        ] = LazBackend.detect_available(),
-        closefd: bool = True,
+            self,
+            dest,
+            header,
+            vlrs: Optional[VLRList] = None,
+            do_compress: bool = False,
+            laz_backend: Union[
+                LazBackend, Iterable[LazBackend]
+            ] = LazBackend.detect_available(),
+            closefd: bool = True,
     ) -> None:
         self.closefd = closefd
         self.header = copy(header)
@@ -103,28 +102,14 @@ class LasWriter:
             self.header.point_size = self.point_format.size
             self.header.set_compressed(self.do_compress)
 
-            try:
-                self.vlrs.index("ExtraBytesVlr")
-            except ValueError:
-                extra_bytes_vlr = ExtraBytesVlr()
-                for dim_info in self.point_format.extra_dimensions:
-                    name = dim_info.name.replace(" ", "_")
-                    type_str = dim_info.type_str()
-                    if type_str.endswith("u1"):
-                        extra_byte = ExtraBytesStruct(
-                            data_type=0,
-                            name=name.encode(),
-                            description="".encode(),
-                            options=int(type_str[:-2]),
-                        )
-                    else:
-                        type_id = extradims.get_id_for_extra_dim_type(type_str)
-                        extra_byte = ExtraBytesStruct(
-                            data_type=type_id,
-                            name=name.encode(),
-                            description="".encode(),
-                        )
-                    extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
+            if self.point_format.num_extra_bytes > 0:
+                try:
+                    self.vlrs.index("ExtraBytesVlr")
+                except ValueError:
+                    extra_bytes_vlr = ExtraBytesVlr()
+                    for dim_info in self.point_format.extra_dimensions:
+                        extra_byte = ExtraBytesStruct.from_dimension_info(dim_info)
+                        extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
                     self.vlrs.append(extra_bytes_vlr)
 
             if self.do_compress:
@@ -163,7 +148,7 @@ class LasWriter:
             self.dest.close()
 
     def _create_laz_backend(
-        self, laz_backends: Union[LazBackend, Iterable[LazBackend]]
+            self, laz_backends: Union[LazBackend, Iterable[LazBackend]]
     ) -> PointWriter:
         try:
             laz_backends = iter(laz_backends)

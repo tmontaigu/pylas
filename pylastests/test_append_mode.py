@@ -34,10 +34,6 @@ def append_self_and_check(las_path_fixture):
         laz_file.append_points(las.points)
     file.seek(0, io.SEEK_SET)
     rlas = pylas.read(file)
-    print(rlas.header.point_count)
-    print(rlas.points)
-    print(rlas.points[:1065].array)
-    print(rlas.points[1065:].array)
     assert rlas.header.point_count == 2 * las.header.point_count
     assert rlas.points[:rlas.header.point_count // 2] == las.points
     assert rlas.points[rlas.header.point_count // 2:] == las.points

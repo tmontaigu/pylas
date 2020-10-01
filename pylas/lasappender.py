@@ -17,6 +17,14 @@ except ModuleNotFoundError:
 
 
 class LazrsAppender:
+    """ Appending in LAZ file works by seeking to start of the last chunk
+    of compressed points, decompress it while keeping the points in
+    memory.
+
+    Then seek back to the start of the last chunk, and recompress
+    the points we just read, so that we have a compressor in the proper state
+    ready to compress new points.
+    """
     def __init__(self, dest, header, vlrs, parallel):
         self.dest = dest
         self.offset_to_point_data = header.offset_to_point_data
@@ -34,7 +42,8 @@ class LazrsAppender:
         if chunk_table is None:
             # The file does not have a chunk table
             # we cannot seek to the last chunk, so instead, we will
-            # decompress points (which is slower)
+            # decompress points (which is slower) and build the chunk table
+            # to write it later
 
             self.chunk_table = []
             start_of_chunk = self.dest.tell()

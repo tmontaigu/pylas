@@ -8,12 +8,13 @@ import ctypes
 import struct
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
+from .. import extradims
 from ..extradims import (
     get_type_for_extra_dim,
     get_signedness_for_extra_dim,
     DimensionSignedness,
 )
-from ..point.dims import DimensionInfo
+from ..point.dims import DimensionInfo, DimensionKind
 
 abstractmethod = abc.abstractmethod
 
@@ -222,6 +223,34 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         strct = self._struct_parser_for_type_signedness()
         return tuple(strct.unpack(d)[0] for d in getattr(self, name))
 
+    @classmethod
+    def from_dimension_info(cls, info: DimensionInfo) -> 'ExtraBytesStruct':
+        if info.is_standard:
+            raise ValueError("ExtraBytesStruct cannot describe standard dims")
+
+        if info.kind == DimensionKind.BitField:
+            raise ValueError("ExtraBytesStruct cannot describe bit fields")
+
+        type_str = info.type_str()
+        if type_str.endswith("u1"):
+            extra_byte = cls(
+                data_type=0,
+                name=info.name.encode(),
+                description="".encode(),
+                options=int(type_str[:-2]),
+            )
+        else:
+            if info.num_elements > 3:
+                raise ValueError("Only u1 data type supports more than 3 elements")
+            type_id = extradims.get_id_for_extra_dim_type(type_str)
+            extra_byte = cls(
+                data_type=type_id,
+                name=info.name.encode(),
+                description="".encode(),
+            )
+
+        return extra_byte
+
     @property
     def no_data(self):
         return self._parse_special_property("_no_data")
@@ -244,9 +273,6 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
     def format_name(self):
         return self.name.rstrip(NULL_BYTE).decode().replace(" ", "_").replace("-", "_")
-
-    def to_dimension_info(self):
-        return DimensionInfo.from_type_str(*self.type_tuple(), is_standard=False)
 
     def type_tuple(self):
         if self.data_type == 0:
