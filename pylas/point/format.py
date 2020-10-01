@@ -31,9 +31,9 @@ class PointFormat:
     """
 
     def __init__(
-            self,
-            point_format_id: int,
-            extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
+        self,
+        point_format_id: int,
+        extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
     ):
         """
         Parameters
@@ -51,12 +51,14 @@ class PointFormat:
                 sub_fields = composed_dims[dim_name]
             except KeyError:
                 dimension = DimensionInfo.from_type_str(
-                    dim_name, dims.DIMENSIONS_TO_TYPE[dim_name], is_standard=True)
+                    dim_name, dims.DIMENSIONS_TO_TYPE[dim_name], is_standard=True
+                )
                 self.dimensions.append(dimension)
             else:
                 for sub_field in sub_fields:
                     dimension = DimensionInfo.from_bitmask(
-                        sub_field.name, sub_field.mask, is_standard=True)
+                        sub_field.name, sub_field.mask, is_standard=True
+                    )
                     self.dimensions.append(dimension)
 
         if extra_dims is not None:
@@ -73,8 +75,7 @@ class PointFormat:
 
     @property
     def dimension_names(self) -> Iterable[str]:
-        """Returns the names of the dimensions contained in the point format
-        """
+        """Returns the names of the dimensions contained in the point format"""
         return (dim.name for dim in self.dimensions)
 
     @property
@@ -89,14 +90,12 @@ class PointFormat:
 
     @property
     def size(self) -> int:
-        """ Returns the number of bytes (standard + extra)
-        """
+        """Returns the number of bytes (standard + extra)"""
         return int(sum(dim.num_bits for dim in self.dimensions) // 8)
 
     @property
     def num_standard_bytes(self) -> int:
-        """ Returns the number of bytes used by standard dims
-        """
+        """Returns the number of bytes used by standard dims"""
         return int(sum(dim.num_bits for dim in self.standard_dimensions) // 8)
 
     @property

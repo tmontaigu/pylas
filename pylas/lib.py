@@ -326,17 +326,13 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     header = headers.HeaderFactory.convert_header(source_las.header, file_version)
     header.point_format_id = point_format_id
 
-    point_format = PointFormat(
-        point_format_id
-    )
+    point_format = PointFormat(point_format_id)
     point_format.dimensions.extend(source_las.point_format.extra_dimensions)
-    points = record.PackedPointRecord.from_point_record(
-        source_las.points, point_format
-    )
+    points = record.PackedPointRecord.from_point_record(source_las.points, point_format)
 
     try:
         evlrs = source_las.evlrs
-    except ValueError:
+    except AttributeError:
         evlrs = []
 
     if file_version >= "1.4":

@@ -1,7 +1,9 @@
 import io
 import math
-from typing import Union, Iterable
+from typing import Union, Iterable, BinaryIO
 
+from .headers.rawheader import Header
+from .vlrs.vlrlist import VLRList
 from .compression import LazBackend
 from .errors import PylasError
 from .evlrs import EVLRList, RawEVLRList
@@ -17,7 +19,7 @@ except ModuleNotFoundError:
 
 
 class LazrsAppender:
-    """ Appending in LAZ file works by seeking to start of the last chunk
+    """Appending in LAZ file works by seeking to start of the last chunk
     of compressed points, decompress it while keeping the points in
     memory.
 
@@ -25,7 +27,10 @@ class LazrsAppender:
     the points we just read, so that we have a compressor in the proper state
     ready to compress new points.
     """
-    def __init__(self, dest, header, vlrs, parallel):
+
+    def __init__(
+        self, dest: BinaryIO, header: Header, vlrs: VLRList, parallel: bool
+    ) -> None:
         self.dest = dest
         self.offset_to_point_data = header.offset_to_point_data
         laszip_vlr = vlrs.pop(vlrs.index("LasZipVlr"))
@@ -76,10 +81,10 @@ class LazrsAppender:
         self.dest.seek(sum(self.chunk_table), io.SEEK_CUR)
         self.compressor.compress_many(points_of_last_chunk)
 
-    def write_points(self, points):
+    def write_points(self, points: PointRecord) -> None:
         self.compressor.compress_many(points.memoryview())
 
-    def done(self):
+    def done(self) -> None:
         # The chunk table written is at the good position
         # but it is incomplete (it's missing the chunk_table of
         # chunks before the one we appended)
@@ -97,7 +102,7 @@ class LazrsAppender:
 class LasAppender:
     def __init__(
         self,
-        dest,
+        dest: BinaryIO,
         laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
             LazBackend.LazrsParallel,
             LazBackend.Lazrs,
@@ -155,14 +160,14 @@ class LasAppender:
         if self.closefd:
             self.dest.close()
 
-    def _write_evlrs(self):
+    def _write_evlrs(self) -> None:
         if self.header.version >= "1.4" and len(self.evlrs) > 0:
             self.header.number_of_evlr = len(self.evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
             raw_evlrs = RawEVLRList.from_list(self.evlrs)
             raw_evlrs.write_to(self.dest)
 
-    def _write_updated_header(self):
+    def _write_updated_header(self) -> None:
         pos = self.dest.tell()
         self.dest.seek(0, io.SEEK_SET)
         self.header.write_to(self.dest)
@@ -204,8 +209,8 @@ class LasAppender:
         else:
             raise PylasError(f"No valid laz backend selected")
 
-    def __enter__(self):
+    def __enter__(self) -> "LasAppender":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()

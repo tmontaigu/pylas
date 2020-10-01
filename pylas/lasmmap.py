@@ -4,6 +4,7 @@ from . import headers, lasreader
 from .lasdatas import base
 from .point import PointFormat, record
 from .vlrs import vlrlist
+from .typehints import PathLike
 
 WHOLE_FILE = 0
 
@@ -23,7 +24,7 @@ class LasMMAP(base.LasBase):
         A LAZ (compressed LAS) cannot be mmapped
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename: PathLike) -> None:
         fileref = open(filename, mode="r+b")
 
         m = mmap.mmap(fileref.fileno(), length=WHOLE_FILE, access=mmap.ACCESS_WRITE)
@@ -48,7 +49,7 @@ class LasMMAP(base.LasBase):
         self.fileref, self.mmap = fileref, m
         self.mmap.seek(self.header.size)
 
-    def close(self):
+    def close(self) -> None:
         # These need to be set to None, so that
         # mmap.close() does not give an error because
         # there are still exported pointers
@@ -57,8 +58,8 @@ class LasMMAP(base.LasBase):
         self.mmap.close()
         self.fileref.close()
 
-    def __enter__(self):
+    def __enter__(self) -> "LasMMAP":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()

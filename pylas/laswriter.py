@@ -12,6 +12,7 @@ from .compression import find_laszip_executable
 from .errors import PylasError, LazError
 from .evlrs import EVLRList, RawEVLRList
 from .headers import HeaderFactory
+from .headers.rawheader import Header
 from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord
@@ -56,15 +57,15 @@ class PointWriter(abc.ABC):
 
 class LasWriter:
     def __init__(
-            self,
-            dest,
-            header,
-            vlrs: Optional[VLRList] = None,
-            do_compress: bool = False,
-            laz_backend: Union[
-                LazBackend, Iterable[LazBackend]
-            ] = LazBackend.detect_available(),
-            closefd: bool = True,
+        self,
+        dest: BinaryIO,
+        header: Header,
+        vlrs: Optional[VLRList] = None,
+        do_compress: bool = False,
+        laz_backend: Union[
+            LazBackend, Iterable[LazBackend]
+        ] = LazBackend.detect_available(),
+        closefd: bool = True,
     ) -> None:
         self.closefd = closefd
         self.header = copy(header)
@@ -148,7 +149,7 @@ class LasWriter:
             self.dest.close()
 
     def _create_laz_backend(
-            self, laz_backends: Union[LazBackend, Iterable[LazBackend]]
+        self, laz_backends: Union[LazBackend, Iterable[LazBackend]]
     ) -> PointWriter:
         try:
             laz_backends = iter(laz_backends)
