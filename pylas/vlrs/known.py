@@ -232,6 +232,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
             raise ValueError("ExtraBytesStruct cannot describe bit fields")
 
         type_str = info.type_str()
+        assert type_str is not None
         if type_str.endswith("u1"):
             extra_byte = cls(
                 data_type=0,

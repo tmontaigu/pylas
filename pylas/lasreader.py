@@ -177,7 +177,7 @@ class LasReader:
                 raise RuntimeError("Read past point data")  # TODO
         return header, vlrs
 
-    def _read_evlrs(self, source, seekable=False):
+    def _read_evlrs(self, source, seekable=False) -> Optional[evlrs.EVLRList]:
         """Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """

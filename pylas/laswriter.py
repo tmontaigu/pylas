@@ -82,8 +82,8 @@ class LasWriter:
             self.vlrs = vlrs
 
         # These will be initialized on the first call to `write`
-        self.point_format = None
-        self.point_writer = None
+        self.point_format: PointFormat
+        self.point_writer: PointWriter
         self.done = False
 
     def write(self, points: PointRecord) -> None:

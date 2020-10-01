@@ -6,27 +6,39 @@ import itertools
 import operator
 from collections import UserDict
 from enum import Enum
-from typing import NamedTuple, Optional, Dict, Tuple
+from typing import NamedTuple, Optional, Dict, Tuple, Set, Iterable, Mapping, TypeVar, Generic
 
 import numpy as np
 
 from . import packing
 from .. import errors
 
+ValueType = TypeVar('ValueType')
 
-class PointFormatDict(UserDict):
 
-    def __init__(self, wrapped_dict):
+class PointFormatDict(UserDict, Generic[ValueType]):
+    """ Simple wrapper around a dict that
+    changes the exception raised when accessing a key that is not-present
+
+    """
+
+    def __init__(self, wrapped_dict: Dict[int, ValueType]):
         super().__init__(wrapped_dict)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> ValueType:
         try:
             return self.data[key]
         except KeyError:
             raise errors.PointFormatNotSupported(key) from None
 
 
-def _point_format_to_dtype(point_format, dimensions):
+class SubField(NamedTuple):
+    name: str
+    mask: int
+    type: str
+
+
+def _point_format_to_dtype(point_format: Iterable[str], dimensions_to_type: Mapping[str, str]):
     """build the numpy.dtype for a point format
 
     Parameters:
@@ -40,10 +52,10 @@ def _point_format_to_dtype(point_format, dimensions):
     numpy.dtype
         The dtype for the input point format
     """
-    return np.dtype([dimensions[dim_name] for dim_name in point_format])
+    return np.dtype([(dim_name, dimensions_to_type[dim_name]) for dim_name in point_format])
 
 
-def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
+def _build_point_formats_dtypes(point_format_dimensions: Mapping[int, Tuple[str]], dimensions_dict: Mapping[str, str]):
     """Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are still packed, and need to be unpacked each time
     you want to access them
@@ -54,56 +66,38 @@ def _build_point_formats_dtypes(point_format_dimensions, dimensions_dict):
     }
 
 
-def _build_unpacked_point_formats_dtypes(
-        point_formats_dimensions, composed_fields_dict, dimensions_dict
-):
-    """Builds the dict mapping point format id to numpy.dtype
-    In the dtypes, bit fields are unpacked and can be accessed directly
-    """
-    unpacked_dtypes = {}
-    for fmt_id, dim_names in point_formats_dimensions.items():
-        composed_dims, dtype = composed_fields_dict[fmt_id], []
-        for dim_name in dim_names:
-            if dim_name in composed_dims:
-                dtype.extend((f.name, f.type) for f in composed_dims[dim_name])
-            else:
-                dtype.append(dimensions_dict[dim_name])
-        unpacked_dtypes[fmt_id] = np.dtype(dtype)
-    return unpacked_dtypes
-
-
 # Definition of the points dimensions and formats
 # LAS version [1.0, 1.1, 1.2, 1.3, 1.4]
-DIMENSIONS = {
-    "X": ("X", "i4"),
-    "Y": ("Y", "i4"),
-    "Z": ("Z", "i4"),
-    "intensity": ("intensity", "u2"),
-    "bit_fields": ("bit_fields", "u1"),
-    "raw_classification": ("raw_classification", "u1"),
-    "scan_angle_rank": ("scan_angle_rank", "i1"),
-    "user_data": ("user_data", "u1"),
-    "point_source_id": ("point_source_id", "u2"),
-    "gps_time": ("gps_time", "f8"),
-    "red": ("red", "u2"),
-    "green": ("green", "u2"),
-    "blue": ("blue", "u2"),
+DIMENSIONS_TO_TYPE: Dict[str, str] = {
+    "X": "i4",
+    "Y": "i4",
+    "Z": "i4",
+    "intensity": "u2",
+    "bit_fields": "u1",
+    "raw_classification": "u1",
+    "scan_angle_rank": "i1",
+    "user_data": "u1",
+    "point_source_id": "u2",
+    "gps_time": "f8",
+    "red": "u2",
+    "green": "u2",
+    "blue": "u2",
     # Waveform related dimensions
-    "wavepacket_index": ("wavepacket_index", "u1"),
-    "wavepacket_offset": ("wavepacket_offset", "u8"),
-    "wavepacket_size": ("wavepacket_size", "u4"),
-    "return_point_wave_location": ("return_point_wave_location", "u4"),
-    "x_t": ("x_t", "f4"),
-    "y_t": ("y_t", "f4"),
-    "z_t": ("z_t", "f4"),
+    "wavepacket_index": "u1",
+    "wavepacket_offset": "u8",
+    "wavepacket_size": "u4",
+    "return_point_wave_location": "u4",
+    "x_t": "f4",
+    "y_t": "f4",
+    "z_t": "f4",
     # Las 1.4
-    "classification_flags": ("classification_flags", "u1"),
-    "scan_angle": ("scan_angle", "i2"),
-    "classification": ("classification", "u1"),
-    "nir": ("nir", "u2"),
+    "classification_flags": "u1",
+    "scan_angle": "i2",
+    "classification": "u1",
+    "nir": "u2",
 }
 
-POINT_FORMAT_0 = (
+POINT_FORMAT_0: Tuple[str, ...] = (
     "X",
     "Y",
     "Z",
@@ -115,7 +109,7 @@ POINT_FORMAT_0 = (
     "point_source_id",
 )
 
-POINT_FORMAT_6 = (
+POINT_FORMAT_6: Tuple[str, ...] = (
     "X",
     "Y",
     "Z",
@@ -129,7 +123,7 @@ POINT_FORMAT_6 = (
     "gps_time",
 )
 
-WAVEFORM_FIELDS_NAMES = (
+WAVEFORM_FIELDS_NAMES: Tuple[str, ...] = (
     "wavepacket_index",
     "wavepacket_offset",
     "wavepacket_size",
@@ -139,7 +133,7 @@ WAVEFORM_FIELDS_NAMES = (
     "z_t",
 )
 
-COLOR_FIELDS_NAMES = ("red", "green", "blue")
+COLOR_FIELDS_NAMES: Tuple[str, ...] = ("red", "green", "blue")
 
 POINT_FORMAT_DIMENSIONS = PointFormatDict({
     0: POINT_FORMAT_0,
@@ -181,13 +175,6 @@ OVERLAP_MASK_6 = 0b00001000
 SCANNER_CHANNEL_MASK_6 = 0b00110000
 SCAN_DIRECTION_FLAG_MASK_6 = 0b01000000
 EDGE_OF_FLIGHT_LINE_MASK_6 = 0b10000000
-
-
-class SubField(NamedTuple):
-    name: str
-    mask: int
-    type: str
-
 
 COMPOSED_FIELDS_0 = {
     "bit_fields": [
@@ -240,8 +227,8 @@ VERSION_TO_POINT_FMT = {
     "1.4": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),
 }
 
-POINT_FORMATS_DTYPE = _build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS)
-
+POINT_FORMATS_DTYPE = PointFormatDict(
+    _build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS_TO_TYPE))
 # This Dict maps point_format_ids to their dimensions names
 ALL_POINT_FORMATS_DIMENSIONS = PointFormatDict({**POINT_FORMAT_DIMENSIONS})
 # This Dict maps point_format_ids to their numpy.dtype
@@ -362,14 +349,11 @@ class DimensionInfo(NamedTuple):
         return f"{self.num_elements}{self.kind.letter()}{self.num_bytes_singular_element}"
 
 
-def size_of_point_format_id(point_format_id):
-    try:
-        return ALL_POINT_FORMATS_DTYPE[point_format_id].itemsize
-    except KeyError:
-        raise errors.PointFormatNotSupported(point_format_id)
+def size_of_point_format_id(point_format_id: int) -> int:
+    return ALL_POINT_FORMATS_DTYPE[point_format_id].itemsize
 
 
-def min_file_version_for_point_format(point_format_id):
+def min_file_version_for_point_format(point_format_id: int) -> str:
     """Returns the minimum file version that supports the given point_format_id"""
     for version, point_formats in sorted(VERSION_TO_POINT_FMT.items()):
         if point_format_id in point_formats:
@@ -377,17 +361,18 @@ def min_file_version_for_point_format(point_format_id):
     raise errors.PointFormatNotSupported(point_format_id)
 
 
-def supported_versions():
+def supported_versions() -> Set[str]:
     """Returns the set of supported file versions"""
     return set(VERSION_TO_POINT_FMT.keys())
 
 
-def supported_point_formats():
+def supported_point_formats() -> Set[int]:
     """Returns a set of all the point formats supported in pylas"""
     return set(POINT_FORMAT_DIMENSIONS.keys())
 
 
-def is_point_fmt_compatible_with_version(point_format_id, file_version):
+def is_point_fmt_compatible_with_version(
+        point_format_id: int, file_version: str) -> bool:
     """Returns true if the file version support the point_format_id"""
     try:
         return point_format_id in VERSION_TO_POINT_FMT[str(file_version)]
@@ -395,7 +380,8 @@ def is_point_fmt_compatible_with_version(point_format_id, file_version):
         raise errors.FileVersionNotSupported(file_version)
 
 
-def raise_if_version_not_compatible_with_fmt(point_format_id, file_version):
+def raise_if_version_not_compatible_with_fmt(
+        point_format_id: int, file_version: str):
     if not is_point_fmt_compatible_with_version(point_format_id, file_version):
         raise errors.PylasError(
             "Point format {} is not compatible with file version {}".format(

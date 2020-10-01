@@ -47,27 +47,27 @@ class LasBase(object):
         """Returns the scaled x positions of the points as doubles"""
         return ScaledArrayView(self.X, self.header.x_scale, self.header.x_offset)
 
-    @property
-    def y(self):
-        """Returns the scaled y positions of the points as doubles"""
-        return ScaledArrayView(self.Y, self.header.y_scale, self.header.y_offset)
-
-    @property
-    def z(self):
-        """Returns the scaled z positions of the points as doubles"""
-        return ScaledArrayView(self.Z, self.header.z_scale, self.header.z_offset)
-
     @x.setter
     def x(self, value):
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.x[:] = value
 
+    @property
+    def y(self):
+        """Returns the scaled y positions of the points as doubles"""
+        return ScaledArrayView(self.Y, self.header.y_scale, self.header.y_offset)
+
     @y.setter
     def y(self, value):
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.y[:] = value
+
+    @property
+    def z(self):
+        """Returns the scaled z positions of the points as doubles"""
+        return ScaledArrayView(self.Z, self.header.z_scale, self.header.z_offset)
 
     @z.setter
     def z(self, value):
@@ -121,8 +121,10 @@ class LasBase(object):
         an error is raised
 
         """
-        if key in dims.DIMENSIONS or key in self.points.all_dimensions_names:
+        if key in self.point_format.dimension_names:
             self.points[key] = value
+        elif key in dims.DIMENSIONS_TO_TYPE:
+            raise ValueError(f"Point format {self.point_format} does not support {key} dimension")
         else:
             super().__setattr__(key, value)
 
