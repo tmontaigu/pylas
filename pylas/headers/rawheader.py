@@ -3,6 +3,7 @@ import datetime
 import enum
 import logging
 import uuid
+from typing import Union, BinaryIO
 
 import numpy as np
 
@@ -258,22 +259,28 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
 
     def update(self, points: PointRecord) -> None:
         self.x_max = max(
-            self.x_max, (points["X"].max() * self.x_scale) + self.x_offset,
+            self.x_max,
+            (points["X"].max() * self.x_scale) + self.x_offset,
         )
         self.y_max = max(
-            self.y_max, (points["Y"].max() * self.y_scale) + self.y_offset,
+            self.y_max,
+            (points["Y"].max() * self.y_scale) + self.y_offset,
         )
         self.z_max = max(
-            self.z_max, (points["Z"].max() * self.z_scale) + self.z_offset,
+            self.z_max,
+            (points["Z"].max() * self.z_scale) + self.z_offset,
         )
         self.x_min = min(
-            self.x_min, (points["X"].min() * self.x_scale) + self.x_offset,
+            self.x_min,
+            (points["X"].min() * self.x_scale) + self.x_offset,
         )
         self.y_min = min(
-            self.y_min, (points["Y"].min() * self.y_scale) + self.y_offset,
+            self.y_min,
+            (points["Y"].min() * self.y_scale) + self.y_offset,
         )
         self.z_min = min(
-            self.z_min, (points["Z"].min() * self.z_scale) + self.z_offset,
+            self.z_min,
+            (points["Z"].min() * self.z_scale) + self.z_offset,
         )
 
         for i, count in zip(*np.unique(points.return_number, return_counts=True)):
@@ -357,6 +364,14 @@ class RawHeader1_4(RawHeader1_3):
         self.number_of_points_by_return = [0] * 15
 
 
+Header = Union[
+    RawHeader1_1,
+    RawHeader1_2,
+    RawHeader1_3,
+    RawHeader1_4,
+]
+
+
 class HeaderFactory:
     """Factory to create a new header by specifying the version.
     This Factory also handles converting headers between different
@@ -372,7 +387,7 @@ class HeaderFactory:
     _offset_to_major_version = RawHeader1_1.version_major.offset
 
     @classmethod
-    def header_class_for_version(cls, version):
+    def header_class_for_version(cls, version: Union[str, float]):
         """
         >>> HeaderFactory.header_class_for_version(2.0)
         Traceback (most recent call last):
@@ -393,7 +408,7 @@ class HeaderFactory:
             raise errors.FileVersionNotSupported(version)
 
     @classmethod
-    def new(cls, version):
+    def new(cls, version: Union[str, float]) -> Header:
         """Returns a new instance of a header.
 
         Parameters
@@ -412,7 +427,7 @@ class HeaderFactory:
         return cls.header_class_for_version(version)()
 
     @classmethod
-    def read_from_stream(cls, stream):
+    def read_from_stream(cls, stream: BinaryIO) -> Header:
         sizeof_u8 = ctypes.sizeof(ctypes.c_uint8)
         header_bytes = bytearray(
             stream.read(cls._offset_to_major_version + (sizeof_u8 * 2))
@@ -443,7 +458,7 @@ class HeaderFactory:
         return cls.header_class_for_version(version).from_buffer(mmap)
 
     @classmethod
-    def peek_file_version(cls, stream):
+    def peek_file_version(cls, stream: BinaryIO) -> str:
         """seeks to the position of the las version header fields
         in the stream and returns it as a str
 
@@ -462,10 +477,12 @@ class HeaderFactory:
         major = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), "little")
         minor = int.from_bytes(stream.read(ctypes.sizeof(ctypes.c_uint8)), "little")
         stream.seek(old_pos)
-        return "{}.{}".format(major, minor)
+        return f"{major}.{minor}"
 
     @classmethod
-    def convert_header(cls, old_header, new_version):
+    def convert_header(
+        cls, old_header: Header, new_version: Union[str, float]
+    ) -> Header:
         """Converts a header to a another version
 
         Parameters

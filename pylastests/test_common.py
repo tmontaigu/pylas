@@ -54,7 +54,7 @@ def all_laz_path(request):
 def dim_does_not_exists(las, dim_name):
     try:
         _ = getattr(las, dim_name)
-    except ValueError:
+    except AttributeError:
         return True
     return False
 
@@ -62,7 +62,7 @@ def dim_does_not_exists(las, dim_name):
 def dim_does_exists(las, dim_name):
     try:
         _ = getattr(las, dim_name)
-    except ValueError:
+    except AttributeError:
         return False
     return True
 

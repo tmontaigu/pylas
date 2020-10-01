@@ -6,18 +6,28 @@ import itertools
 import operator
 from collections import UserDict
 from enum import Enum
-from typing import NamedTuple, Optional, Dict, Tuple, Set, Iterable, Mapping, TypeVar, Generic
+from typing import (
+    NamedTuple,
+    Optional,
+    Dict,
+    Tuple,
+    Set,
+    Iterable,
+    Mapping,
+    TypeVar,
+    Generic,
+)
 
 import numpy as np
 
 from . import packing
 from .. import errors
 
-ValueType = TypeVar('ValueType')
+ValueType = TypeVar("ValueType")
 
 
 class PointFormatDict(UserDict, Generic[ValueType]):
-    """ Simple wrapper around a dict that
+    """Simple wrapper around a dict that
     changes the exception raised when accessing a key that is not-present
 
     """
@@ -38,7 +48,9 @@ class SubField(NamedTuple):
     type: str
 
 
-def _point_format_to_dtype(point_format: Iterable[str], dimensions_to_type: Mapping[str, str]):
+def _point_format_to_dtype(
+    point_format: Iterable[str], dimensions_to_type: Mapping[str, str]
+):
     """build the numpy.dtype for a point format
 
     Parameters:
@@ -52,10 +64,15 @@ def _point_format_to_dtype(point_format: Iterable[str], dimensions_to_type: Mapp
     numpy.dtype
         The dtype for the input point format
     """
-    return np.dtype([(dim_name, dimensions_to_type[dim_name]) for dim_name in point_format])
+    return np.dtype(
+        [(dim_name, dimensions_to_type[dim_name]) for dim_name in point_format]
+    )
 
 
-def _build_point_formats_dtypes(point_format_dimensions: Mapping[int, Tuple[str]], dimensions_dict: Mapping[str, str]):
+def _build_point_formats_dtypes(
+    point_format_dimensions: Mapping[int, Tuple[str]],
+    dimensions_dict: Mapping[str, str],
+):
     """Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are still packed, and need to be unpacked each time
     you want to access them
@@ -135,19 +152,21 @@ WAVEFORM_FIELDS_NAMES: Tuple[str, ...] = (
 
 COLOR_FIELDS_NAMES: Tuple[str, ...] = ("red", "green", "blue")
 
-POINT_FORMAT_DIMENSIONS = PointFormatDict({
-    0: POINT_FORMAT_0,
-    1: POINT_FORMAT_0 + ("gps_time",),
-    2: POINT_FORMAT_0 + COLOR_FIELDS_NAMES,
-    3: POINT_FORMAT_0 + ("gps_time",) + COLOR_FIELDS_NAMES,
-    4: POINT_FORMAT_0 + ("gps_time",) + WAVEFORM_FIELDS_NAMES,
-    5: POINT_FORMAT_0 + ("gps_time",) + COLOR_FIELDS_NAMES + WAVEFORM_FIELDS_NAMES,
-    6: POINT_FORMAT_6,
-    7: POINT_FORMAT_6 + COLOR_FIELDS_NAMES,
-    8: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ("nir",),
-    9: POINT_FORMAT_6 + WAVEFORM_FIELDS_NAMES,
-    10: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ("nir",) + WAVEFORM_FIELDS_NAMES,
-})
+POINT_FORMAT_DIMENSIONS = PointFormatDict(
+    {
+        0: POINT_FORMAT_0,
+        1: POINT_FORMAT_0 + ("gps_time",),
+        2: POINT_FORMAT_0 + COLOR_FIELDS_NAMES,
+        3: POINT_FORMAT_0 + ("gps_time",) + COLOR_FIELDS_NAMES,
+        4: POINT_FORMAT_0 + ("gps_time",) + WAVEFORM_FIELDS_NAMES,
+        5: POINT_FORMAT_0 + ("gps_time",) + COLOR_FIELDS_NAMES + WAVEFORM_FIELDS_NAMES,
+        6: POINT_FORMAT_6,
+        7: POINT_FORMAT_6 + COLOR_FIELDS_NAMES,
+        8: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ("nir",),
+        9: POINT_FORMAT_6 + WAVEFORM_FIELDS_NAMES,
+        10: POINT_FORMAT_6 + COLOR_FIELDS_NAMES + ("nir",) + WAVEFORM_FIELDS_NAMES,
+    }
+)
 
 # sub fields of the 'bit_fields' dimension
 RETURN_NUMBER_MASK_0 = 0b00000111
@@ -207,19 +226,21 @@ COMPOSED_FIELDS_6 = {
 }
 
 # Dict giving the composed fields for each point_format_id
-COMPOSED_FIELDS = PointFormatDict({
-    0: COMPOSED_FIELDS_0,
-    1: COMPOSED_FIELDS_0,
-    2: COMPOSED_FIELDS_0,
-    3: COMPOSED_FIELDS_0,
-    4: COMPOSED_FIELDS_0,
-    5: COMPOSED_FIELDS_0,
-    6: COMPOSED_FIELDS_6,
-    7: COMPOSED_FIELDS_6,
-    8: COMPOSED_FIELDS_6,
-    9: COMPOSED_FIELDS_6,
-    10: COMPOSED_FIELDS_6,
-})
+COMPOSED_FIELDS = PointFormatDict(
+    {
+        0: COMPOSED_FIELDS_0,
+        1: COMPOSED_FIELDS_0,
+        2: COMPOSED_FIELDS_0,
+        3: COMPOSED_FIELDS_0,
+        4: COMPOSED_FIELDS_0,
+        5: COMPOSED_FIELDS_0,
+        6: COMPOSED_FIELDS_6,
+        7: COMPOSED_FIELDS_6,
+        8: COMPOSED_FIELDS_6,
+        9: COMPOSED_FIELDS_6,
+        10: COMPOSED_FIELDS_6,
+    }
+)
 
 VERSION_TO_POINT_FMT = {
     "1.2": (0, 1, 2, 3),
@@ -228,7 +249,8 @@ VERSION_TO_POINT_FMT = {
 }
 
 POINT_FORMATS_DTYPE = PointFormatDict(
-    _build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS_TO_TYPE))
+    _build_point_formats_dtypes(POINT_FORMAT_DIMENSIONS, DIMENSIONS_TO_TYPE)
+)
 # This Dict maps point_format_ids to their dimensions names
 ALL_POINT_FORMATS_DIMENSIONS = PointFormatDict({**POINT_FORMAT_DIMENSIONS})
 # This Dict maps point_format_ids to their numpy.dtype
@@ -251,12 +273,12 @@ class DimensionKind(Enum):
     BitField = 3
 
     @classmethod
-    def from_letter(cls, letter: str) -> 'DimensionKind':
-        if letter == 'u':
+    def from_letter(cls, letter: str) -> "DimensionKind":
+        if letter == "u":
             return cls.UnsignedInteger
-        elif letter == 'i':
+        elif letter == "i":
             return cls.SignedInteger
-        elif letter == 'f':
+        elif letter == "f":
             return cls.FloatingPoint
         else:
             raise ValueError(f"Unknown type letter '{letter}'")
@@ -285,9 +307,8 @@ def num_bit_set(n: int) -> int:
 
 
 class DimensionInfo(NamedTuple):
-    """ Tuple that contains information of a dimension
+    """Tuple that contains information of a dimension"""
 
-    """
     name: str
     kind: DimensionKind
     num_bits: int
@@ -295,11 +316,13 @@ class DimensionInfo(NamedTuple):
     is_standard: bool = True
 
     @classmethod
-    def from_type_str(cls, name: str, type_str: str, is_standard: bool = True) -> 'DimensionInfo':
+    def from_type_str(
+        cls, name: str, type_str: str, is_standard: bool = True
+    ) -> "DimensionInfo":
         first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
         if first_digits:
             num_elements = int(first_digits)
-            type_str = type_str[len(first_digits):]
+            type_str = type_str[len(first_digits) :]
         else:
             num_elements = 1
 
@@ -309,7 +332,9 @@ class DimensionInfo(NamedTuple):
         return cls(name, kind, num_bits, num_elements, is_standard)
 
     @classmethod
-    def from_bitmask(cls, name: str, bit_mask: int, is_standard: bool = False) -> 'DimensionInfo':
+    def from_bitmask(
+        cls, name: str, bit_mask: int, is_standard: bool = False
+    ) -> "DimensionInfo":
         kind = DimensionKind.BitField
         bit_size = num_bit_set(bit_mask)
         return cls(name, kind, bit_size, is_standard=is_standard)
@@ -333,7 +358,10 @@ class DimensionInfo(NamedTuple):
 
     @property
     def min(self):
-        if self.kind == DimensionKind.BitField or self.kind == DimensionKind.UnsignedInteger:
+        if (
+            self.kind == DimensionKind.BitField
+            or self.kind == DimensionKind.UnsignedInteger
+        ):
             return 0
         elif self.kind == DimensionKind.FloatingPoint:
             return np.finfo(self.type_str()).min
@@ -346,7 +374,9 @@ class DimensionInfo(NamedTuple):
 
         if self.num_elements == 1:
             return f"{self.kind.letter()}{self.num_bytes_singular_element}"
-        return f"{self.num_elements}{self.kind.letter()}{self.num_bytes_singular_element}"
+        return (
+            f"{self.num_elements}{self.kind.letter()}{self.num_bytes_singular_element}"
+        )
 
 
 def size_of_point_format_id(point_format_id: int) -> int:
@@ -372,7 +402,8 @@ def supported_point_formats() -> Set[int]:
 
 
 def is_point_fmt_compatible_with_version(
-        point_format_id: int, file_version: str) -> bool:
+    point_format_id: int, file_version: str
+) -> bool:
     """Returns true if the file version support the point_format_id"""
     try:
         return point_format_id in VERSION_TO_POINT_FMT[str(file_version)]
@@ -380,8 +411,7 @@ def is_point_fmt_compatible_with_version(
         raise errors.FileVersionNotSupported(file_version)
 
 
-def raise_if_version_not_compatible_with_fmt(
-        point_format_id: int, file_version: str):
+def raise_if_version_not_compatible_with_fmt(point_format_id: int, file_version: str):
     if not is_point_fmt_compatible_with_version(point_format_id, file_version):
         raise errors.PylasError(
             "Point format {} is not compatible with file version {}".format(
@@ -481,7 +511,7 @@ class SubFieldView:
                 f"value {np.max(value)} is greater than allowed (max: {self.max_value_allowed})"
             )
         self.array[key] &= ~self.bit_mask
-        self.array[key] |= (value << self.lsb)
+        self.array[key] |= value << self.lsb
 
     def __getitem__(self, item):
         return SubFieldView(self.array[item], int(self.bit_mask))
@@ -518,7 +548,9 @@ class ScaledArrayView:
         return self.scaled_array()
 
     def __array_function__(self, func, types, args, kwargs):
-        args = tuple(arg.array if isinstance(arg, ScaledArrayView) else arg for arg in args)
+        args = tuple(
+            arg.array if isinstance(arg, ScaledArrayView) else arg for arg in args
+        )
         ret = func(*args, **kwargs)
         if ret is not None:
             if isinstance(ret, np.ndarray) and ret.dtype != np.bool:
@@ -552,9 +584,9 @@ class ScaledArrayView:
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return (
-                    self.scale == other.scale
-                    and self.offset == other.offset
-                    and np.all(self.array == other.array)
+                self.scale == other.scale
+                and self.offset == other.offset
+                and np.all(self.array == other.array)
             )
         else:
             return self.scaled_array() == other
@@ -562,9 +594,9 @@ class ScaledArrayView:
     def __ne__(self, other):
         if isinstance(other, self.__class__):
             return (
-                    self.scale != other.scale
-                    and self.offset != other.offset
-                    and np.all(self.array != other.array)
+                self.scale != other.scale
+                and self.offset != other.offset
+                and np.all(self.array != other.array)
             )
         else:
             return self.scaled_array() != other
@@ -582,10 +614,14 @@ class ScaledArrayView:
         return self.array <= self._remove_scale(other)
 
     def __sub__(self, other):
-        return ScaledArrayView(self.array - self._remove_scale(other), self.scale, self.offset)
+        return ScaledArrayView(
+            self.array - self._remove_scale(other), self.scale, self.offset
+        )
 
     def __add__(self, other):
-        return ScaledArrayView(self.array + self._remove_scale(other), self.scale, self.offset)
+        return ScaledArrayView(
+            self.array + self._remove_scale(other), self.scale, self.offset
+        )
 
     def __getitem__(self, item):
         if isinstance(item, int):

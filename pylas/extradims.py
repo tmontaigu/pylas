@@ -1,6 +1,5 @@
-from enum import Enum
-
 from . import errors
+from .point.dims import DimensionKind
 
 _extra_dims_base_style_1 = (
     "",
@@ -58,13 +57,7 @@ _type_to_extra_dim_id_style_2 = {
 }
 
 
-class DimensionSignedness(Enum):
-    FLOATING = 0
-    SIGNED = 1
-    UNSIGNED = 2
-
-
-def get_signedness_for_extra_dim(type_index):
+def get_kind_of_extra_dim(type_index: int) -> DimensionKind:
     """Returns the signedness foe the given type index
 
     Parameters
@@ -80,16 +73,16 @@ def get_signedness_for_extra_dim(type_index):
     try:
         t = _extra_dims_style_2[type_index]
         if "uint" in t:
-            return DimensionSignedness.UNSIGNED
+            return DimensionKind.UnsignedInteger
         elif "int" in t:
-            return DimensionSignedness.SIGNED
+            return DimensionKind.SignedInteger
         else:
-            return DimensionSignedness.FLOATING
+            return DimensionKind.FloatingPoint
     except IndexError:
         raise errors.UnknownExtraType(type_index)
 
 
-def get_type_for_extra_dim(type_index):
+def get_type_for_extra_dim(type_index: int) -> str:
     """Returns the type str ('u1" or "u2", etc) for the given type index
     Parameters
     ----------
@@ -108,7 +101,7 @@ def get_type_for_extra_dim(type_index):
         raise errors.UnknownExtraType(type_index)
 
 
-def get_id_for_extra_dim_type(type_str):
+def get_id_for_extra_dim_type(type_str: str) -> int:
     """Returns the index of the type as defined in the LAS Specification
 
     Parameters

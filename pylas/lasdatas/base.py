@@ -108,7 +108,10 @@ class LasBase(object):
         The requested dimension if it exists
 
         """
-        return self.points[item]
+        try:
+            return self.points[item]
+        except ValueError:
+            raise AttributeError(f"{self.__class__.__name__} object has no attribute '{item}'") from None
 
     def __setattr__(self, key, value):
         """This is called on every access to an attribute of the instance.
@@ -124,7 +127,9 @@ class LasBase(object):
         if key in self.point_format.dimension_names:
             self.points[key] = value
         elif key in dims.DIMENSIONS_TO_TYPE:
-            raise ValueError(f"Point format {self.point_format} does not support {key} dimension")
+            raise ValueError(
+                f"Point format {self.point_format} does not support {key} dimension"
+            )
         else:
             super().__setattr__(key, value)
 
@@ -187,7 +192,7 @@ class LasBase(object):
             self.header.number_of_points_by_return = counts
 
     def write_to(
-            self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
+        self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
     ):
         """writes the data to a stream
 
@@ -201,12 +206,12 @@ class LasBase(object):
             By default, pylas detect available backends
         """
         with LasWriter(
-                out_stream,
-                self.header,
-                self.vlrs,
-                do_compress=do_compress,
-                closefd=False,
-                laz_backend=laz_backend,
+            out_stream,
+            self.header,
+            self.vlrs,
+            do_compress=do_compress,
+            closefd=False,
+            laz_backend=laz_backend,
         ) as writer:
             writer.write(self.points)
 
@@ -239,7 +244,7 @@ class LasBase(object):
             self.write_to(out, do_compress=do_compress)
 
     def write(
-            self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
+        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
     ):
         """Writes to a stream or file
 
@@ -277,9 +282,7 @@ class LasBase(object):
         else:
             if do_compress is None:
                 do_compress = False
-            self.write_to(
-                destination, do_compress=do_compress, laz_backend=laz_backend
-            )
+            self.write_to(destination, do_compress=do_compress, laz_backend=laz_backend)
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(

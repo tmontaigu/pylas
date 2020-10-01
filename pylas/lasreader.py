@@ -13,6 +13,7 @@ from .compression import find_laszip_executable
 from .lasdatas import las14, las12
 from .point import record, PointFormat
 from .point.dims import size_of_point_format_id
+from .typehints import LasData
 from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr
 from .vlrs.vlrlist import VLRList
@@ -95,7 +96,7 @@ class LasReader:
         self.points_read += n
         return points
 
-    def read(self) -> Union[las12.LasData, las14.LasData]:
+    def read(self) -> LasData:
         """Reads all the points not read and returns a LasData object"""
         points = self.read_n_points(-1)
         if points is None:
@@ -135,7 +136,7 @@ class LasReader:
         if self.closefd:
             self.point_source.close()
 
-    def _create_laz_backend(self, source):
+    def _create_laz_backend(self, source) -> Optional["IPointReader"]:
         try:
             backends = iter(self.laz_backend)
         except TypeError:
