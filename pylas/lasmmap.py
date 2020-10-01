@@ -1,6 +1,6 @@
 import mmap
 
-from . import headers
+from . import headers, lasreader
 from .lasdatas import base
 from .point import PointFormat, record
 from .vlrs import vlrlist
@@ -10,17 +10,17 @@ WHOLE_FILE = 0
 
 class LasMMAP(base.LasBase):
     """Memory map a LAS file.
-    It works like a regular LasData however the data is not actually read in memory
-    which is useful for large files.
+    It works like a regular LasData however the data is not actually read in memory,
+
+    Access to dimensions are made directly from the file itself, changes made to the points
+    are directly reflected in the mmap file.
+
+    Vlrs cannot be modified.
+
+    This can be useful if you want to be able to process a big LAS file
 
     .. note::
         A LAZ (compressed LAS) cannot be mmapped
-
-    Changes made to the header or points data is directly done in the file.
-
-    VLRs are an exception, they are read and held into memory, (it is not a problem
-    as its the point data that actually account for most of a LAS file payload).
-    VLRS are written when closing the file so any changes to them is not directly reflected
     """
 
     def __init__(self, filename):
@@ -29,55 +29,31 @@ class LasMMAP(base.LasBase):
         m = mmap.mmap(fileref.fileno(), length=WHOLE_FILE, access=mmap.ACCESS_WRITE)
         header = headers.HeaderFactory.from_mmap(m)
         if header.are_points_compressed:
-            m.close()
             raise ValueError("Cannot mmap a compressed LAZ file")
-        super().__init__(header=header)
-        self.fileref, self.mmap = fileref, m
-        self.mmap.seek(self.header.size)
-        self.vlrs = vlrlist.VLRList.read_from(self.mmap, self.header.number_of_vlr)
+        vlrs = vlrlist.VLRList.read_from(m, header.number_of_vlr)
 
-        try:
-            extra_dims = self.vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
-        except IndexError:
-            extra_dims = None
-
-        self.points_data = record.PackedPointRecord.from_buffer(
-            self.mmap,
-            self.header.point_format_id,
-            count=self.header.point_count,
-            offset=self.header.offset_to_point_data,
+        point_format = PointFormat(
+            header.point_format_id,
+            extra_dims=lasreader.get_extra_dims_info_tuple(header, vlrs),
         )
 
-    def _write_vlrs(self):
-        raw_vlrs = vlrlist.RawVLRList(vlr.into_raw() for vlr in self.vlrs)
+        points_data = record.PackedPointRecord.from_buffer(
+            m,
+            point_format,
+            count=header.point_count,
+            offset=header.offset_to_point_data,
+        )
+        super().__init__(header=header, vlrs=vlrs, points=points_data)
 
-        original_vlrs_bytes_len = self.header.offset_to_point_data - self.header.size
-        bytes_len_diff = original_vlrs_bytes_len - raw_vlrs.total_size_in_bytes()
-        old_offset = self.header.offset_to_point_data
-        new_offset = old_offset - bytes_len_diff
-        points_bytes_len = self.points_data.actual_point_size * len(self.points_data)
-        header_size = self.header.size
-
-        self.header.offset_to_point_data = new_offset
-        self.header.number_of_vlr = len(raw_vlrs)
-        # To be able to use mmap.resize(),
-        # the header must be set to None so that the ctypes structure
-        # releases its pointer the the mmap buffer
-        self.header = None
-        self.points_data = record.PackedPointRecord.empty(0)
-
-        if bytes_len_diff > 0:
-            self.mmap.move(new_offset, old_offset, points_bytes_len)
-            self.mmap.resize(len(self.mmap) - bytes_len_diff)
-        elif bytes_len_diff < 0:
-            self.mmap.resize(len(self.mmap) - bytes_len_diff)
-            self.mmap.move(new_offset, old_offset, points_bytes_len)
-
-        self.mmap.seek(header_size)
-        raw_vlrs.write_to(self.mmap)
+        self.fileref, self.mmap = fileref, m
+        self.mmap.seek(self.header.size)
 
     def close(self):
-        self._write_vlrs()
+        # These need to be set to None, so that
+        # mmap.close() does not give an error because
+        # there are still exported pointers
+        self.header = None
+        self._points = None
         self.mmap.close()
         self.fileref.close()
 
