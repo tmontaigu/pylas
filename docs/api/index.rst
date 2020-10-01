@@ -24,4 +24,5 @@ Submodules
    pylas.headers
    pylas.point.format
    pylas.vlrs.known
+   pylas.lasmmap
 
