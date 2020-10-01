@@ -47,27 +47,27 @@ class LasBase(object):
         """Returns the scaled x positions of the points as doubles"""
         return ScaledArrayView(self.X, self.header.x_scale, self.header.x_offset)
 
-    @property
-    def y(self):
-        """Returns the scaled y positions of the points as doubles"""
-        return ScaledArrayView(self.Y, self.header.y_scale, self.header.y_offset)
-
-    @property
-    def z(self):
-        """Returns the scaled z positions of the points as doubles"""
-        return ScaledArrayView(self.Z, self.header.z_scale, self.header.z_offset)
-
     @x.setter
     def x(self, value):
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.x[:] = value
 
+    @property
+    def y(self):
+        """Returns the scaled y positions of the points as doubles"""
+        return ScaledArrayView(self.Y, self.header.y_scale, self.header.y_offset)
+
     @y.setter
     def y(self, value):
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.y[:] = value
+
+    @property
+    def z(self):
+        """Returns the scaled z positions of the points as doubles"""
+        return ScaledArrayView(self.Z, self.header.z_scale, self.header.z_offset)
 
     @z.setter
     def z(self, value):
@@ -121,8 +121,10 @@ class LasBase(object):
         an error is raised
 
         """
-        if key in dims.DIMENSIONS or key in self.points.all_dimensions_names:
+        if key in self.point_format.dimension_names:
             self.points[key] = value
+        elif key in dims.DIMENSIONS_TO_TYPE:
+            raise ValueError(f"Point format {self.point_format} does not support {key} dimension")
         else:
             super().__setattr__(key, value)
 
@@ -132,20 +134,22 @@ class LasBase(object):
     def __setitem__(self, key, value):
         self.points[key] = value
 
-    def add_extra_dim(self, name, type, description=""):
+    def add_extra_dim(self, name: str, type: str, description: str = ""):
         """Adds a new extra dimension to the point record
 
         Parameters
         ----------
         name: str
-            the name of the dimension
+            the name of the dimension, spaces are replaced with '_'.
         type: str
-            type of the dimension (eg 'uint8')
+            type of the dimension (eg 'uint8' or 'u1')
         description: str, optional
             a small description of the dimension
         """
         name = name.replace(" ", "_")
         type_id = extradims.get_id_for_extra_dim_type(type)
+        # convert to u1, i2, style
+        type = extradims.get_type_for_extra_dim(type_id)
         extra_byte = ExtraBytesStruct(
             data_type=type_id, name=name.encode(), description=description.encode()
         )
@@ -193,6 +197,8 @@ class LasBase(object):
             the destination stream, implementing the write method
         do_compress: bool, optional, default False
             Flag to indicate if you want the date to be compressed
+        laz_backend: optional, the laz backend to use
+            By default, pylas detect available backends
         """
         with LasWriter(
                 out_stream,
@@ -263,6 +269,8 @@ class LasBase(object):
             filename or stream to write to
         do_compress: bool, optional
             Flags to indicate if you want to compress the data
+        laz_backend: optional, the laz backend to use
+            By default, pylas detect available backends
         """
         if isinstance(destination, str):
             self.write_to_file(destination)

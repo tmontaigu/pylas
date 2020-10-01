@@ -312,7 +312,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         pylas.lasdatas.base.LasBase
     """
     if point_format_id is None:
-        point_format_id = source_las.points.point_format.id
+        point_format_id = source_las.point_format.id
 
     if file_version is None:
         file_version = max(

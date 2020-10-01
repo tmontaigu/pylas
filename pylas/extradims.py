@@ -59,8 +59,8 @@ _type_to_extra_dim_id_style_2 = {
 
 
 class DimensionSignedness(Enum):
-    FLOATING = (0,)
-    SIGNED = (1,)
+    FLOATING = 0
+    SIGNED = 1
     UNSIGNED = 2
 
 

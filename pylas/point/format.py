@@ -51,7 +51,7 @@ class PointFormat:
                 sub_fields = composed_dims[dim_name]
             except KeyError:
                 dimension = DimensionInfo.from_type_str(
-                    dim_name, dims.DIMENSIONS[dim_name][1], is_standard=True)
+                    dim_name, dims.DIMENSIONS_TO_TYPE[dim_name], is_standard=True)
                 self.dimensions.append(dimension)
             else:
                 for sub_field in sub_fields:

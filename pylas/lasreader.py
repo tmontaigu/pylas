@@ -95,7 +95,7 @@ class LasReader:
         self.points_read += n
         return points
 
-    def read(self):
+    def read(self) -> Union[las12.LasData, las14.LasData]:
         """Reads all the points not read and returns a LasData object"""
         points = self.read_n_points(-1)
         if points is None:
@@ -130,7 +130,7 @@ class LasReader:
         """
         return PointChunkIterator(self, points_per_iteration)
 
-    def close(self):
+    def close(self) -> None:
         """closes the file object used by the reader"""
         if self.closefd:
             self.point_source.close()
@@ -177,7 +177,7 @@ class LasReader:
                 raise RuntimeError("Read past point data")  # TODO
         return header, vlrs
 
-    def _read_evlrs(self, source, seekable=False):
+    def _read_evlrs(self, source, seekable=False) -> Optional[evlrs.EVLRList]:
         """Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """
