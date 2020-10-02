@@ -1,13 +1,13 @@
 from typing import Union, BinaryIO, Iterable, Optional, overload, Literal
 
-from compression import LazBackend
-from lasappender import LasAppender
-from lasmmap import LasMMAP
-from lasreader import LasReader
+from .compression import LazBackend
+from .lasappender import LasAppender
+from .lasmmap import LasMMAP
+from .lasreader import LasReader
 
-from pylas import LasWriter
-from pylas.headers.rawheader import Header
-from pylas.typehints import LasData, PathLike
+from . import LasWriter
+from .headers.rawheader import Header
+from .typehints import LasData, PathLike
 
 LazBackend = LazBackend
 @overload
@@ -56,7 +56,7 @@ def open_las(
 def read_las(
     source: Union[BinaryIO, PathLike],
     closefd: bool = True,
-    laz_blackends: Union[
+    laz_backend: Union[
         LazBackend, Iterable[LazBackend]
     ] = LazBackend.detect_available(),
 ) -> Union[LasData]: ...
