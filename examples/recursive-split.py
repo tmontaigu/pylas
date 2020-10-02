@@ -36,7 +36,7 @@ def main():
     parser.add_argument("input_file")
     parser.add_argument("output_dir")
     parser.add_argument("size", type=tuple_size, help="eg: 50x64.17")
-    parser.add_argument("--points_per_iter", default=10**6)
+    parser.add_argument("--points-per-iter", default=10**6)
 
     args = parser.parse_args()
 
