@@ -57,7 +57,7 @@ def main():
                 print(f"{count / file.header.point_count * 100}%")
 
                 # For performance we need to use copy
-                # so that the arrays underlying arrays are contiguous
+                # so that the underlying arrays are contiguous
                 x, y = points.x.copy(), points.y.copy()
 
                 point_piped = 0

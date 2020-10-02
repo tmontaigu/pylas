@@ -1,4 +1,6 @@
 import logging
+import pathlib
+from typing import Union, Optional
 
 import numpy as np
 
@@ -192,7 +194,7 @@ class LasBase(object):
             self.header.number_of_points_by_return = counts
 
     def write_to(
-        self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
+            self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
     ):
         """writes the data to a stream
 
@@ -206,12 +208,12 @@ class LasBase(object):
             By default, pylas detect available backends
         """
         with LasWriter(
-            out_stream,
-            self.header,
-            self.vlrs,
-            do_compress=do_compress,
-            closefd=False,
-            laz_backend=laz_backend,
+                out_stream,
+                self.header,
+                self.vlrs,
+                do_compress=do_compress,
+                closefd=False,
+                laz_backend=laz_backend,
         ) as writer:
             writer.write(self.points)
 
@@ -224,7 +226,7 @@ class LasBase(object):
                 )
             )
 
-    def write_to_file(self, filename, do_compress=None):
+    def write_to_file(self, filename: Union[str, pathlib.Path], do_compress: Optional[bool] = None) -> None:
         """Writes the las data into a file
 
         Parameters
@@ -236,7 +238,7 @@ class LasBase(object):
             to determine if the data should be compressed
             otherwise the do_compress flag indicate if the data should be compressed
         """
-        is_ext_laz = filename.split(".")[-1].lower() == "laz"
+        is_ext_laz = pathlib.Path(filename).suffix.lower() == "laz"
         if is_ext_laz and do_compress is None:
             do_compress = True
 
@@ -244,7 +246,7 @@ class LasBase(object):
             self.write_to(out, do_compress=do_compress)
 
     def write(
-        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
+            self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
     ):
         """Writes to a stream or file
 
@@ -277,7 +279,7 @@ class LasBase(object):
         laz_backend: optional, the laz backend to use
             By default, pylas detect available backends
         """
-        if isinstance(destination, str):
+        if isinstance(destination, (str, pathlib.Path)):
             self.write_to_file(destination)
         else:
             if do_compress is None:
