@@ -158,7 +158,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
 
 
 class LasZipVlr(BaseKnownVLR):
-    """Contains the informations needed by laszip & lazperf
+    """Contains the information needed by laszip (or any other laz backend)
     to compress the point records.
     """
 
@@ -167,7 +167,7 @@ class LasZipVlr(BaseKnownVLR):
         self.record_data = data
 
     def parse_record_data(self, record_data):
-        # Only laz-perf/laszip knows how to parse this
+        # Only laz backends know how to parse this
         pass
 
     def record_data_bytes(self):
