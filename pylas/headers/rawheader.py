@@ -232,7 +232,17 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
         self.x_offset, self.y_offset, self.z_offset = value
 
     def write_to(self, out_stream):
-        out_stream.write(bytes(self))
+        hdr_bytes = bytearray(self)
+
+        slc = hdr_bytes[26: 26+32]
+        i = slc.find(b"\0")
+        slc[i:] = b'\x00'
+
+        slc = hdr_bytes[58: 58+32]
+        i = slc.find(b"\0")
+        slc[i:] = b'\x00'
+
+        out_stream.write(hdr_bytes)
 
     def partial_reset(self):
         self.generating_software = PROJECT_NAME
