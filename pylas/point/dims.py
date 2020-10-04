@@ -613,16 +613,6 @@ class ScaledArrayView:
     def __le__(self, other):
         return self.array <= self._remove_scale(other)
 
-    def __sub__(self, other):
-        return ScaledArrayView(
-            self.array - self._remove_scale(other), self.scale, self.offset
-        )
-
-    def __add__(self, other):
-        return ScaledArrayView(
-            self.array + self._remove_scale(other), self.scale, self.offset
-        )
-
     def __getitem__(self, item):
         if isinstance(item, int):
             return self._apply_scale(self.array[item])
