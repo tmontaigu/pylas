@@ -10,6 +10,7 @@ class RawVLRHeader(ctypes.LittleEndianStructure):
     in the LAS file.
     """
 
+    _pack_ = 1
     _fields_ = [
         ("_reserved", ctypes.c_uint16),
         ("user_id", ctypes.c_char * 16),
