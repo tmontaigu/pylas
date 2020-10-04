@@ -7,8 +7,6 @@ import pylas
 
 
 def main(args):
-    print(args.exclude)
-
     files = [args.in_path] if args.in_path.is_file() else list(args.in_path.glob("*.la[s-z]"))
 
     if args.out_path.suffix and len(files) > 1:
@@ -19,7 +17,7 @@ def main(args):
 
         las = pylas.read(path)
 
-        dimensions = (dim for dim in las.point_format.dimensions if dim not in args.exclude)
+        dimensions = (dim for dim in las.point_format.dimensions if dim.name not in args.exclude)
         for dimension in dimensions:
             print(f"\t{dimension.name}", end='')
             if dimension.kind == pylas.DimensionKind.FloatingPoint:
@@ -34,7 +32,10 @@ def main(args):
             las[dimension.name] = np.random.randint(dimension.min, dimension.max + 1, len(las.points), type_str)
             print()
 
-        las.write(args.out_path / path.name)
+        if args.out_path.suffix:
+            las.write(args.out_path)
+        else:
+            las.write(args.out_path / path.name)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,6 @@
 import argparse
 import sys
+from pathlib import Path
 from typing import List
 from typing import Optional
 
@@ -36,7 +37,7 @@ def main():
     parser.add_argument("input_file")
     parser.add_argument("output_dir")
     parser.add_argument("size", type=tuple_size, help="eg: 50x64.17")
-    parser.add_argument("--points-per-iter", default=10**6)
+    parser.add_argument("--points-per-iter", default=10**6, type=int)
 
     args = parser.parse_args()
 
@@ -57,7 +58,7 @@ def main():
                 print(f"{count / file.header.point_count * 100}%")
 
                 # For performance we need to use copy
-                # so that the arrays underlying arrays are contiguous
+                # so that the underlying arrays are contiguous
                 x, y = points.x.copy(), points.y.copy()
 
                 point_piped = 0
@@ -67,7 +68,8 @@ def main():
 
                     if np.any(mask):
                         if writers[i] is None:
-                            writers[i] = pylas.open(f"{sys.argv[2]}/output_{i}.laz",
+                            output_path = Path(sys.argv[2]) / f"output_{i}.laz"
+                            writers[i] = pylas.open(output_path,
                                                     mode='w',
                                                     header=file.header)
                         sub_points = points[mask]
@@ -77,6 +79,7 @@ def main():
                     if point_piped == len(points):
                         break
                 count += len(points)
+            print(f"{count / file.header.point_count * 100}%")
         finally:
             for writer in writers:
                 if writer is not None:
