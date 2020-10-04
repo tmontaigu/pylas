@@ -94,6 +94,17 @@ class LasBase(object):
         self._points = new_points
         self.update_header()
 
+    def change_scaling(self, scales=None, offsets=None) -> None:
+        if scales is None:
+            scales = self.header.scales
+        if offsets is None:
+            offsets = self.header.offsets
+
+        record.apply_new_scaling(self, scales, offsets)
+
+        self.header.scales = scales
+        self.header.offsets = offsets
+
     def __getattr__(self, item):
         """Automatically called by Python when the attribute
         named 'item' is no found. We use this function to forward the call the
