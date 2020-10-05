@@ -5,7 +5,7 @@ in the context of Las point data
 """
 import logging
 from abc import ABC, abstractmethod
-from typing import NoReturn
+from typing import NoReturn, Any
 
 import numpy as np
 
@@ -17,8 +17,16 @@ from ..point import PointFormat
 logger = logging.getLogger(__name__)
 
 
+def scale_dimension(array_dim, scale, offset):
+    return (array_dim * scale) + offset
+
+
+def unscale_dimension(array_dim, scale, offset):
+    return np.round((np.array(array_dim) - offset) / scale)
+
+
 def raise_not_enough_bytes_error(
-    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -348,9 +356,26 @@ class PackedPointRecord(PointRecord):
         )
 
 
+def apply_new_scaling(record, scales, offsets) -> None:
+    record['X'] = unscale_dimension(np.asarray(record.x), scales[0], offsets[0])
+    record['Y'] = unscale_dimension(np.asarray(record.y), scales[1], offsets[1])
+    record['Z'] = unscale_dimension(np.asarray(record.x), scales[2], offsets[2])
+
+
 class ScaleAwarePointRecord(PackedPointRecord):
     def __init__(self, array, point_format, scales, offsets):
         super().__init__(array, point_format)
+        self.scales = scales
+        self.offsets = offsets
+
+    def change_scaling(self, scales=None, offsets=None) -> None:
+        if scales is not None:
+            self.scales = scales
+        if offsets is not None:
+            self.offsets = offsets
+
+        apply_new_scaling(self, scales, offsets)
+
         self.scales = scales
         self.offsets = offsets
 
@@ -369,10 +394,3 @@ class ScaleAwarePointRecord(PackedPointRecord):
         else:
             return super().__getitem__(item)
 
-
-def scale_dimension(array_dim, scale, offset):
-    return (array_dim * scale) + offset
-
-
-def unscale_dimension(array_dim, scale, offset):
-    return np.round((np.array(array_dim) - offset) / scale)
