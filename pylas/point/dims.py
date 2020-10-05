@@ -16,6 +16,7 @@ from typing import (
     Mapping,
     TypeVar,
     Generic,
+    List,
 )
 
 import numpy as np
@@ -27,8 +28,8 @@ ValueType = TypeVar("ValueType")
 
 
 class PointFormatDict(UserDict, Generic[ValueType]):
-    """Simple wrapper around a dict that
-    changes the exception raised when accessing a key that is not-present
+    """Simple wrapper around a dict that changes
+    the exception raised when accessing a key that is not-present
 
     """
 
@@ -45,12 +46,11 @@ class PointFormatDict(UserDict, Generic[ValueType]):
 class SubField(NamedTuple):
     name: str
     mask: int
-    type: str
 
 
 def _point_format_to_dtype(
     point_format: Iterable[str], dimensions_to_type: Mapping[str, str]
-):
+) -> np.dtype:
     """build the numpy.dtype for a point format
 
     Parameters:
@@ -72,7 +72,7 @@ def _point_format_to_dtype(
 def _build_point_formats_dtypes(
     point_format_dimensions: Mapping[int, Tuple[str]],
     dimensions_dict: Mapping[str, str],
-):
+) -> Dict[int, np.dtype]:
     """Builds the dict mapping point format id to numpy.dtype
     In the dtypes, bit fields are still packed, and need to be unpacked each time
     you want to access them
@@ -195,33 +195,35 @@ SCANNER_CHANNEL_MASK_6 = 0b00110000
 SCAN_DIRECTION_FLAG_MASK_6 = 0b01000000
 EDGE_OF_FLIGHT_LINE_MASK_6 = 0b10000000
 
-COMPOSED_FIELDS_0 = {
+COMPOSED_FIELDS_0: Dict[str, List[SubField]] = {
     "bit_fields": [
-        SubField("return_number", RETURN_NUMBER_MASK_0, "u1"),
-        SubField("number_of_returns", NUMBER_OF_RETURNS_MASK_0, "u1"),
-        SubField("scan_direction_flag", SCAN_DIRECTION_FLAG_MASK_0, "bool"),
-        SubField("edge_of_flight_line", EDGE_OF_FLIGHT_LINE_MASK_0, "bool"),
+        SubField("return_number", RETURN_NUMBER_MASK_0),
+        SubField("number_of_returns", NUMBER_OF_RETURNS_MASK_0),
+        SubField("scan_direction_flag", SCAN_DIRECTION_FLAG_MASK_0),
+        SubField("edge_of_flight_line", EDGE_OF_FLIGHT_LINE_MASK_0),
     ],
     "raw_classification": [
-        SubField("classification", CLASSIFICATION_MASK_0, "u1"),
-        SubField("synthetic", SYNTHETIC_MASK_0, "bool"),
-        SubField("key_point", KEY_POINT_MASK_0, "bool"),
-        SubField("withheld", WITHHELD_MASK_0, "bool"),
+        SubField("classification", CLASSIFICATION_MASK_0),
+        SubField("synthetic", SYNTHETIC_MASK_0),
+        SubField("key_point", KEY_POINT_MASK_0),
+        SubField("withheld", WITHHELD_MASK_0),
     ],
 }
-COMPOSED_FIELDS_6 = {
+
+
+COMPOSED_FIELDS_6: Dict[str, List[SubField]] = {
     "bit_fields": [
-        SubField("return_number", RETURN_NUMBER_MASK_6, "u1"),
-        SubField("number_of_returns", NUMBER_OF_RETURNS_MASK_6, "u1"),
+        SubField("return_number", RETURN_NUMBER_MASK_6),
+        SubField("number_of_returns", NUMBER_OF_RETURNS_MASK_6),
     ],
     "classification_flags": [
-        SubField("synthetic", SYNTHETIC_MASK_6, "bool"),
-        SubField("key_point", KEY_POINT_MASK_6, "bool"),
-        SubField("withheld", WITHHELD_MASK_6, "bool"),
-        SubField("overlap", OVERLAP_MASK_6, "bool"),
-        SubField("scanner_channel", SCANNER_CHANNEL_MASK_6, "u1"),
-        SubField("scan_direction_flag", SCAN_DIRECTION_FLAG_MASK_6, "bool"),
-        SubField("edge_of_flight_line", EDGE_OF_FLIGHT_LINE_MASK_6, "bool"),
+        SubField("synthetic", SYNTHETIC_MASK_6),
+        SubField("key_point", KEY_POINT_MASK_6),
+        SubField("withheld", WITHHELD_MASK_6),
+        SubField("overlap", OVERLAP_MASK_6),
+        SubField("scanner_channel", SCANNER_CHANNEL_MASK_6),
+        SubField("scan_direction_flag", SCAN_DIRECTION_FLAG_MASK_6),
+        SubField("edge_of_flight_line", EDGE_OF_FLIGHT_LINE_MASK_6),
     ],
 }
 
@@ -242,7 +244,7 @@ COMPOSED_FIELDS = PointFormatDict(
     }
 )
 
-VERSION_TO_POINT_FMT = {
+VERSION_TO_POINT_FMT: Dict[str, Tuple[int, ...]] = {
     "1.2": (0, 1, 2, 3),
     "1.3": (0, 1, 2, 3, 4, 5),
     "1.4": (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),

@@ -234,13 +234,13 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
     def write_to(self, out_stream):
         hdr_bytes = bytearray(self)
 
-        slc = hdr_bytes[26: 26+32]
+        slc = hdr_bytes[26 : 26 + 32]
         i = slc.find(b"\0")
-        slc[i:] = b'\x00'
+        slc[i:] = b"\x00"
 
-        slc = hdr_bytes[58: 58+32]
+        slc = hdr_bytes[58 : 58 + 32]
         i = slc.find(b"\0")
-        slc[i:] = b'\x00'
+        slc[i:] = b"\x00"
 
         out_stream.write(hdr_bytes)
 
