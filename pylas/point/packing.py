@@ -19,24 +19,6 @@ def least_significant_bit_set(mask: int) -> int:
     return (mask & -mask).bit_length() - 1
 
 
-def unpack(source_array, mask, dtype=np.uint8):
-    """Unpack sub field using its mask
-
-    Parameters:
-    ----------
-    source_array : numpy.ndarray
-        The source array
-    mask : mask (ie: 0b00001111)
-        Mask of the sub field to be extracted from the source array
-    Returns
-    -------
-    numpy.ndarray
-        The sub field array
-    """
-    lsb = least_significant_bit_set(mask)
-    return ((source_array & mask) >> lsb).astype(dtype)
-
-
 def pack(array, sub_field_array, mask, inplace=False):
     """Packs a sub field's array into another array using a mask
 
