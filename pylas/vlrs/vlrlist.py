@@ -1,6 +1,7 @@
 import logging
+from typing import BinaryIO, Type, List
 
-from .known import vlr_factory
+from .known import vlr_factory, IKnownVLR
 from .rawvlr import RawVLR
 
 logger = logging.getLogger(__name__)
@@ -170,7 +171,7 @@ class VLRList:
         """
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
-    def extract(self, vlr_type):
+    def extract(self, vlr_type: Type[IKnownVLR]) -> List[IKnownVLR]:
         """Returns the list of vlrs of the requested type
         The difference with get is that the returned vlrs will be removed from the list
 
@@ -220,7 +221,7 @@ class VLRList:
         return "[{}]".format(", ".join(repr(vlr) for vlr in self.vlrs))
 
     @classmethod
-    def read_from(cls, data_stream, num_to_read):
+    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> 'VLRList':
         """Reads vlrs and parse them if possible from the stream
 
         Parameters
@@ -239,10 +240,7 @@ class VLRList:
         vlrlist = cls()
         for _ in range(num_to_read):
             raw = RawVLR.read_from(data_stream)
-            try:
-                vlrlist.append(vlr_factory(raw))
-            except UnicodeDecodeError:
-                logger.error("Failed to decode VLR: {}".format(raw))
+            vlrlist.append(vlr_factory(raw))
 
         return vlrlist
 

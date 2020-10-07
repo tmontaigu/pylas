@@ -5,6 +5,7 @@
 """
 import abc
 import ctypes
+import logging
 import struct
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
@@ -16,6 +17,8 @@ from ..extradims import (
 from ..point.dims import DimensionInfo, DimensionKind
 
 abstractmethod = abc.abstractmethod
+
+logger = logging.getLogger(__name__)
 
 
 class IKnownVLR(abc.ABC):
@@ -589,5 +592,10 @@ def vlr_factory(raw_vlr):
             known_vlr.official_user_id() == user_id
             and raw_vlr.header.record_id in known_vlr.official_record_ids()
         ):
-            return known_vlr.from_raw(raw_vlr)
+            try:
+                return known_vlr.from_raw(raw_vlr)
+            except Exception as err:
+                logger.warning(f"Failed to parse {known_vlr}: {err}")
+                return VLR.from_raw(raw_vlr)
+
     return VLR.from_raw(raw_vlr)
