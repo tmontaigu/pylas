@@ -253,7 +253,7 @@ class LasBase(object):
             to determine if the data should be compressed
             otherwise the do_compress flag indicate if the data should be compressed
         """
-        is_ext_laz = pathlib.Path(filename).suffix.lower() == "laz"
+        is_ext_laz = pathlib.Path(filename).suffix.lower() == ".laz"
         if is_ext_laz and do_compress is None:
             do_compress = True
 
