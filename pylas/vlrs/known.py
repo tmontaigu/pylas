@@ -112,18 +112,12 @@ class ClassificationLookupVlr(BaseKnownVLR):
         self.lookups = {}
 
     def parse_record_data(self, record_data):
-        if len(record_data) % self._lookup_struct.size != 0:
-            raise ValueError(
-                "Length of ClassificationLookup VLR's record_data must be a multiple of {}".format(
-                    self._lookup_struct.size
-                )
-            )
-
-        for i in range(len(record_data) // self._lookup_struct.size):
-            class_id, desc = self._lookup_struct.unpack_from(
-                record_data, self._lookup_struct.size * i
-            )
-            self.lookups[class_id] = desc.split(b"\x00")[0].decode("ascii")
+        for class_id, desc in struct.iter_unpack("<B15s", record_data):
+            # index using desc[i:i+1], because desc[i] gives an int, and we want a byte
+            description = b"".join(
+                desc[i:i+1] for i in range(len(desc)) if desc[i:i+1].isalnum() or desc[i:i+1] == b' '
+            ).decode()
+            self.lookups[class_id] = description
 
     def record_data_bytes(self):
         def lookup_converter(lookup_dict):
