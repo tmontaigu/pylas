@@ -119,7 +119,6 @@ class LasReader:
         else:
             las_data = las12.LasData(header=self.header, vlrs=self.vlrs, points=points)
 
-        las_data.update_header()
         return las_data
 
     def chunk_iterator(self, points_per_iteration: int) -> "PointChunkIterator":
