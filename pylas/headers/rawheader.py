@@ -293,10 +293,12 @@ class RawHeader1_1(ctypes.LittleEndianStructure):
             (points["Z"].min() * self.z_scale) + self.z_offset,
         )
 
-        for i, count in zip(*np.unique(points.return_number, return_counts=True)):
-            if i >= len(self.number_of_points_by_return):
+        for return_number, count in zip(*np.unique(points.return_number, return_counts=True)):
+            if return_number == 0:
+                continue
+            if return_number > len(self.number_of_points_by_return):
                 break  # np.unique sorts unique values
-            self.number_of_points_by_return[i - 1] += count
+            self.number_of_points_by_return[return_number - 1] += count
         self.point_count += len(points)
 
     def __repr__(self):
