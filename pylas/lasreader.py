@@ -88,7 +88,7 @@ class LasReader:
             n = min(n, points_left)
 
         r = record.PackedPointRecord.from_buffer(
-            bytearray(self.point_source.read_n_points(n)), self.point_format, n
+            self.point_source.read_n_points(n), self.point_format, n
         )
         points = record.ScaleAwarePointRecord(
             r.array, r.point_format, self.header.scales, self.header.offsets
@@ -219,7 +219,7 @@ class IPointReader(abc.ABC):
     """
 
     @abc.abstractmethod
-    def read_n_points(self, n) -> bytes:
+    def read_n_points(self, n) -> bytearray:
         ...
 
     @abc.abstractmethod
@@ -234,8 +234,13 @@ class UncompressedPointReader(IPointReader):
         self.source = source
         self.point_size = point_size
 
-    def read_n_points(self, n) -> bytes:
-        return self.source.read(n * self.point_size)
+    def read_n_points(self, n) -> bytearray:
+        try:
+            data = bytearray(n * self.point_size)
+            self.source.readinto(data)
+            return data
+        except AttributeError:
+            return bytearray(self.source.read(n * self.point_size))
 
     def close(self):
         self.source.close()
@@ -288,11 +293,12 @@ class LasZipProcessPointReader(IPointReader):
                 stderr=subprocess.PIPE,
             )
 
-    def read_n_points(self, n) -> bytes:
-        b = self.process.stdout.read(n * self.point_size)
+    def read_n_points(self, n) -> bytearray:
+        b = bytearray(n * self.point_size)
+        self.process.stdout.readinto(b)
         if self.process.poll() is not None:
             self.raise_if_bad_err_code()
-        return b
+        return bytearray(b)
 
     def close(self):
         if self.conveyor is not None and self.conveyor.is_alive():
@@ -337,8 +343,8 @@ class LazrsPointReader(IPointReader):
         else:
             self.decompressor = lazrs.LasZipDecompressor(source, laszip_vlr.record_data)
 
-    def read_n_points(self, n) -> bytes:
-        point_bytes = np.zeros(n * self.vlr.item_size(), np.uint8)
+    def read_n_points(self, n) -> bytearray:
+        point_bytes = bytearray(n * self.vlr.item_size())
         self.decompressor.decompress_many(point_bytes)
         return point_bytes
 
