@@ -550,9 +550,19 @@ class ScaledArrayView:
         return self.scaled_array()
 
     def __array_function__(self, func, types, args, kwargs):
-        args = tuple(
-            arg.array if isinstance(arg, ScaledArrayView) else arg for arg in args
-        )
+        converted_args = []
+        for arg in args:
+            if isinstance(arg, (tuple, list)):
+                top_level_args = []
+                converted_args.append(top_level_args)
+            else:
+                top_level_args = converted_args
+                arg = [arg]
+            top_level_args.extend(
+                a.array if isinstance(a, ScaledArrayView) else a for a in arg
+            )
+
+        args = converted_args
         ret = func(*args, **kwargs)
         if ret is not None:
             if isinstance(ret, np.ndarray) and ret.dtype != np.bool:
