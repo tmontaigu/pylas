@@ -19,7 +19,8 @@ to support compressed LAZ files.
 The 2 supported options are:
 
 1) `lazrs`_ `[lazrs PyPi]`_
-3) `laszip.exe`_
+
+2) `laszip.exe`_
 
 When encountering LAZ data, pylas will try this options in the order described above.
 (Example: if lazrs is not installed or if it fails during, the process, pylas will try laszip)
