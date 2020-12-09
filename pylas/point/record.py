@@ -143,11 +143,18 @@ class PointRecord(IPointRecord, ABC):
         new_record.copy_fields_from(other_point_record)
         return new_record
 
-    def copy_fields_from(self, other_record):
+    def copy_fields_from(self, other_record: 'PointRecord'):
         """Tries to copy the values of the current dimensions from other_record"""
         for dim_name in self.dimensions_names:
             try:
                 self[dim_name] = np.array(other_record[dim_name])
+            except ValueError:
+                pass
+
+    def copy_fields_from_numpy_array(self, array: np.ndarray):
+        for dim_name in self.array.dtype.names:
+            try:
+                self[dim_name] = array[dim_name]
             except ValueError:
                 pass
 
@@ -156,7 +163,7 @@ class PointRecord(IPointRecord, ABC):
             self.point_format.add_extra_dimension(name, type_str)
         old_array = self.array
         self._array = np.zeros_like(old_array, dtype=self.point_format.dtype())
-        self.copy_fields_from(old_array)
+        self.copy_fields_from_numpy_array(old_array)
 
     def add_extra_dim(self, name, type_str):
         self.add_extra_dims([(name, type_str)])
