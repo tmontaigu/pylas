@@ -33,9 +33,9 @@ The Allowed base types for an extra dimensions are:
 +-------------------------+-------------+-------------+
 |     i8 or int64         |     64      |    signed   |
 +-------------------------+-------------+-------------+
-|     f4 or float         |     32      |   floating  |
+|     f4 or float32       |     32      |   floating  |
 +-------------------------+-------------+-------------+
-|     f8 or double        |     64      |   floating  |
+|     f8 or float32       |     64      |   floating  |
 +-------------------------+-------------+-------------+
 
 You can prepend the number '2' or '3' to one of the above base type to define an extra dimension
@@ -62,6 +62,13 @@ and an array field of 3 doubles for each points.
 
     Although the specification of the ExtraBytesVlr appeared in the 1.4 LAS Spec, pylas allows to
     add new dimensions to file with version < 1.4
+
+.. note::
+
+   If you are adding multiple extra dimensions use :meth:`pylas.LasBase.add_extra_dims`
+   as it is more efficient (it allows to allocate all the dimensions at once instead
+   of re-allocating each time a new dimension is added.
+
 
 Custom VLRs
 ===========

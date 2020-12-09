@@ -24,8 +24,8 @@ _extra_dims_base_style_2 = (
     "int32",
     "uint64",
     "int64",
-    "float",
-    "double",
+    "float32",
+    "float64",
 )
 
 _extra_dims_style_1_array_2 = tuple(

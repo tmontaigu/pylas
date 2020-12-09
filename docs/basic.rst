@@ -33,7 +33,7 @@ if you need metada informations that are contained in the header.
 
 Sometimes files are big, too big to be read entirely and fit into your RAM.
 The object returned by the :func:`pylas.open` function, :class:`pylas.lasreader.LasReader`
-can also be used to read points chunk by chunk, which will allow you to do some
+can also be used to read points chunk by chunk by using :meth:`pylas.lasreader.LasReader.chunk_iterator`, which will allow you to do some
 processing on large files (splitting, filtering, etc)
 
 .. code:: python

@@ -1,6 +1,6 @@
 import logging
 import pathlib
-from typing import Union, Optional
+from typing import Union, Optional, Tuple, List
 
 import numpy as np
 
@@ -157,6 +157,12 @@ class LasBase(object):
     def add_extra_dim(self, name: str, type: str, description: str = ""):
         """Adds a new extra dimension to the point record
 
+        .. note::
+
+            If you plan on adding multiple extra dimensions,
+            prefer :meth:`pylas.LasBase.add_extra_dims` as it will
+            save re-allocations and data copy
+
         Parameters
         ----------
         name: str
@@ -166,13 +172,32 @@ class LasBase(object):
         description: str, optional
             a small description of the dimension
         """
-        name = name.replace(" ", "_")
-        type_id = extradims.get_id_for_extra_dim_type(type)
-        # convert to u1, i2, style
-        type = extradims.get_type_for_extra_dim(type_id)
-        extra_byte = ExtraBytesStruct(
-            data_type=type_id, name=name.encode(), description=description.encode()
-        )
+        self.add_extra_dims([(name, type, description)])
+
+    def add_extra_dims(self, type_tuples: List[Tuple[str,...]]):
+        """ Add multiple extra dimensions at once
+
+        Parameters
+        ----------
+
+        type_tuples:
+               a list of tuple describing the dimensions to add
+               [(name, type, description), (name2, other_type)]
+               The description is optional
+        """
+        extra_bytes_structs = []
+        tuples = []
+        for name, type, *rest in type_tuples:
+            name = name.replace(" ", "_")
+            if rest:
+                description = rest[0]
+            else:
+                description = ""
+            type_id = extradims.get_id_for_extra_dim_type(type)
+            tuples.append((name, extradims.get_type_for_extra_dim(type_id)))
+            extra_bytes_structs.append(ExtraBytesStruct(
+                data_type=type_id, name=name.encode(), description=description.encode()
+            ))
 
         try:
             extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
@@ -180,8 +205,10 @@ class LasBase(object):
             extra_bytes_vlr = ExtraBytesVlr()
             self.vlrs.append(extra_bytes_vlr)
         finally:
-            extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
-            self.points.add_extra_dim(name, type)
+            extra_bytes_vlr.extra_bytes_structs.extend(extra_bytes_structs)
+            self.points.add_extra_dims(tuples)
+
+
 
     def update_header(self):
         """Update the information stored in the header
