@@ -4,6 +4,7 @@ import pytest
 import pylas
 from pylas.compression import find_laszip_executable
 from pylastests.test_common import (
+    las_path_fixture,
     test1_4_las,
     extra_bytes_las,
     write_then_read_again,
@@ -105,3 +106,13 @@ def test_conversion_keeps_eb(extrab_las):
     )
     for name in eb_0.points.extra_dimensions_names:
         assert np.allclose(eb_0[name], extrab_las[name])
+
+
+def test_adding_extra_bytes_keeps_values_of_all_existing_fields(las_path_fixture):
+    las = pylas.read(las_path_fixture)
+    las.add_extra_dims([])
+
+    original = pylas.read(las_path_fixture)
+
+    for name in las.point_format.dimension_names:
+        assert np.allclose(las[name], original[name])
