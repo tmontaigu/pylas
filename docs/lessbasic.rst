@@ -35,7 +35,7 @@ The Allowed base types for an extra dimensions are:
 +-------------------------+-------------+-------------+
 |     f4 or float32       |     32      |   floating  |
 +-------------------------+-------------+-------------+
-|     f8 or float32       |     64      |   floating  |
+|     f8 or float64       |     64      |   floating  |
 +-------------------------+-------------+-------------+
 
 You can prepend the number '2' or '3' to one of the above base type to define an extra dimension
