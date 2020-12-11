@@ -57,10 +57,10 @@ class RawEVLR:
 
     def __eq__(self, other):
         return (
-                self.header.user_id == other.header.user_id
-                and self.header.record_id == other.header.record_id
-                and self.header.description == other.header.description
-                and self.record_data == other.record_data
+            self.header.user_id == other.header.user_id
+            and self.header.record_id == other.header.record_id
+            and self.header.description == other.header.description
+            and self.record_data == other.record_data
         )
 
     def __repr__(self):
@@ -77,7 +77,7 @@ class EVLR(rawvlr.VLR):
 
 class RawEVLRList(vlrlist.RawVLRList):
     @classmethod
-    def from_list(cls, vlrs: Iterable[VLR]) -> 'RawEVLRList':
+    def from_list(cls, vlrs: Iterable[VLR]) -> "RawEVLRList":
         raw_vlrs = cls()
         for vlr in vlrs:
             raw = RawEVLR()
@@ -91,7 +91,7 @@ class RawEVLRList(vlrlist.RawVLRList):
 
 class EVLRList(vlrlist.VLRList):
     @classmethod
-    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> 'EVLRList':
+    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> "EVLRList":
         evlr_list = cls()
         for _ in range(num_to_read):
             raw = RawEVLR.read_from(data_stream)

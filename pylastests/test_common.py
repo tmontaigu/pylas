@@ -67,8 +67,6 @@ def dim_does_exists(las, dim_name):
     return True
 
 
-# TODO: should propably use ALL_POiNTS_FORMATS_DIMS dict
-#   to do this test
 def test_change_format(las):
     in_version = las.header.version
 
@@ -130,7 +128,7 @@ def test_change_format(las):
 
 
 def test_conversion_file_version():
-    las = pylas.create(point_format_id=0, file_version="1.4")
+    las = pylas.create(point_format=0, file_version="1.4")
     las2 = pylas.convert(las, file_version="1.2")
 
     assert las.points.point_format == las2.points.point_format
@@ -199,7 +197,7 @@ def test_coords_when_setting_offsets_and_scales(las):
 
 
 def test_coords_when_using_create_from_header(las):
-    new_las = pylas.create_from_header(las.header)
+    new_las = pylas.LasData(las.header)
 
     new_las.x = las.x
     new_las.y = las.y

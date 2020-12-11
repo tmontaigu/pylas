@@ -34,18 +34,18 @@ def test_xyz():
 def test_wrong_version():
     for i in range(6, 8):
         with pytest.raises(pylas.errors.PylasError):
-            _ = pylas.create(point_format_id=i, file_version="1.2")
+            _ = pylas.create(point_format=i, file_version="1.2")
 
 
 def test_good_version_is_used():
     for i in range(6, 8):
-        las = pylas.create(point_format_id=i)
+        las = pylas.create(point_format=i)
         assert las.header.version.major == 1
         assert las.header.version.minor == 4
 
 
 def test_create_fmt_0(file):
-    new = pylas.create(point_format_id=0)
+    new = pylas.create(point_format=0)
 
     dim_names_fmt_0 = PointFormat(0).dimension_names
 
@@ -76,7 +76,7 @@ def test_create_fmt_0(file):
 
 
 def test_create_fmt_1(file):
-    new = pylas.create(point_format_id=1)
+    new = pylas.create(point_format=1)
 
     with pytest.raises(ValueError):
         new.red = file.red
@@ -95,7 +95,7 @@ def test_create_fmt_1(file):
 
 
 def test_create_fmt_2(file):
-    new = pylas.create(point_format_id=2)
+    new = pylas.create(point_format=2)
 
     with pytest.raises(ValueError):
         new.gps_time = file.gps_time
@@ -115,7 +115,7 @@ def test_create_fmt_2(file):
 
 
 def test_create_fmt_3(file):
-    new = pylas.create(point_format_id=3)
+    new = pylas.create(point_format=3)
 
     new.red = file.red
     new.green = file.green
@@ -135,7 +135,7 @@ def test_create_fmt_3(file):
 
 
 def test_create_fmt_6(file1_4):
-    new = pylas.create(point_format_id=6)
+    new = pylas.create(point_format=6)
     assert str(new.header.version) == "1.4"
 
     dim_names_fmt_6 = PointFormat(6).dtype().names

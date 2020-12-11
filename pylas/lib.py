@@ -6,7 +6,7 @@ import io
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
 import numpy as np
 
@@ -179,27 +179,11 @@ def mmap_las(filename):
     return LasMMAP(filename)
 
 
-def create_from_header(header: LasHeader):
-    """Creates a File from an existing header,
-    allocating the array of point according to the provided header.
-    The input header is copied.
-
-
-    Parameters
-    ----------
-    header : existing header to be used to create the file
-
-    Returns
-    -------
-    pylas.lasdatas.base.LasBase
-    """
-    header = copy.copy(header)
-    header.point_count = 0
-    points = record.PackedPointRecord.empty(header.point_format)
-    return LasData(header=header, points=points)
-
-
-def create_las(*, point_format_id=0, file_version=None):
+def create_las(
+    *,
+    point_format: Union[int, PointFormat] = PointFormat(0),
+    file_version: Optional[Union[str, Version]] = None
+):
     """Function to create a new empty las data object
 
     .. note::
@@ -207,7 +191,7 @@ def create_las(*, point_format_id=0, file_version=None):
         If you provide both point_format and file_version
         an exception will be raised if they are not compatible
 
-    >>> las = create_las(point_format_id=6,file_version="1.2")
+    >>> las = create_las(point_format=6,file_version="1.2")
     Traceback (most recent call last):
      ...
     pylas.errors.PylasError: Point format 6 is not compatible with file version 1.2
@@ -216,21 +200,21 @@ def create_las(*, point_format_id=0, file_version=None):
     If you provide only the point_format the file_version will automatically
     selected for you.
 
-    >>> las = create_las(point_format_id=0)
+    >>> las = create_las(point_format=0)
     >>> las.header.version == '1.2'
     True
 
-    >>> las = create_las(point_format_id=6)
+    >>> las = create_las(point_format=PointFormat(6))
     >>> las.header.version == '1.4'
     True
 
 
     Parameters
     ----------
-    point_format_id: int
+    point_format:
         The point format you want the created file to have
 
-    file_version: str, optional, default=None
+    file_version:
         The las version you want the created las to have
 
     Returns
@@ -239,15 +223,15 @@ def create_las(*, point_format_id=0, file_version=None):
        A new las data object
 
     """
+    if isinstance(point_format, int):
+        point_format = PointFormat(point_format)
+
     if file_version is not None:
-        dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
+        dims.raise_if_version_not_compatible_with_fmt(point_format.id, file_version)
     else:
-        file_version = dims.min_file_version_for_point_format(point_format_id)
+        file_version = dims.min_file_version_for_point_format(point_format.id)
 
-    header = LasHeader()
-    header.version = Version(int(file_version[0]), int(file_version[2]))
-    header.point_format = PointFormat(point_format_id)
-
+    header = LasHeader(point_format=point_format, version=Version.from_str(file_version))
     return LasData(header=header)
 
 
@@ -321,17 +305,21 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         file_version = str(file_version)
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
 
-    header = LasHeader()
-    header.version = Version(int(file_version[0]), int(file_version[2]))
-    header.vlrs = source_las.vlrs.copy()
+    version = Version.from_str(file_version)
 
     point_format = PointFormat(point_format_id)
-    point_format.dimensions.extend(source_las.point_format.extra_dimensions)
-    points = record.PackedPointRecord.from_point_record(source_las.points, point_format)
-    header.point_format = point_format
+    for dim in source_las.point_format.extra_dimensions:
+        point_format.add_extra_dimension(dim.name, dim.type_str(), dim.description)
 
-    evlrs = source_las.evlrs
+    header = copy.deepcopy(source_las.header)
+    header.set_version_and_point_format(version, point_format)
 
+    if source_las.evlrs is not None:
+        evlrs = source_las.evlrs.copy()
+    else:
+        evlrs = None
+
+    points = record.PackedPointRecord.from_point_record(source_las.points, header.point_format)
     las = LasData(header=header, points=points)
 
     if file_version < "1.4" and evlrs is not None and evlrs:
@@ -377,10 +365,11 @@ def merge_las(*las_files):
 
     # scaled x, y, z have to be set manually
     # to be sure to have a good offset in the header
-    merged = create_from_header(header)
+    merged = LasData(header)
     # TODO extra dimensions should be managed better here
 
     for dim_name, dim_type in las_files[0].points.point_format.extra_dims:
+        # TODO
         merged.add_extra_dim(dim_name, dim_type)
 
     merged.points = np.zeros(num_pts_merged, merged.points.dtype)

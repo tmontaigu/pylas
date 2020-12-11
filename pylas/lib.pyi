@@ -1,6 +1,6 @@
 from typing import Union, BinaryIO, Iterable, Optional, overload, Literal
 
-from . import LasWriter
+from . import LasWriter, PointFormat
 from .compression import LazBackend
 from .header import LasHeader
 from .lasappender import LasAppender
@@ -63,7 +63,7 @@ def read_las(
 def mmap_las(filename: PathLike) -> LasMMAP: ...
 def merge_las(las_files: Union[Iterable[LasData], LasData]) -> LasData: ...
 def create_las(
-    *, point_format_id: int = 0, file_version: Optional[str] = 0
+    *, point_format: Union[int, PointFormat] = 0, file_version: Optional[str] = 0
 ) -> LasData: ...
 def convert(
     source_las: LasData,

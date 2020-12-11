@@ -158,16 +158,6 @@ class PointRecord(IPointRecord, ABC):
             except ValueError:
                 pass
 
-    def add_extra_dims(self, dim_tuples: List[Tuple[str, str]]):
-        for name, type_str in dim_tuples:
-            self.point_format.add_extra_dimension(name, type_str)
-        old_array = self.array
-        self._array = np.zeros_like(old_array, dtype=self.point_format.dtype())
-        self.copy_fields_from_numpy_array(old_array)
-
-    def add_extra_dim(self, name, type_str):
-        self.add_extra_dims([(name, type_str)])
-
     def memoryview(self):
         return memoryview(self.array)
 

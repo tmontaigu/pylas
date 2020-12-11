@@ -315,10 +315,11 @@ class DimensionInfo(NamedTuple):
     num_bits: int
     num_elements: int = 1
     is_standard: bool = True
+    description: str = ""
 
     @classmethod
     def from_type_str(
-        cls, name: str, type_str: str, is_standard: bool = True
+        cls, name: str, type_str: str, is_standard: bool = True, description:str = ""
     ) -> "DimensionInfo":
         first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
         if first_digits:
@@ -330,7 +331,7 @@ class DimensionInfo(NamedTuple):
         kind = DimensionKind.from_letter(type_str[0])
         num_bits = int(type_str[1:]) * 8 * num_elements
 
-        return cls(name, kind, num_bits, num_elements, is_standard)
+        return cls(name, kind, num_bits, num_elements, is_standard, description=description)
 
     @classmethod
     def from_bitmask(
@@ -390,6 +391,10 @@ def min_file_version_for_point_format(point_format_id: int) -> str:
         if point_format_id in point_formats:
             return version
     raise errors.PointFormatNotSupported(point_format_id)
+
+
+def min_point_format_for_version(version: str) -> int:
+    return VERSION_TO_POINT_FMT[version][0]
 
 
 def supported_versions() -> Set[str]:

@@ -4,20 +4,18 @@ from typing import Union, Optional, Tuple, List
 
 import numpy as np
 
-from pylas import extradims, errors
+from pylas import errors
 from pylas.compression import LazBackend
 from pylas.header import LasHeader
 from pylas.laswriter import LasWriter
 from pylas.point import record, dims
 from pylas.point.dims import ScaledArrayView
-from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 
 logger = logging.getLogger(__name__)
 
 
 class LasData:
-    """LasBase is the base of all the different LasData classes.
-    These classes are objects that the user will interact with to manipulate las data.
+    """Class synchronizing all the moving parts of LAS files.
 
     It connects the point record, header, vlrs together.
 
@@ -29,15 +27,17 @@ class LasData:
         las.classification
         # or
         las['classification']
-
-
-    .. note::
-        using las['dimension_name']  is not possible with the scaled values of x, y, z
     """
 
-    def __init__(self, *, header: LasHeader, points=None):
+    def __init__(
+        self, header: LasHeader, points: Optional[record.PackedPointRecord] = None
+    ):
         if points is None:
-            points = record.PackedPointRecord.empty(header.point_format)
+            points = record.PackedPointRecord.zeros(
+                header.point_format, header.point_count
+            )
+        elif points.point_format != header.point_format:
+            raise errors.PylasError("Incompatible Point Formats")
         self.__dict__["_points"] = points
         self.points: record.PackedPointRecord
         self.header: LasHeader = header
@@ -191,32 +191,11 @@ class LasData:
                [(name, type, description), (name2, other_type)]
                The description is optional
         """
-        extra_bytes_structs = []
-        tuples = []
-        for name, type, *rest in type_tuples:
-            name = name.replace(" ", "_")
-            if rest:
-                description = rest[0]
-            else:
-                description = ""
-            type_id = extradims.get_id_for_extra_dim_type(type)
-            tuples.append((name, extradims.get_type_for_extra_dim(type_id)))
-            extra_bytes_structs.append(
-                ExtraBytesStruct(
-                    data_type=type_id,
-                    name=name.encode(),
-                    description=description.encode(),
-                )
-            )
-
-        try:
-            extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
-        except IndexError:
-            extra_bytes_vlr = ExtraBytesVlr()
-            self.vlrs.append(extra_bytes_vlr)
-        finally:
-            extra_bytes_vlr.extra_bytes_structs.extend(extra_bytes_structs)
-            self.points.add_extra_dims(tuples)
+        self.header.add_extra_dims(type_tuples)
+        new_point_record = record.PackedPointRecord.from_point_record(
+            self.points, self.header.point_format
+        )
+        self.points = new_point_record
 
     def update_header(self):
         """Update the information stored in the header

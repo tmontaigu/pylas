@@ -30,9 +30,9 @@ class PointFormat:
     """
 
     def __init__(
-        self,
-        point_format_id: int,
-        extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
+            self,
+            point_format_id: int,
+            extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
     ):
         """
         Parameters
@@ -114,9 +114,10 @@ class PointFormat:
                 return dim
         raise ValueError(f"Dimension '{name}' does not exist")
 
-    def add_extra_dimension(self, name: str, type_str: str) -> None:
+    def add_extra_dimension(self, name: str, type_str: str, description="") -> None:
         self.dimensions.append(
-            dims.DimensionInfo.from_type_str(name, type_str, is_standard=False)
+            dims.DimensionInfo.from_type_str(name, type_str, is_standard=False,
+                                             description=description)
         )
 
     def dtype(self):

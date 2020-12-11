@@ -2,19 +2,22 @@ import enum
 import logging
 import struct
 from datetime import date, timedelta
-from typing import NamedTuple, BinaryIO, Optional
+from typing import NamedTuple, BinaryIO, Optional, Tuple, List
 from uuid import UUID
 
 import numpy as np
 
+from . import extradims
 from .compression import (
     compressed_id_to_uncompressed,
     is_point_format_compressed,
     uncompressed_id_to_compressed,
 )
-from .errors import PylasError
+from .errors import PylasError, UnknownExtraType
+from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord
+from .vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
 
 logger = logging.getLogger(__name__)
@@ -25,6 +28,11 @@ LAS_FILE_SIGNATURE = b"LASF"
 class Version(NamedTuple):
     major: int
     minor: int
+
+    @classmethod
+    def from_str(cls, string: str) -> 'Version':
+        major, minor = tuple(map(int, string.split(".")))
+        return cls(major, minor)
 
     def __eq__(self, other):
         if isinstance(other, str):
@@ -72,29 +80,48 @@ class GlobalEncoding:
         return bool(self.value & self.WKT_MASK)
 
     @classmethod
-    def read_from(cls, stream: BinaryIO) -> 'GlobalEncoding':
-        return cls(int.from_bytes(stream.read(2), byteorder='little', signed=False))
+    def read_from(cls, stream: BinaryIO) -> "GlobalEncoding":
+        return cls(int.from_bytes(stream.read(2), byteorder="little", signed=False))
 
     def write_to(self, stream: BinaryIO) -> None:
-        stream.write(self.value.to_bytes(2, byteorder='little', signed=False))
+        stream.write(self.value.to_bytes(2, byteorder="little", signed=False))
 
 
 class LasHeader:
-    """ Contains the information from the header of as LAS file
+    """Contains the information from the header of as LAS file
     with 'implementation' field left out and 'users' field
     stored in more ergonomic classes.
 
     This header also contains the VLRs
     """
 
-    def __init__(self):
+    DEFAULT_VERSION = Version(1, 2)
+    DEFAULT_POINT_FORMAT = PointFormat(3)
+
+    def __init__(
+        self,
+        *,
+        version: Optional[Version] = None,
+        point_format: Optional[PointFormat] = None,
+    ) -> None:
+        if version is None and point_format is None:
+            version = LasHeader.DEFAULT_VERSION
+            point_format = LasHeader.DEFAULT_POINT_FORMAT
+        elif version is not None and point_format is None:
+            point_format = PointFormat(dims.min_point_format_for_version(str(version)))
+        elif version is None and point_format is not None:
+            version = Version.from_str(
+                dims.min_file_version_for_point_format(point_format.id)
+            )
+        dims.raise_if_version_not_compatible_with_fmt(point_format.id, str(version))
+
         self.file_source_id: int = 0
         self.global_encoding: GlobalEncoding = GlobalEncoding()
         self.uuid: UUID = UUID(bytes_le=b"\0" * 16)
-        self.version: Version = Version(1, 2)
-        self.system_identifier: str = ""
+        self._version: Version = version
+        self.system_identifier: str = "OTHER"
         self.generating_software: str = "pylas"
-        self.point_format: PointFormat = PointFormat(3)
+        self._point_format: PointFormat = point_format
         self.creation_date: Optional[date] = date.today()
         self.point_count: int = 0
         self.scales: np.ndarray = np.array([0.01, 0.01, 0.01], dtype=np.float64)
@@ -121,6 +148,32 @@ class LasHeader:
         # Info we keep because its useful for us but not the user
         self.offset_to_point_data: int = 0
         self.are_points_compressed: bool = False
+
+        self.sync_extra_bytes_vlr()
+
+
+    @property
+    def point_format(self) -> PointFormat:
+        return self._point_format
+
+    @point_format.setter
+    def point_format(self, new_point_format: PointFormat) -> None:
+        dims.raise_if_version_not_compatible_with_fmt(
+            new_point_format.id, str(self.version)
+        )
+        self._point_format = new_point_format
+        self.sync_extra_bytes_vlr()
+
+    @property
+    def version(self) -> Version:
+        return self._version
+
+    @version.setter
+    def version(self, version: Version) -> None:
+        dims.raise_if_version_not_compatible_with_fmt(
+            self.point_format.id, str(version)
+        )
+        self._version = version
 
     # scale properties
     @property
@@ -222,6 +275,45 @@ class LasHeader:
     def z_min(self, value: float) -> None:
         self.mins[2] = value
 
+    def add_extra_dims(self, type_tuples: List[Tuple[str, ...]]) -> None:
+        extra_bytes_structs = []
+        for name, type, *rest in type_tuples:
+            name = name.replace(" ", "_")
+            if rest:
+                description = rest[0]
+            else:
+                description = ""
+            type_id = extradims.get_id_for_extra_dim_type(type)
+            self.point_format.add_extra_dimension(
+                name, extradims.get_type_for_extra_dim(type_id), description
+            )
+            extra_bytes_structs.append(
+                ExtraBytesStruct(
+                    data_type=type_id,
+                    name=name.encode(),
+                    description=description.encode(),
+                )
+            )
+
+        try:
+            extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
+        except IndexError:
+            extra_bytes_vlr = ExtraBytesVlr()
+            self.vlrs.append(extra_bytes_vlr)
+        finally:
+            extra_bytes_vlr.extra_bytes_structs.extend(extra_bytes_structs)
+
+    def set_version_and_point_format(self, version: Version, point_format: PointFormat) -> None:
+        dims.raise_if_version_not_compatible_with_fmt(point_format.id, str(version))
+        self._version = version
+        self.point_format = point_format
+
+    # TODO: should propably use ALL_POiNTS_FORMATS_DIMS dict
+    #   to do this test
+
+    def add_extra_dim(self, name: str, type: str, description: str = ""):
+        self.add_extra_dims([(name, type, description)])
+
     def partial_reset(self) -> None:
         self.creation_date = date.today()
         self.point_count = 0
@@ -260,7 +352,7 @@ class LasHeader:
         )
 
         for return_number, count in zip(
-                *np.unique(points.return_number, return_counts=True)
+            *np.unique(points.return_number, return_counts=True)
         ):
             if return_number == 0:
                 continue
@@ -287,7 +379,7 @@ class LasHeader:
         header.global_encoding = GlobalEncoding.read_from(stream)
 
         header.uuid = UUID(bytes_le=stream.read(16))
-        header.version = Version(
+        header._version = Version(
             int.from_bytes(stream.read(1), little_endian, signed=False),
             int.from_bytes(stream.read(1), little_endian, signed=False),
         )
@@ -352,16 +444,18 @@ class LasHeader:
             if current_pos < header_size:
                 header.extra_header_bytes = stream.read(header_size - current_pos)
             elif current_pos > header_size:
-                raise PylasError('Incoherent header size')
+                raise PylasError("Incoherent header size")
 
         header.vlrs = VLRList.read_from(stream, num_to_read=number_of_vlrs)
 
         if seekable:
             current_pos = stream.tell()
             if current_pos < header.offset_to_point_data:
-                header.extra_vlr_bytes = stream.read(header.offset_to_point_data - current_pos)
+                header.extra_vlr_bytes = stream.read(
+                    header.offset_to_point_data - current_pos
+                )
             elif current_pos > header.offset_to_point_data:
-                raise PylasError('Incoherent offset to point data')
+                raise PylasError("Incoherent offset to point data")
 
         header.are_points_compressed = is_point_format_compressed(point_format_id)
         point_format_id = compressed_id_to_uncompressed(point_format_id)
@@ -380,7 +474,7 @@ class LasHeader:
             else:
                 for name, type_str in extra_dims:
                     point_format.add_extra_dimension(name, type_str)
-        header.point_format = point_format
+        header._point_format = point_format
 
         if point_size != point_format.size:
             raise PylasError("Incoherent point size")
@@ -491,6 +585,36 @@ class LasHeader:
                 )
 
         raw_vlrs.write_to(stream)
+
+    def sync_extra_bytes_vlr(self) -> None:
+        try:
+            self.vlrs.extract("ExtraBytesVlr")
+        except IndexError:
+            pass
+
+        eb_vlr = ExtraBytesVlr()
+        for extra_dimension in self.point_format.extra_dimensions:
+            type_str = extra_dimension.type_str()
+            if type_str is None:
+                raise PylasError(f'Invalid extra dimension {extra_dimension}')
+
+            eb_struct = ExtraBytesStruct(
+                name=extra_dimension.name.encode(),
+                description=extra_dimension.description.encode()
+            )
+
+            try:
+                type_id = extradims.get_id_for_extra_dim_type(type_str)
+            except UnknownExtraType:
+                if type_str[-2:] != 'u1':
+                    raise
+                type_id = 0
+                eb_struct.options = extra_dimension.num_elements
+
+            eb_struct.data_type = type_id
+            eb_vlr.extra_bytes_structs.append(eb_struct)
+
+        self.vlrs.append(eb_vlr)
 
     def __repr__(self) -> str:
         return f"<LasHeader({self.version.major}.{self.version.minor}, {self.point_format})>"
