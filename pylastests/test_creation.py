@@ -40,8 +40,8 @@ def test_wrong_version():
 def test_good_version_is_used():
     for i in range(6, 8):
         las = pylas.create(point_format_id=i)
-        assert las.header.version_major == 1
-        assert las.header.version_minor == 4
+        assert las.header.version.major == 1
+        assert las.header.version.minor == 4
 
 
 def test_create_fmt_0(file):
@@ -136,7 +136,7 @@ def test_create_fmt_3(file):
 
 def test_create_fmt_6(file1_4):
     new = pylas.create(point_format_id=6)
-    assert new.header.version == "1.4"
+    assert str(new.header.version) == "1.4"
 
     dim_names_fmt_6 = PointFormat(6).dtype().names
 

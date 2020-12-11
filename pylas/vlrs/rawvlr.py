@@ -2,7 +2,7 @@ import ctypes
 
 from .. import utils
 
-NULL_BYTE = b"\x00"
+NULL_BYTE = b"\0"
 
 
 class RawVLRHeader(ctypes.LittleEndianStructure):

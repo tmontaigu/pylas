@@ -115,7 +115,9 @@ class ClassificationLookupVlr(BaseKnownVLR):
         for class_id, desc in struct.iter_unpack("<B15s", record_data):
             # index using desc[i:i+1], because desc[i] gives an int, and we want a byte
             description = b"".join(
-                desc[i:i+1] for i in range(len(desc)) if desc[i:i+1].isalnum() or desc[i:i+1] == b' '
+                desc[i : i + 1]
+                for i in range(len(desc))
+                if desc[i : i + 1].isalnum() or desc[i : i + 1] == b" "
             ).decode()
             self.lookups[class_id] = description
 
@@ -530,7 +532,10 @@ class WktMathTransformVlr(BaseKnownVLR):
         self.string = ""
 
     def _encode_string(self):
-        return self.string.encode("utf-8") + NULL_BYTE
+        byte_str = self.string.encode("utf-8")
+        if byte_str[-1] != 0:
+            byte_str += NULL_BYTE
+        return byte_str
 
     def parse_record_data(self, record_data):
         self.string = record_data.decode("utf-8")

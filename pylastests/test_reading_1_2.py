@@ -41,21 +41,18 @@ def get_header():
 # TODO add test of global encoding
 def test_raw_header(get_header):
     header = get_header
-    assert header.file_signature == b"LASF"
     assert header.file_source_id == 0
-    assert header.version_major == 1
-    assert header.version_minor == 2
-    assert header.system_identifier.rstrip(b"\0").decode() == ""
-    assert header.generating_software.rstrip(b"\0").decode() == "TerraScan"
-    assert header.creation_day_of_year == 0
-    assert header.creation_year == 0
-    assert header.size == 227
+    assert header.version.major == 1
+    assert header.version.minor == 2
+    assert header.system_identifier == ""
+    assert header.generating_software == "TerraScan"
+    assert header.creation_date is None
     assert header.offset_to_point_data == 227
-    assert header.number_of_vlr == 0
-    assert header.point_format_id == 3
-    assert header.point_data_record_length == 34
+    assert len(header.vlrs) == 0
+    assert header.point_format.id == 3
+    assert header.point_format.size == 34
     assert header.point_count == 1065
-    assert tuple(header.number_of_points_by_return) == (925, 114, 21, 5, 0)
+    assert tuple(header.number_of_points_by_return[:5]) == (925, 114, 21, 5, 0)
     assert header.x_scale == 0.01
     assert header.y_scale == 0.01
     assert header.z_scale == 0.01

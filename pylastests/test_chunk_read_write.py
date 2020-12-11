@@ -18,7 +18,7 @@ def laz_backend(request):
 
 def check_chunked_reading_is_gives_expected_points(groundtruth_las, reader, iter_size):
     """Checks that the points read by the reader are the same as groundtruth points."""
-    assert groundtruth_las.point_format == reader.point_format
+    assert groundtruth_las.point_format == reader.header.point_format
     for i, points in enumerate(reader.chunk_iterator(iter_size)):
         expected_points = groundtruth_las.points[i * iter_size : (i + 1) * iter_size]
         for dim_name in points.array.dtype.names:

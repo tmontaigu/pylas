@@ -210,7 +210,6 @@ COMPOSED_FIELDS_0: Dict[str, List[SubField]] = {
     ],
 }
 
-
 COMPOSED_FIELDS_6: Dict[str, List[SubField]] = {
     "bit_fields": [
         SubField("return_number", RETURN_NUMBER_MASK_6),
@@ -324,7 +323,7 @@ class DimensionInfo(NamedTuple):
         first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
         if first_digits:
             num_elements = int(first_digits)
-            type_str = type_str[len(first_digits):]
+            type_str = type_str[len(first_digits) :]
         else:
             num_elements = 1
 

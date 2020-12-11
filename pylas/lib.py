@@ -10,14 +10,15 @@ from typing import Union
 
 import numpy as np
 
-from . import headers, utils
+from . import utils
 from .compression import LazBackend
 from .errors import PylasError
-from .lasdatas import las12, las14
+from .header import LasHeader, Version
+from .lasappender import LasAppender
+from .lasdata import LasData
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .laswriter import LasWriter
-from .lasappender import LasAppender
 from .point import dims, record, PointFormat
 
 logger = logging.getLogger(__name__)
@@ -34,14 +35,14 @@ def open_las(
     """Opens and reads the header of the las content in the source
 
         >>> with open_las('pylastests/simple.las') as f:
-        ...     print(f.header.point_format_id)
+        ...     print(f.header.point_format.id)
         3
 
 
         >>> f = open('pylastests/simple.las', mode='rb')
         >>> with open_las(f,closefd=False) as flas:
         ...     print(flas.header)
-        <LasHeader(1.2)>
+        <LasHeader(1.2, <PointFormat(3, 0 bytes of extra dims)>)>
         >>> f.closed
         False
         >>> f.close()
@@ -178,7 +179,7 @@ def mmap_las(filename):
     return LasMMAP(filename)
 
 
-def create_from_header(header):
+def create_from_header(header: LasHeader):
     """Creates a File from an existing header,
     allocating the array of point according to the provided header.
     The input header is copied.
@@ -194,10 +195,8 @@ def create_from_header(header):
     """
     header = copy.copy(header)
     header.point_count = 0
-    points = record.PackedPointRecord.empty(PointFormat(header.point_format_id))
-    if header.version >= "1.4":
-        return las14.LasData(header=header, points=points)
-    return las12.LasData(header=header, points=points)
+    points = record.PackedPointRecord.empty(header.point_format)
+    return LasData(header=header, points=points)
 
 
 def create_las(*, point_format_id=0, file_version=None):
@@ -245,12 +244,11 @@ def create_las(*, point_format_id=0, file_version=None):
     else:
         file_version = dims.min_file_version_for_point_format(point_format_id)
 
-    header = headers.HeaderFactory.new(file_version)
-    header.point_format_id = point_format_id
+    header = LasHeader()
+    header.version = Version(int(file_version[0]), int(file_version[2]))
+    header.point_format = PointFormat(point_format_id)
 
-    if file_version >= "1.4":
-        return las14.LasData(header=header)
-    return las12.LasData(header=header)
+    return LasData(header=header)
 
 
 def convert(source_las, *, point_format_id=None, file_version=None):
@@ -263,26 +261,26 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     >>> las = read_las('pylastests/simple.las')
     >>> las.header.version
-    '1.2'
+    Version(major=1, minor=2)
     >>> las = convert(las, point_format_id=0)
-    >>> las.header.point_format_id
+    >>> las.header.point_format.id
     0
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.2'
 
     convert to point format 6, which need version >= 1.4
     then convert back to point format 0, version is not downgraded
 
     >>> las = read_las('pylastests/simple.las')
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.2'
     >>> las = convert(las, point_format_id=6)
-    >>> las.header.point_format_id
+    >>> las.header.point_format.id
     6
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.4'
     >>> las = convert(las, point_format_id=0)
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.4'
 
     an exception is raised if the requested point format is not compatible
@@ -316,39 +314,35 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     if file_version is None:
         file_version = max(
-            source_las.header.version,
+            str(source_las.header.version),
             dims.min_file_version_for_point_format(point_format_id),
         )
     else:
         file_version = str(file_version)
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
 
-    header = headers.HeaderFactory.convert_header(source_las.header, file_version)
-    header.point_format_id = point_format_id
+    header = LasHeader()
+    header.version = Version(int(file_version[0]), int(file_version[2]))
+    header.vlrs = source_las.vlrs.copy()
 
     point_format = PointFormat(point_format_id)
     point_format.dimensions.extend(source_las.point_format.extra_dimensions)
     points = record.PackedPointRecord.from_point_record(source_las.points, point_format)
+    header.point_format = point_format
 
-    try:
-        evlrs = source_las.evlrs
-    except AttributeError:
-        evlrs = []
+    evlrs = source_las.evlrs
 
-    if file_version >= "1.4":
+    las = LasData(header=header, points=points)
 
-        las = las14.LasData(
-            header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
+    if file_version < "1.4" and evlrs is not None and evlrs:
+        logger.warning(
+            "The source contained {} EVLRs,"
+            " they will be lost as version {} doest not support them".format(
+                len(evlrs), file_version
+            )
         )
     else:
-        if evlrs:
-            logger.warning(
-                "The source contained {} EVLRs,"
-                " they will be lost as version {} doest not support them".format(
-                    len(evlrs), file_version
-                )
-            )
-        las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+        las.evlrs = evlrs
 
     return las
 

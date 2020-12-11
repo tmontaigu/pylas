@@ -11,14 +11,12 @@ from .compression import LazBackend
 from .compression import find_laszip_executable
 from .errors import PylasError, LazError
 from .evlrs import EVLRList, RawEVLRList
-from .headers import HeaderFactory
-from .headers.rawheader import Header
+from .header import LasHeader
 from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord
 from .utils import ConveyorThread
-from .vlrs.known import LasZipVlr, ExtraBytesStruct, ExtraBytesVlr
-from .vlrs.vlrlist import VLRList, RawVLRList
+from .vlrs.known import LasZipVlr
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +32,8 @@ class PointWriter(abc.ABC):
     def destination(self):
         ...
 
-    def write_initial_header_and_vlrs(self, header, vlrs: VLRList):
-        raw_vlrs = RawVLRList.from_list(vlrs)
-        header.number_of_vlr = len(raw_vlrs)
-        header.offset_to_point_data = header.size + raw_vlrs.total_size_in_bytes()
-
+    def write_initial_header_and_vlrs(self, header: LasHeader):
         header.write_to(self.destination)
-        raw_vlrs.write_to(self.destination)
 
     @abc.abstractmethod
     def write_points(self, points):
@@ -59,8 +52,7 @@ class LasWriter:
     def __init__(
         self,
         dest: BinaryIO,
-        header: Header,
-        vlrs: Optional[VLRList] = None,
+        header: LasHeader,
         do_compress: bool = False,
         laz_backend: Union[
             LazBackend, Iterable[LazBackend]
@@ -76,16 +68,22 @@ class LasWriter:
         self.do_compress = do_compress
         self.laz_backend = laz_backend
         self.dest = dest
-
-        if vlrs is None:
-            self.vlrs = VLRList()
-        else:
-            self.vlrs = vlrs
+        self.done = False
 
         # These will be initialized on the first call to `write`
-        self.point_format: PointFormat
         self.point_writer: PointWriter
-        self.done = False
+
+        dims.raise_if_version_not_compatible_with_fmt(
+            header.point_format.id, str(self.header.version)
+        )
+        self.header.are_points_compressed = self.do_compress
+
+        if self.do_compress:
+            self.point_writer = self._create_laz_backend(self.laz_backend)
+        else:
+            self.point_writer = UncompressedPointWriter(self.dest)
+
+        self.point_writer.write_initial_header_and_vlrs(self.header)
 
     def write(self, points: PointRecord) -> None:
         if not points:
@@ -94,39 +92,14 @@ class LasWriter:
         if self.done:
             raise PylasError("Cannot write points anymore")
 
-        if self.header.point_count == 0:
-            dims.raise_if_version_not_compatible_with_fmt(
-                points.point_format.id, self.header.version
-            )
-            self.point_format = points.point_format
-            self.header.point_format_id = self.point_format.id
-            self.header.point_size = self.point_format.size
-            self.header.set_compressed(self.do_compress)
-
-            if self.point_format.num_extra_bytes > 0:
-                try:
-                    self.vlrs.index("ExtraBytesVlr")
-                except ValueError:
-                    extra_bytes_vlr = ExtraBytesVlr()
-                    for dim_info in self.point_format.extra_dimensions:
-                        extra_byte = ExtraBytesStruct.from_dimension_info(dim_info)
-                        extra_bytes_vlr.extra_bytes_structs.append(extra_byte)
-                    self.vlrs.append(extra_bytes_vlr)
-
-            if self.do_compress:
-                self.point_writer = self._create_laz_backend(self.laz_backend)
-            else:
-                self.point_writer = UncompressedPointWriter(self.dest)
-
-            self.point_writer.write_initial_header_and_vlrs(self.header, self.vlrs)
-        elif points.point_format != self.point_format:
+        if points.point_format != self.header.point_format:
             raise PylasError("Incompatible point formats")
 
         self.header.update(points)
         self.point_writer.write_points(points)
 
     def write_evlrs(self, evlrs: EVLRList) -> None:
-        if self.header.version < "1.4":
+        if self.header.version.minor < 4:
             raise PylasError(
                 "EVLRs are not supported on files with version less than 1.4"
             )
@@ -134,7 +107,7 @@ class LasWriter:
         if len(evlrs) > 0:
             self.point_writer.done()
             self.done = True
-            self.header.number_of_evlr = len(evlrs)
+            self.header.number_of_evlrs = len(evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
             # self.header.update_evlrs_info_in_stream(self.dest)
             raw_evlrs = RawEVLRList.from_list(evlrs)
@@ -165,10 +138,12 @@ class LasWriter:
                 if backend == LazBackend.Laszip:
                     return LasZipProcessPointWriter(self.dest)
                 elif backend == LazBackend.LazrsParallel:
-                    return LazrsPointWriter(self.dest, self.point_format, parallel=True)
+                    return LazrsPointWriter(
+                        self.dest, self.header.point_format, parallel=True
+                    )
                 elif backend == LazBackend.Lazrs:
                     return LazrsPointWriter(
-                        self.dest, self.point_format, parallel=False
+                        self.dest, self.header.point_format, parallel=False
                     )
                 else:
                     raise PylasError("Unknown LazBacked: {}".format(backend))
@@ -237,16 +212,14 @@ class LasZipProcessPointWriter(PointWriter):
     def destination(self):
         return self.process.stdin
 
-    def write_initial_header_and_vlrs(self, header, vlrs):
+    def write_initial_header_and_vlrs(self, header):
         # If the header we sent to laszip has a point_count
         # that is less than the number of points that will get
         # pass to calls to write_points, the laszip process
         # will quit with an error, that's why we set it to max
-        header.set_point_count_to_max()
+        header.point_count = np.iinfo(np.uint32).max - 1
         header.set_compressed(False)
-        super(LasZipProcessPointWriter, self).write_initial_header_and_vlrs(
-            header, vlrs
-        )
+        super(LasZipProcessPointWriter, self).write_initial_header_and_vlrs(header)
         header.set_compressed(True)
         header.point_count = 0
 
@@ -277,7 +250,7 @@ class LasZipProcessPointWriter(PointWriter):
     def _rewrite_chunk_table_offset(self):
         position_backup = self.dest.tell()
         self.dest.seek(0, io.SEEK_SET)
-        hdr = HeaderFactory.read_from_stream(self.dest)
+        hdr = LasHeader.read_from(self.dest)
         self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
         offset_to_chunk_table = int.from_bytes(self.dest.read(8), "little", signed=True)
         if offset_to_chunk_table == -1:
@@ -295,14 +268,14 @@ class LasZipProcessPointWriter(PointWriter):
     def write_updated_header(self, header):
         position_save = self.dest.tell()
         self.dest.seek(0, io.SEEK_SET)
-        hdr = HeaderFactory.read_from_stream(self.dest)
+        hdr = LasHeader.read_from(self.dest)
         hdr.point_count = header.point_count
         hdr.maxs = header.maxs
         hdr.mins = header.mins
         hdr.number_of_points_by_return = header.number_of_points_by_return
 
-        if header.version >= "1.4":
-            hdr.number_of_evlr = header.number_of_evlr
+        if header.version.minor >= 4:
+            hdr.number_of_evlrs = header.number_of_evlrs
             hdr.start_of_first_evlr = header.start_of_first_evlr
 
         self.dest.seek(0, io.SEEK_SET)
@@ -330,10 +303,10 @@ class LazrsPointWriter(PointWriter):
         self.parallel = parallel
         self.compressor = None
 
-    def write_initial_header_and_vlrs(self, header, vlrs: VLRList):
+    def write_initial_header_and_vlrs(self, header):
         laszip_vlr = LasZipVlr(self.vlr.record_data())
-        vlrs.append(laszip_vlr)
-        super().write_initial_header_and_vlrs(header, vlrs)
+        header.vlrs.append(laszip_vlr)
+        super().write_initial_header_and_vlrs(header)
         # We have to initialize our compressor here
         # because on init, it writes the offset to chunk table
         # so the header and vlrs have to be written

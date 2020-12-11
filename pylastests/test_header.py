@@ -50,11 +50,11 @@ def test_header_copy():
     las = pylas.read(test_common.simple_las)
     header_copy = copy.copy(las.header)
 
-    assert header_copy.point_format_id == las.header.point_format_id
+    assert header_copy.point_format.id == las.header.point_format.id
     assert header_copy.version == las.header.version
 
     header_copy.point_format_id = 0
-    assert header_copy.point_format_id != las.header.point_format_id
+    assert header_copy.point_format_id != las.header.point_format.id
     assert header_copy.version == las.header.version
 
 
@@ -69,7 +69,7 @@ def test_set_uuid():
 
 
 def test_set_offsets():
-    header = pylas.headers.HeaderFactory.new("1.2")
+    header = pylas.header.LasHeader()
     header.offsets = [0.5, 0.6, 0.7]
 
     assert 0.5 == header.x_offset
@@ -79,7 +79,7 @@ def test_set_offsets():
 
 
 def test_set_scales():
-    header = pylas.headers.HeaderFactory.new("1.2")
+    header = pylas.header.LasHeader()
     header.scales = [0.001, 0.001, 0.01]
 
     assert 0.001 == header.x_scale
@@ -89,7 +89,7 @@ def test_set_scales():
 
 
 def test_set_maxs():
-    header = pylas.headers.HeaderFactory.new("1.2")
+    header = pylas.header.LasHeader()
     values = [42.0, 1337.42, 553.3]
     header.maxs = values
 
@@ -100,7 +100,7 @@ def test_set_maxs():
 
 
 def test_set_mins():
-    header = pylas.headers.HeaderFactory.new("1.2")
+    header = pylas.header.LasHeader()
     values = [42.0, 1337.42, 553.3]
     header.mins = values
 

@@ -23,6 +23,7 @@ def test_append_laz(all_laz_path):
 
 
 def test_append(las_path_fixture):
+    print(las_path_fixture)
     append_self_and_check(las_path_fixture)
 
 

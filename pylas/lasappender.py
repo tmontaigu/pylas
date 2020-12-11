@@ -2,15 +2,12 @@ import io
 import math
 from typing import Union, Iterable, BinaryIO
 
-from .headers.rawheader import Header
-from .vlrs.vlrlist import VLRList
 from .compression import LazBackend
 from .errors import PylasError
 from .evlrs import EVLRList, RawEVLRList
-from .lasreader import LasReader, get_extra_dims_info_tuple
 from .laswriter import UncompressedPointWriter
-from .point.format import PointFormat
 from .point.record import PointRecord
+from .header import LasHeader
 
 try:
     import lazrs
@@ -28,12 +25,10 @@ class LazrsAppender:
     ready to compress new points.
     """
 
-    def __init__(
-        self, dest: BinaryIO, header: Header, vlrs: VLRList, parallel: bool
-    ) -> None:
+    def __init__(self, dest: BinaryIO, header: LasHeader, parallel: bool) -> None:
         self.dest = dest
         self.offset_to_point_data = header.offset_to_point_data
-        laszip_vlr = vlrs.pop(vlrs.index("LasZipVlr"))
+        laszip_vlr = header.vlrs.get("LasZipVlr")[0]
 
         self.dest.seek(header.offset_to_point_data, io.SEEK_SET)
         decompressor = lazrs.LasZipDecompressor(self.dest, laszip_vlr.record_data)
@@ -111,42 +106,37 @@ class LasAppender:
     ) -> None:
         if not dest.seekable():
             raise TypeError("Expected the 'dest' to be a seekable file object")
-        header, vlrs = LasReader._read_header_and_vlrs(dest, seekable=True)
+        header = LasHeader.read_from(dest)
 
         self.dest = dest
         self.header = header
-        self.vlrs = vlrs
-        self.point_format = PointFormat(
-            self.header.point_format_id,
-            get_extra_dims_info_tuple(self.header, self.vlrs),
-        )
 
         if not header.are_points_compressed:
             self.points_writer = UncompressedPointWriter(self.dest)
             self.dest.seek(
-                (self.header.point_count * self.header.point_size)
+                (self.header.point_count * self.header.point_format.size)
                 + self.header.offset_to_point_data,
                 io.SEEK_SET,
             )
         else:
             self.points_writer = self._create_laz_backend(laz_backend)
 
-        if header.version >= "1.4" and header.number_of_evlr > 0:
+        if header.version.minor >= 4 and header.number_of_evlrs > 0:
             assert (
                 self.dest.tell() <= self.header.start_of_first_evlr
             ), "The position is past the start of evlrs"
             pos = self.dest.tell()
             self.dest.seek(self.header.start_of_first_evlr, io.SEEK_SET)
-            self.evlrs = EVLRList.read_from(self.dest, self.header.number_of_evlr)
+            self.evlrs = EVLRList.read_from(self.dest, self.header.number_of_evlrs)
             dest.seek(self.header.start_of_first_evlr, io.SEEK_SET)
             self.dest.seek(pos, io.SEEK_SET)
-        elif header.version >= "1.4":
+        elif header.version.minor >= 4:
             self.evlrs = []
 
         self.closefd = closefd
 
     def append_points(self, points: PointRecord) -> None:
-        if points.point_format != self.point_format:
+        if points.point_format != self.header.point_format:
             raise PylasError("Point formats do not match")
 
         self.points_writer.write_points(points)
@@ -161,7 +151,7 @@ class LasAppender:
             self.dest.close()
 
     def _write_evlrs(self) -> None:
-        if self.header.version >= "1.4" and len(self.evlrs) > 0:
+        if self.header.version.minor >= 4 and len(self.evlrs) > 0:
             self.header.number_of_evlr = len(self.evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
             raw_evlrs = RawEVLRList.from_list(self.evlrs)
@@ -191,16 +181,12 @@ class LasAppender:
                 raise PylasError("Laszip backend does not support appending")
             elif backend == LazBackend.LazrsParallel:
                 try:
-                    return LazrsAppender(
-                        self.dest, self.header, self.vlrs, parallel=True
-                    )
+                    return LazrsAppender(self.dest, self.header, parallel=True)
                 except Exception as e:
                     last_error = e
             elif backend == LazBackend.Lazrs:
                 try:
-                    return LazrsAppender(
-                        self.dest, self.header, self.vlrs, parallel=False
-                    )
+                    return LazrsAppender(self.dest, self.header, parallel=False)
                 except Exception as e:
                     last_error = e
 

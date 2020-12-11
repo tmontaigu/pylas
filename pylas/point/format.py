@@ -4,7 +4,6 @@ from typing import Tuple, Optional, Iterable
 import numpy as np
 
 from . import dims
-from .dims import DimensionInfo
 
 
 class PointFormat:
@@ -50,13 +49,13 @@ class PointFormat:
             try:
                 sub_fields = composed_dims[dim_name]
             except KeyError:
-                dimension = DimensionInfo.from_type_str(
+                dimension = dims.DimensionInfo.from_type_str(
                     dim_name, dims.DIMENSIONS_TO_TYPE[dim_name], is_standard=True
                 )
                 self.dimensions.append(dimension)
             else:
                 for sub_field in sub_fields:
-                    dimension = DimensionInfo.from_bitmask(
+                    dimension = dims.DimensionInfo.from_bitmask(
                         sub_field.name, sub_field.mask, is_standard=True
                     )
                     self.dimensions.append(dimension)
@@ -66,11 +65,11 @@ class PointFormat:
                 self.add_extra_dimension(name, type_str)
 
     @property
-    def standard_dimensions(self) -> Iterable[DimensionInfo]:
+    def standard_dimensions(self) -> Iterable[dims.DimensionInfo]:
         return (dim for dim in self.dimensions if dim.is_standard)
 
     @property
-    def extra_dimensions(self) -> Iterable[DimensionInfo]:
+    def extra_dimensions(self) -> Iterable[dims.DimensionInfo]:
         return (dim for dim in self.dimensions if dim.is_standard is False)
 
     @property
@@ -109,7 +108,7 @@ class PointFormat:
         dimensions = set(self.dimension_names)
         return all(name in dimensions for name in dims.WAVEFORM_FIELDS_NAMES)
 
-    def dimension_by_name(self, name: str) -> DimensionInfo:
+    def dimension_by_name(self, name: str) -> dims.DimensionInfo:
         for dim in self.dimensions:
             if dim.name == name:
                 return dim
@@ -117,7 +116,7 @@ class PointFormat:
 
     def add_extra_dimension(self, name: str, type_str: str) -> None:
         self.dimensions.append(
-            DimensionInfo.from_type_str(name, type_str, is_standard=False)
+            dims.DimensionInfo.from_type_str(name, type_str, is_standard=False)
         )
 
     def dtype(self):

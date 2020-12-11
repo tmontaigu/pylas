@@ -204,6 +204,11 @@ class VLRList:
                 return i
         raise ValueError("{} is not in the VLR list".format(vlr_type))
 
+    def copy(self):
+        vlrs = VLRList()
+        vlrs.vlrs = self.vlrs.copy()
+        return vlrs
+
     def __iter__(self):
         yield from iter(self.vlrs)
 
@@ -221,7 +226,7 @@ class VLRList:
         return "[{}]".format(", ".join(repr(vlr) for vlr in self.vlrs))
 
     @classmethod
-    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> 'VLRList':
+    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> "VLRList":
         """Reads vlrs and parse them if possible from the stream
 
         Parameters

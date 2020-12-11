@@ -94,7 +94,7 @@ You can access the header of a las file you read or opened by retrieving the 'he
 >>> import pylas
 >>> las = pylas.read('pylastests/simple.las')
 >>> las.header
-<LasHeader(1.2)>
+<LasHeader(1.2, <PointFormat(3, 0 bytes of extra dims)>)>
 >>> las.header.point_count
 1065
 
@@ -179,7 +179,7 @@ To access the VLRs stored in a file, simply access the `vlr` member of the las o
 [<ExtraBytesVlr(extra bytes structs: 5)>]
 
 >>> with pylas.open('pylastests/extrabytes.las') as f:
-...     f.vlrs
+...     f.header.vlrs
 [<ExtraBytesVlr(extra bytes structs: 5)>]
 
 

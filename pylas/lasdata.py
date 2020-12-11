@@ -4,18 +4,18 @@ from typing import Union, Optional, Tuple, List
 
 import numpy as np
 
+from pylas import extradims, errors
+from pylas.compression import LazBackend
+from pylas.header import LasHeader
+from pylas.laswriter import LasWriter
+from pylas.point import record, dims
+from pylas.point.dims import ScaledArrayView
 from pylas.vlrs.known import ExtraBytesStruct, ExtraBytesVlr
-from .. import extradims, errors
-from ..compression import LazBackend
-from ..laswriter import LasWriter
-from ..point import record, dims, PointFormat
-from ..point.dims import ScaledArrayView
-from ..vlrs import vlrlist
 
 logger = logging.getLogger(__name__)
 
 
-class LasBase(object):
+class LasData:
     """LasBase is the base of all the different LasData classes.
     These classes are objects that the user will interact with to manipulate las data.
 
@@ -33,16 +33,18 @@ class LasBase(object):
 
     .. note::
         using las['dimension_name']  is not possible with the scaled values of x, y, z
-
-
     """
 
-    def __init__(self, *, header, vlrs=None, points=None):
+    def __init__(self, *, header: LasHeader, points=None):
         if points is None:
-            points = record.PackedPointRecord.empty(PointFormat(header.point_format_id))
+            points = record.PackedPointRecord.empty(header.point_format)
         self.__dict__["_points"] = points
-        self.header = header
-        self.vlrs = vlrs if vlrs is not None else vlrlist.VLRList()
+        self.points: record.PackedPointRecord
+        self.header: LasHeader = header
+        if header.version.minor >= 4:
+            self.evlrs: Optional[List] = []
+        else:
+            self.evlrs: Optional[List] = None
 
     @property
     def x(self):
@@ -93,6 +95,10 @@ class LasBase(object):
             )
         self._points = new_points
         self.update_header()
+
+    @property
+    def vlrs(self):
+        return self.header.vlrs
 
     def change_scaling(self, scales=None, offsets=None) -> None:
         if scales is None:
@@ -174,8 +180,8 @@ class LasBase(object):
         """
         self.add_extra_dims([(name, type, description)])
 
-    def add_extra_dims(self, type_tuples: List[Tuple[str,...]]):
-        """ Add multiple extra dimensions at once
+    def add_extra_dims(self, type_tuples: List[Tuple[str, ...]]):
+        """Add multiple extra dimensions at once
 
         Parameters
         ----------
@@ -195,9 +201,13 @@ class LasBase(object):
                 description = ""
             type_id = extradims.get_id_for_extra_dim_type(type)
             tuples.append((name, extradims.get_type_for_extra_dim(type_id)))
-            extra_bytes_structs.append(ExtraBytesStruct(
-                data_type=type_id, name=name.encode(), description=description.encode()
-            ))
+            extra_bytes_structs.append(
+                ExtraBytesStruct(
+                    data_type=type_id,
+                    name=name.encode(),
+                    description=description.encode(),
+                )
+            )
 
         try:
             extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
@@ -207,8 +217,6 @@ class LasBase(object):
         finally:
             extra_bytes_vlr.extra_bytes_structs.extend(extra_bytes_structs)
             self.points.add_extra_dims(tuples)
-
-
 
     def update_header(self):
         """Update the information stored in the header
@@ -233,6 +241,16 @@ class LasBase(object):
             unique, counts = np.unique(self.return_number, return_counts=True)
             self.header.number_of_points_by_return = counts
 
+        if self.header.version.minor >= 4:
+            if self.evlrs is not None:
+                self.header.number_of_evlrs = len(self.evlrs)
+            self.header.start_of_waveform_data_packet_record = 0
+            # TODO
+            # if len(self.vlrs.get("WktCoordinateSystemVlr")) == 1:
+            #     self.header.global_encoding.wkt = 1
+        else:
+            self.header.number_of_evlrs = 0
+
     def write_to(
         self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
     ):
@@ -243,19 +261,20 @@ class LasBase(object):
         out_stream: file object
             the destination stream, implementing the write method
         do_compress: bool, optional, default False
-            Flag to indicate if you want the date to be compressed
+            Flag to indicate if you want the data to be compressed
         laz_backend: optional, the laz backend to use
             By default, pylas detect available backends
         """
         with LasWriter(
             out_stream,
             self.header,
-            self.vlrs,
             do_compress=do_compress,
             closefd=False,
             laz_backend=laz_backend,
         ) as writer:
             writer.write(self.points)
+            if self.header.version.minor >= 4 and self.evlrs is not None:
+                writer.write_evlrs(self.evlrs)
 
     @staticmethod
     def _raise_if_not_expected_pos(stream, expected_pos):
@@ -330,8 +349,8 @@ class LasBase(object):
 
     def __repr__(self):
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(
-            self.header.version_major,
-            self.header.version_minor,
+            self.header.version.major,
+            self.header.version.minor,
             self.points.point_format,
             len(self.points),
             len(self.vlrs),

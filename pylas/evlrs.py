@@ -1,7 +1,10 @@
 import ctypes
 import logging
+from typing import Iterable
 
-from .vlrs import rawvlr, vlrlist, known
+from typing.io import BinaryIO
+
+from .vlrs import rawvlr, vlrlist, VLR
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +57,10 @@ class RawEVLR:
 
     def __eq__(self, other):
         return (
-            self.header.user_id == other.header.user_id
-            and self.header.record_id == other.header.record_id
-            and self.header.description == other.header.description
-            and self.record_data == other.record_data
+                self.header.user_id == other.header.user_id
+                and self.header.record_id == other.header.record_id
+                and self.header.description == other.header.description
+                and self.record_data == other.record_data
         )
 
     def __repr__(self):
@@ -72,13 +75,9 @@ class EVLR(rawvlr.VLR):
     pass
 
 
-def evlr_factory(raw):
-    return known.vlr_factory(raw)
-
-
 class RawEVLRList(vlrlist.RawVLRList):
     @classmethod
-    def from_list(cls, vlrs):
+    def from_list(cls, vlrs: Iterable[VLR]) -> 'RawEVLRList':
         raw_vlrs = cls()
         for vlr in vlrs:
             raw = RawEVLR()
@@ -92,12 +91,12 @@ class RawEVLRList(vlrlist.RawVLRList):
 
 class EVLRList(vlrlist.VLRList):
     @classmethod
-    def read_from(cls, data_stream, num_to_read):
+    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> 'EVLRList':
         evlr_list = cls()
         for _ in range(num_to_read):
             raw = RawEVLR.read_from(data_stream)
             try:
-                evlr_list.append(evlr_factory(raw))
+                evlr_list.append(VLR.from_raw(raw))
             except UnicodeDecodeError:
                 logger.error("Failed to decode VLR: {}".format(raw))
 

@@ -5,7 +5,7 @@ in the context of Las point data
 """
 import logging
 from abc import ABC, abstractmethod
-from typing import NoReturn, Any, List, Tuple
+from typing import NoReturn, List, Tuple
 
 import numpy as np
 
@@ -26,7 +26,7 @@ def unscale_dimension(array_dim, scale, offset):
 
 
 def raise_not_enough_bytes_error(
-        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -143,7 +143,7 @@ class PointRecord(IPointRecord, ABC):
         new_record.copy_fields_from(other_point_record)
         return new_record
 
-    def copy_fields_from(self, other_record: 'PointRecord'):
+    def copy_fields_from(self, other_record: "PointRecord"):
         """Tries to copy the values of the current dimensions from other_record"""
         for dim_name in self.dimensions_names:
             try:
@@ -368,9 +368,9 @@ class PackedPointRecord(PointRecord):
 
 
 def apply_new_scaling(record, scales, offsets) -> None:
-    record['X'] = unscale_dimension(np.asarray(record.x), scales[0], offsets[0])
-    record['Y'] = unscale_dimension(np.asarray(record.y), scales[1], offsets[1])
-    record['Z'] = unscale_dimension(np.asarray(record.x), scales[2], offsets[2])
+    record["X"] = unscale_dimension(np.asarray(record.x), scales[0], offsets[0])
+    record["Y"] = unscale_dimension(np.asarray(record.y), scales[1], offsets[1])
+    record["Z"] = unscale_dimension(np.asarray(record.x), scales[2], offsets[2])
 
 
 class ScaleAwarePointRecord(PackedPointRecord):
@@ -404,4 +404,3 @@ class ScaleAwarePointRecord(PackedPointRecord):
             return ScaledArrayView(self.array["Z"], self.scales[2], self.offsets[2])
         else:
             return super().__getitem__(item)
-

@@ -1,22 +1,17 @@
 import abc
-import io
 import logging
 import os
 import subprocess
-from typing import Optional, BinaryIO, Iterable, Union, Tuple
+from typing import Optional, BinaryIO, Iterable, Union
 
-import numpy as np
-
-from . import headers, errors, evlrs
+from . import errors, evlrs
 from .compression import LazBackend
 from .compression import find_laszip_executable
-from .lasdatas import las14, las12
-from .point import record, PointFormat
-from .point.dims import size_of_point_format_id
-from .typehints import LasData
+from .header import LasHeader
+from .lasdata import LasData
+from .point import record
 from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr
-from .vlrs.vlrlist import VLRList
 
 try:
     import lazrs
@@ -24,23 +19,6 @@ except ModuleNotFoundError:
     pass
 
 logger = logging.getLogger(__name__)
-
-
-def get_extra_dims_info_tuple(header, vlrs) -> Optional[Tuple[Tuple[str, str], ...]]:
-    try:
-        extra_dims = vlrs.get("ExtraBytesVlr")[0].type_of_extra_dims()
-    except IndexError:
-        return None
-
-    point_size_without_extra_bytes = size_of_point_format_id(header.point_format_id)
-    if header.point_size == point_size_without_extra_bytes:
-        logger.warning(
-            "There is an ExtraByteVlr but the header.point_size matches the "
-            "point size without extra bytes. The extra bytes vlr info will be ignored"
-        )
-        vlrs.extract("ExtraBytesVlr")
-        extra_dims = None
-    return extra_dims
 
 
 class LasReader:
@@ -56,7 +34,7 @@ class LasReader:
     ):
         self.closefd = closefd
         self.laz_backend = laz_backend
-        self.header, self.vlrs = self._read_header_and_vlrs(source)
+        self.header = LasHeader.read_from(source)
 
         if self.header.are_points_compressed:
             if not laz_backend:
@@ -69,13 +47,11 @@ class LasReader:
                     "Data is compressed, but no LazBacked could be initialized"
                 )
         else:
-            self.point_source = UncompressedPointReader(source, self.header.point_size)
+            self.point_source = UncompressedPointReader(
+                source, self.header.point_format.size
+            )
 
         self.points_read = 0
-        self.point_format = PointFormat(
-            self.header.point_format_id,
-            extra_dims=get_extra_dims_info_tuple(self.header, self.vlrs),
-        )
 
     def read_n_points(self, n: int) -> Optional[record.ScaleAwarePointRecord]:
         points_left = self.header.point_count - self.points_read
@@ -88,7 +64,7 @@ class LasReader:
             n = min(n, points_left)
 
         r = record.PackedPointRecord.from_buffer(
-            self.point_source.read_n_points(n), self.point_format, n
+            self.point_source.read_n_points(n), self.header.point_format, n
         )
         points = record.ScaleAwarePointRecord(
             r.array, r.point_format, self.header.scales, self.header.offsets
@@ -100,9 +76,10 @@ class LasReader:
         """Reads all the points not read and returns a LasData object"""
         points = self.read_n_points(-1)
         if points is None:
-            points = record.PackedPointRecord.empty(self.point_format)
+            points = record.PackedPointRecord.empty(self.header.point_format)
 
-        if self.header.version >= "1.4":
+        las_data = LasData(header=self.header, points=points)
+        if self.header.version.minor >= 4:
             if (
                 self.header.are_points_compressed
                 and not self.point_source.source.seekable()
@@ -112,12 +89,7 @@ class LasReader:
                 raise errors.PylasError(
                     "source must be seekable, to read evlrs form LAZ file"
                 )
-            evlrs = self._read_evlrs(self.point_source.source, seekable=True)
-            las_data = las14.LasData(
-                header=self.header, vlrs=self.vlrs, points=points, evlrs=evlrs
-            )
-        else:
-            las_data = las12.LasData(header=self.header, vlrs=self.vlrs, points=points)
+            las_data.evlrs = self._read_evlrs(self.point_source.source, seekable=True)
 
         return las_data
 
@@ -141,7 +113,7 @@ class LasReader:
         except TypeError:
             backends = (self.laz_backend,)
 
-        laszip_vlr = self.vlrs.pop(self.vlrs.index("LasZipVlr"))
+        laszip_vlr = self.header.vlrs.pop(self.header.vlrs.index("LasZipVlr"))
         for backend in backends:
             try:
                 if not backend.is_available():
@@ -152,12 +124,8 @@ class LasReader:
                 elif backend == LazBackend.Lazrs:
                     return LazrsPointReader(source, laszip_vlr, parallel=False)
                 elif backend == LazBackend.Laszip:
-                    point_source = LasZipProcessPointReader(
-                        source, self.header, self.vlrs
-                    )
-                    self._read_header_and_vlrs(
-                        point_source.process.stdout, seekable=False
-                    )
+                    point_source = LasZipProcessPointReader(source, self.header)
+                    LasHeader.read_from(point_source.process.stdout, seekable=False)
                     return point_source
                 else:
                     raise errors.PylasError("Unknown LazBackend: {}".format(backend))
@@ -165,26 +133,17 @@ class LasReader:
             except errors.LazError as e:
                 logger.error(e)
 
-    @staticmethod
-    def _read_header_and_vlrs(source, seekable=True):
-        header = headers.HeaderFactory().read_from_stream(source)
-        vlrs = VLRList.read_from(source, num_to_read=header.number_of_vlr)
-        if seekable:
-            offset = header.offset_to_point_data - source.tell()
-            if offset >= 0:
-                source.seek(offset, io.SEEK_CUR)
-            else:
-                raise RuntimeError("Read past point data")  # TODO
-        return header, vlrs
-
     def _read_evlrs(self, source, seekable=False) -> Optional[evlrs.EVLRList]:
         """Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """
-        if self.header.version >= "1.4" and self.points_read == self.header.point_count:
+        if (
+            self.header.version.minor >= 4
+            and self.points_read == self.header.point_count
+        ):
             if seekable:
                 source.seek(self.header.start_of_first_evlr)
-            return evlrs.EVLRList.read_from(source, self.header.number_of_evlr)
+            return evlrs.EVLRList.read_from(source, self.header.number_of_evlrs)
         else:
             return None
 
@@ -260,10 +219,10 @@ class LasZipProcessPointReader(IPointReader):
 
     conveyor: Optional[ConveyorThread]
 
-    def __init__(self, source, header, _vlrs) -> None:
+    def __init__(self, source, header: LasHeader) -> None:
         laszip_binary = find_laszip_executable()
-        self.point_size: int = header.point_size
-        if header.version >= "1.4" and header.number_of_evlr > 0:
+        self.point_size: int = header.point_format.size
+        if header.version.minor >= 4 and header.number_of_evlrs > 0:
             raise errors.PylasError(
                 "Reading a LAZ file that contains EVLR using laszip is not supported"
             )

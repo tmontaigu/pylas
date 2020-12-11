@@ -3,10 +3,9 @@ __version__ = "0.5.0a1"
 import logging
 
 from . import errors, vlrs
-from .evlrs import EVLR
-from .headers import HeaderFactory
-from .laswriter import LasWriter
 from .errors import PylasError
+from .evlrs import EVLR
+from .laswriter import LasWriter
 from .lib import LazBackend
 from .lib import convert, create_from_header
 from .lib import create_las as create

@@ -1,15 +1,14 @@
 import mmap
 
-from . import headers, lasreader
-from .lasdatas import base
+from . import lasreader, lasdata
 from .point import PointFormat, record
-from .vlrs import vlrlist
 from .typehints import PathLike
+from .vlrs import vlrlist
 
 WHOLE_FILE = 0
 
 
-class LasMMAP(base.LasBase):
+class LasMMAP(lasdata.LasData):
     """Memory map a LAS file.
     It works like a regular LasData however the data is not actually read in memory,
 
