@@ -8,7 +8,7 @@ from pylas import errors
 from pylas.compression import LazBackend
 from pylas.header import LasHeader
 from pylas.laswriter import LasWriter
-from pylas.point import record, dims
+from pylas.point import record, dims, ExtraBytesParams, PointFormat
 from pylas.point.dims import ScaledArrayView
 
 logger = logging.getLogger(__name__)
@@ -80,7 +80,7 @@ class LasData:
         self.z[:] = value
 
     @property
-    def point_format(self):
+    def point_format(self) -> PointFormat:
         return self.points.point_format
 
     @property
@@ -160,7 +160,7 @@ class LasData:
     def __setitem__(self, key, value):
         self.points[key] = value
 
-    def add_extra_dim(self, name: str, type: str, description: str = ""):
+    def add_extra_dim(self, params: ExtraBytesParams):
         """Adds a new extra dimension to the point record
 
         .. note::
@@ -178,9 +178,9 @@ class LasData:
         description: str, optional
             a small description of the dimension
         """
-        self.add_extra_dims([(name, type, description)])
+        self.add_extra_dims([params])
 
-    def add_extra_dims(self, type_tuples: List[Tuple[str, ...]]):
+    def add_extra_dims(self, params: List[ExtraBytesParams]):
         """Add multiple extra dimensions at once
 
         Parameters
@@ -191,7 +191,7 @@ class LasData:
                [(name, type, description), (name2, other_type)]
                The description is optional
         """
-        self.header.add_extra_dims(type_tuples)
+        self.header.add_extra_dims(params)
         new_point_record = record.PackedPointRecord.from_point_record(
             self.points, self.header.point_format
         )

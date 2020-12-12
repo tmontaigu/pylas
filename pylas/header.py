@@ -15,7 +15,7 @@ from .compression import (
 )
 from .errors import PylasError, UnknownExtraType
 from .point import dims
-from .point.format import PointFormat
+from .point.format import PointFormat, ExtraBytesParams
 from .point.record import PointRecord
 from .vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
@@ -30,7 +30,7 @@ class Version(NamedTuple):
     minor: int
 
     @classmethod
-    def from_str(cls, string: str) -> 'Version':
+    def from_str(cls, string: str) -> "Version":
         major, minor = tuple(map(int, string.split(".")))
         return cls(major, minor)
 
@@ -150,7 +150,6 @@ class LasHeader:
         self.are_points_compressed: bool = False
 
         self.sync_extra_bytes_vlr()
-
 
     @property
     def point_format(self) -> PointFormat:
@@ -275,44 +274,20 @@ class LasHeader:
     def z_min(self, value: float) -> None:
         self.mins[2] = value
 
-    def add_extra_dims(self, type_tuples: List[Tuple[str, ...]]) -> None:
-        extra_bytes_structs = []
-        for name, type, *rest in type_tuples:
-            name = name.replace(" ", "_")
-            if rest:
-                description = rest[0]
-            else:
-                description = ""
-            type_id = extradims.get_id_for_extra_dim_type(type)
-            self.point_format.add_extra_dimension(
-                name, extradims.get_type_for_extra_dim(type_id), description
-            )
-            extra_bytes_structs.append(
-                ExtraBytesStruct(
-                    data_type=type_id,
-                    name=name.encode(),
-                    description=description.encode(),
-                )
-            )
+    def add_extra_dims(self, params: List[ExtraBytesParams]) -> None:
+        for param in params:
+            self.point_format.add_extra_dimension(param)
+        self.sync_extra_bytes_vlr()
 
-        try:
-            extra_bytes_vlr = self.vlrs.get("ExtraBytesVlr")[0]
-        except IndexError:
-            extra_bytes_vlr = ExtraBytesVlr()
-            self.vlrs.append(extra_bytes_vlr)
-        finally:
-            extra_bytes_vlr.extra_bytes_structs.extend(extra_bytes_structs)
+    def add_extra_dim(self, params: ExtraBytesParams):
+        self.add_extra_dims([params])
 
-    def set_version_and_point_format(self, version: Version, point_format: PointFormat) -> None:
+    def set_version_and_point_format(
+        self, version: Version, point_format: PointFormat
+    ) -> None:
         dims.raise_if_version_not_compatible_with_fmt(point_format.id, str(version))
         self._version = version
         self.point_format = point_format
-
-    # TODO: should propably use ALL_POiNTS_FORMATS_DIMS dict
-    #   to do this test
-
-    def add_extra_dim(self, name: str, type: str, description: str = ""):
-        self.add_extra_dims([(name, type, description)])
 
     def partial_reset(self) -> None:
         self.creation_date = date.today()
@@ -472,8 +447,8 @@ class LasHeader:
                 )
                 header.vlrs.extract("ExtraBytesVlr")
             else:
-                for name, type_str in extra_dims:
-                    point_format.add_extra_dimension(name, type_str)
+                for extra_dim_info in extra_dims:
+                    point_format.add_extra_dimension(extra_dim_info)
         header._point_format = point_format
 
         if point_size != point_format.size:
@@ -595,21 +570,28 @@ class LasHeader:
         eb_vlr = ExtraBytesVlr()
         for extra_dimension in self.point_format.extra_dimensions:
             type_str = extra_dimension.type_str()
-            if type_str is None:
-                raise PylasError(f'Invalid extra dimension {extra_dimension}')
+            assert type_str is not None
 
             eb_struct = ExtraBytesStruct(
                 name=extra_dimension.name.encode(),
-                description=extra_dimension.description.encode()
+                description=extra_dimension.description.encode(),
             )
 
-            try:
-                type_id = extradims.get_id_for_extra_dim_type(type_str)
-            except UnknownExtraType:
-                if type_str[-2:] != 'u1':
-                    raise
+            if extra_dimension.num_elements > 3 and type_str[-2:] == "u1":
                 type_id = 0
                 eb_struct.options = extra_dimension.num_elements
+            else:
+                type_id = extradims.get_id_for_extra_dim_type(type_str)
+
+            if extra_dimension.scales is not None:
+                eb_struct.set_scale_is_relevant()
+                for i in range(extra_dimension.num_elements):
+                    eb_struct.scale[i] = extra_dimension.scales[i]
+
+            if extra_dimension.offsets is not None:
+                eb_struct.set_offset_is_relevant()
+                for i in range(extra_dimension.num_elements):
+                    eb_struct.offset[i] = extra_dimension.offsets[i]
 
             eb_struct.data_type = type_id
             eb_vlr.extra_bytes_structs.append(eb_struct)

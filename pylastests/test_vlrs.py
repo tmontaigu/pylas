@@ -4,7 +4,6 @@ import pytest
 
 import pylas
 from pylas.evlrs import RawEVLR, EVLR_HEADER_SIZE, EVLRList, EVLR, RawEVLRList
-from pylas.vlrs import VLR_HEADER_SIZE
 from pylastests import test_common
 
 

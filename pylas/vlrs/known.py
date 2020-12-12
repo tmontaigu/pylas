@@ -7,6 +7,9 @@ import abc
 import ctypes
 import logging
 import struct
+from typing import List, Optional, Any
+
+import numpy as np
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
 from .. import extradims
@@ -15,6 +18,7 @@ from ..extradims import (
     get_kind_of_extra_dim,
 )
 from ..point.dims import DimensionInfo, DimensionKind
+from ..point.format import ExtraBytesParams
 
 abstractmethod = abc.abstractmethod
 
@@ -196,14 +200,20 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         ("_no_data", (ctypes.c_byte * 8) * 3),
         ("_min", (ctypes.c_byte * 8) * 3),
         ("_max", (ctypes.c_byte * 8) * 3),
-        ("_scale", (ctypes.c_byte * 8) * 3),
-        ("_offset", (ctypes.c_byte * 8) * 3),
+        ("_scale", ctypes.c_double * 3),
+        ("_offset", ctypes.c_double * 3),
         ("description", ctypes.c_char * 32),
     ]
 
     _uint64t_struct = struct.Struct("<Q")
     _int64t_struct = struct.Struct("<q")
     _double_struct = struct.Struct("<d")
+
+    NO_DATA_BIT_MASK = 0b000_0001
+    MIN_BIT_MASK = 0b0000_0010
+    MAX_BIT_MASK = 0b0000_0100
+    SCALE_BIT_MASK = 0b000_1000
+    OFFSET_BIT_MASK = 0b0001_0000
 
     def _struct_parser_for_kind(self):
         signedness = get_kind_of_extra_dim(self.data_type)
@@ -221,35 +231,6 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         strct = self._struct_parser_for_kind()
         return tuple(strct.unpack(d)[0] for d in getattr(self, name))
 
-    @classmethod
-    def from_dimension_info(cls, info: DimensionInfo) -> "ExtraBytesStruct":
-        if info.is_standard:
-            raise ValueError("ExtraBytesStruct cannot describe standard dims")
-
-        if info.kind == DimensionKind.BitField:
-            raise ValueError("ExtraBytesStruct cannot describe bit fields")
-
-        type_str = info.type_str()
-        assert type_str is not None
-        if type_str.endswith("u1"):
-            extra_byte = cls(
-                data_type=0,
-                name=info.name.encode(),
-                description="".encode(),
-                options=int(type_str[:-2]),
-            )
-        else:
-            if info.num_elements > 3:
-                raise ValueError("Only u1 data type supports more than 3 elements")
-            type_id = extradims.get_id_for_extra_dim_type(type_str)
-            extra_byte = cls(
-                data_type=type_id,
-                name=info.name.encode(),
-                description="".encode(),
-            )
-
-        return extra_byte
-
     @property
     def no_data(self):
         return self._parse_special_property("_no_data")
@@ -263,20 +244,30 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         return self._parse_special_property("_max")
 
     @property
-    def offset(self):
-        return self._parse_special_property("_offset")
+    def offset(self) -> Optional[Any]:
+        if self.options & self.OFFSET_BIT_MASK != 0:
+            return self._offset
+        return None
 
     @property
     def scale(self):
-        return self._parse_special_property("_scale")
+        if self.options & self.SCALE_BIT_MASK != 0:
+            return self._scale
+        return None
+
+    def set_scale_is_relevant(self) -> None:
+        self.options |= self.SCALE_BIT_MASK
+
+    def set_offset_is_relevant(self) -> None:
+        self.options |= self.OFFSET_BIT_MASK
 
     def format_name(self):
-        return self.name.rstrip(NULL_BYTE).decode().replace(" ", "_").replace("-", "_")
+        return self.name.rstrip(NULL_BYTE).decode()
 
-    def type_tuple(self):
+    def type_str(self):
         if self.data_type == 0:
-            return self.format_name(), "{}u1".format(self.options)
-        return self.format_name(), get_type_for_extra_dim(self.data_type)
+            return "{}u1".format(self.options)
+        return get_type_for_extra_dim(self.data_type)
 
     @staticmethod
     def size():
@@ -312,8 +303,28 @@ class ExtraBytesVlr(BaseKnownVLR):
             bytes(extra_struct) for extra_struct in self.extra_bytes_structs
         )
 
-    def type_of_extra_dims(self):
-        return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
+    def type_of_extra_dims(self) -> List[ExtraBytesParams]:
+        dim_info_list: List[ExtraBytesParams] = []
+        for eb_struct in self.extra_bytes_structs:
+            # TODO offsets scale
+            scales = eb_struct.scale
+            if scales is not None:
+                scales = np.array(scales)
+
+            offsets = eb_struct.offset
+            if offsets is not None:
+                offsets = np.array(offsets)
+            dim_info_list.append(
+                ExtraBytesParams(
+                    eb_struct.format_name(),
+                    eb_struct.type_str(),
+                    description=eb_struct.description.rstrip(NULL_BYTE).decode(),
+                    scales=scales,
+                    offsets=offsets
+                    )
+            )
+        return dim_info_list
+
 
     def __repr__(self):
         return "<ExtraBytesVlr(extra bytes structs: {})>".format(

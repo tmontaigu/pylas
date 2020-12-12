@@ -7,8 +7,6 @@ import pylas
 from pylastests.test_common import (
     simple_las,
     simple_laz,
-    write_then_read_again,
-    do_compression,
 )
 
 
@@ -38,8 +36,7 @@ def get_header():
         return fin.header
 
 
-# TODO add test of global encoding
-def test_raw_header(get_header):
+def test_header(get_header):
     header = get_header
     assert header.file_source_id == 0
     assert header.version.major == 1
@@ -181,11 +178,6 @@ def test_blue(read_simple):
     f = read_simple
     assert f.blue.max() == 249
     assert f.blue.min() == 56
-
-
-@pytest.mark.parametrize("do_compress", do_compression)
-def test_read_write_read(read_simple, do_compress):
-    _ = write_then_read_again(read_simple, do_compress=do_compress)
 
 
 @pytest.mark.skipif(

@@ -1,45 +1,25 @@
 import io
 import os
 
-import numpy as np
-
-import pylas
 import pytest
 
-from pylas.evlrs import EVLRList
-from pylastests.test_common import simple_laz, las_path_fixture, all_laz_path
+import pylas
+from pylastests.test_common import simple_laz
+
+
+def test_append(file_path):
+    """
+    Test appending
+    """
+    if file_path.suffix == '.laz' and not pylas.LazBackend.Lazrs.is_available():
+        pytest.skip("Only Lazrs backed supports appending")
+    append_self_and_check(file_path)
 
 
 def test_raises_for_laszip_backend():
     with pytest.raises(pylas.PylasError):
         with pylas.open(simple_laz, mode="a", laz_backend=pylas.LazBackend.Laszip):
             ...
-
-
-@pytest.mark.skipif(pylas.LazBackend.Lazrs not in pylas.LazBackend.detect_available(),
-                    reason="Only Lazrs backend supports appending")
-def test_append_laz(all_laz_path):
-    append_self_and_check(all_laz_path)
-
-
-def test_append(las_path_fixture):
-    print(las_path_fixture)
-    append_self_and_check(las_path_fixture)
-
-
-def append_self_and_check(las_path_fixture):
-    with open(las_path_fixture, mode="rb") as f:
-        file = io.BytesIO(f.read())
-    las = pylas.read(las_path_fixture)
-    with pylas.open(file, mode='a', closefd=False) as laz_file:
-        laz_file.append_points(las.points)
-    file.seek(0, io.SEEK_SET)
-    rlas = pylas.read(file)
-    assert rlas.header.point_count == 2 * las.header.point_count
-    assert rlas.points[:rlas.header.point_count // 2] == las.points
-    assert rlas.points[rlas.header.point_count // 2:] == las.points
-
-    return rlas
 
 
 def test_append_las_with_evlrs():
@@ -69,3 +49,18 @@ def test_append_laz_with_evlrs():
     assert evlr.record_id == expected_evlr.record_id
     assert evlr.user_id == expected_evlr.user_id
     assert evlr.record_data == expected_evlr.record_data
+
+
+def append_self_and_check(las_path_fixture):
+    with open(las_path_fixture, mode="rb") as f:
+        file = io.BytesIO(f.read())
+    las = pylas.read(las_path_fixture)
+    with pylas.open(file, mode='a', closefd=False) as laz_file:
+        laz_file.append_points(las.points)
+    file.seek(0, io.SEEK_SET)
+    rlas = pylas.read(file)
+    assert rlas.header.point_count == 2 * las.header.point_count
+    assert rlas.points[:rlas.header.point_count // 2] == las.points
+    assert rlas.points[rlas.header.point_count // 2:] == las.points
+
+    return rlas

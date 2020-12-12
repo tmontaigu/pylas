@@ -12,7 +12,7 @@ from .lib import merge_las as merge
 from .lib import mmap_las as mmap
 from .lib import open_las as open
 from .lib import read_las as read
-from .point import PointFormat, DimensionKind, DimensionInfo
+from .point import PointFormat, ExtraBytesParams, DimensionKind, DimensionInfo
 from .point.dims import supported_point_formats, supported_versions
 from .point.format import lost_dimensions
 from .header import LasHeader

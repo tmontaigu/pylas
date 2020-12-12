@@ -1,9 +1,18 @@
 from itertools import zip_longest
-from typing import Tuple, Optional, Iterable
+from typing import Tuple, Optional, Iterable, NamedTuple
 
 import numpy as np
 
+from ..errors import PylasError
 from . import dims
+
+
+class ExtraBytesParams(NamedTuple):
+    name: str
+    type_str: str
+    description: str = ""
+    offsets: Optional[np.ndarray] = None
+    scales: Optional[np.ndarray] = None
 
 
 class PointFormat:
@@ -30,9 +39,8 @@ class PointFormat:
     """
 
     def __init__(
-            self,
-            point_format_id: int,
-            extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
+        self,
+        point_format_id: int,
     ):
         """
         Parameters
@@ -59,10 +67,6 @@ class PointFormat:
                         sub_field.name, sub_field.mask, is_standard=True
                     )
                     self.dimensions.append(dimension)
-
-        if extra_dims is not None:
-            for name, type_str in extra_dims:
-                self.add_extra_dimension(name, type_str)
 
     @property
     def standard_dimensions(self) -> Iterable[dims.DimensionInfo]:
@@ -114,11 +118,18 @@ class PointFormat:
                 return dim
         raise ValueError(f"Dimension '{name}' does not exist")
 
-    def add_extra_dimension(self, name: str, type_str: str, description="") -> None:
-        self.dimensions.append(
-            dims.DimensionInfo.from_type_str(name, type_str, is_standard=False,
-                                             description=description)
+    def add_extra_dimension(self, param: ExtraBytesParams) -> None:
+        dim_info = dims.DimensionInfo.from_type_str(
+            param.name,
+            param.type_str,
+            is_standard=False,
+            description=param.description,
+            offsets=param.offsets,
+            scales=param.scales,
         )
+        if dim_info.num_elements > 3 and dim_info.kind != dims.DimensionKind.UnsignedInteger:
+            raise PylasError("Extra Dimensions do not support more than 3 elements")
+        self.dimensions.append(dim_info)
 
     def dtype(self):
         """Returns the numpy.dtype used to store the point records in a numpy array
