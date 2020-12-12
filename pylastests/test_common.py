@@ -127,31 +127,6 @@ def test_change_format(las):
     assert dim_does_not_exists(las, "nir")
 
 
-def test_conversion_file_version():
-    las = pylas.create(point_format=0, file_version="1.4")
-    las2 = pylas.convert(las, file_version="1.2")
-
-    assert las.points.point_format == las2.points.point_format
-    for dim_name in las.points.point_format.dimension_names:
-        assert np.allclose(
-            las.points[dim_name], las2.points[dim_name]
-        ), "{} not equal".format(dim_name)
-
-
-def test_conversion_copies_fields(all_las_but_1_4):
-    las = all_las_but_1_4
-    for i in (0, 1, 2, 3, 2, 1, 0):
-        old_record = las.points
-        las = pylas.convert(las, point_format_id=i)
-        las = write_then_read_again(las)
-
-        for dim_name in old_record.dimensions_names:
-            try:
-                assert np.allclose(
-                    las.points[dim_name], old_record[dim_name]
-                ), "{} not equal".format(dim_name)
-            except ValueError:
-                pass  # dim exists in old_record but not new
 
 
 def test_rw_all_set_one(las):

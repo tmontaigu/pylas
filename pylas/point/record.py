@@ -26,7 +26,7 @@ def unscale_dimension(array_dim, scale, offset):
 
 
 def raise_not_enough_bytes_error(
-    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"
@@ -226,13 +226,6 @@ class PackedPointRecord(PointRecord):
         self.sub_fields_dict = dims.get_sub_fields_dict(point_format.id)
 
     @property
-    def all_dimensions_names(self):
-        """Returns all the dimensions names, including the names of sub_fields
-        and their corresponding packed fields
-        """
-        return frozenset(self.array.dtype.names + tuple(self.sub_fields_dict.keys()))
-
-    @property
     def point_size(self):
         """Returns the point size in bytes taken by each points of the record
 
@@ -325,11 +318,25 @@ class PackedPointRecord(PointRecord):
         """Gives access to the underlying numpy array
         Unpack the dimension if item is the name a sub-field
         """
+        # 1) Is it a sub field ?
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
             return dims.SubFieldView(self.array[composed_dim], sub_field.mask)
         except KeyError:
-            return self.array[item]
+            pass
+
+        # 2) Is it a Scaled Extra Byte Dimension ?
+        try:
+            dim_info = self.point_format.dimension_by_name(item)
+            if dim_info.is_standard is False:
+                if dim_info.scales is not None or dim_info.offsets is not None:
+                    scale = 1.0 if dim_info.scales is None else dim_info.scales[0]
+                    offset = 0.0 if dim_info.offsets is None else dim_info.offsets[0]
+                    return ScaledArrayView(self.array[item], scale, offset)
+        except ValueError:
+            pass
+
+        return self.array[item]
 
     def __setitem__(self, key, value):
         """Sets elements in the array"""

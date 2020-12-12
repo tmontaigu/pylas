@@ -316,10 +316,18 @@ class DimensionInfo(NamedTuple):
     num_elements: int = 1
     is_standard: bool = True
     description: str = ""
+    offsets: Optional[np.ndarray] = None
+    scales: Optional[np.ndarray] = None
 
     @classmethod
     def from_type_str(
-        cls, name: str, type_str: str, is_standard: bool = True, description:str = ""
+        cls,
+        name: str,
+        type_str: str,
+        is_standard: bool = True,
+        description: str = "",
+        offsets: Optional[np.ndarray] = None,
+        scales: Optional[np.ndarray] = None,
     ) -> "DimensionInfo":
         first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
         if first_digits:
@@ -328,10 +336,19 @@ class DimensionInfo(NamedTuple):
         else:
             num_elements = 1
 
+        dtype = np.dtype(type_str)
         kind = DimensionKind.from_letter(type_str[0])
-        num_bits = int(type_str[1:]) * 8 * num_elements
-
-        return cls(name, kind, num_bits, num_elements, is_standard, description=description)
+        num_bits = num_elements * dtype.itemsize * 8
+        return cls(
+            name,
+            kind,
+            num_bits,
+            num_elements,
+            is_standard,
+            description=description,
+            offsets=offsets,
+            scales=scales,
+        )
 
     @classmethod
     def from_bitmask(
@@ -563,7 +580,7 @@ class ScaledArrayView:
                 top_level_args = converted_args
                 arg = [arg]
             top_level_args.extend(
-                a.array if isinstance(a, ScaledArrayView) else a for a in arg
+                np.array(a) if isinstance(a, ScaledArrayView) else a for a in arg
             )
 
         args = converted_args
@@ -571,10 +588,8 @@ class ScaledArrayView:
         if ret is not None:
             if isinstance(ret, np.ndarray) and ret.dtype != np.bool:
                 return self.__class__(ret, self.scale, self.offset)
-            if isinstance(ret, (bool, np.bool)):
-                return ret
             else:
-                return self._apply_scale(ret)
+                return ret
         return ret
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
@@ -643,10 +658,14 @@ class ScaledArrayView:
                 )
             self.array[key] = value.array[key]
         else:
-            iinfo = np.iinfo(self.array.dtype)
+            try:
+                info = np.iinfo(self.array.dtype)
+            except ValueError:
+                info = np.finfo(self.array.dtype)
+
             new_max = self._remove_scale(np.max(value))
             new_min = self._remove_scale(np.min(value))
-            if new_max > iinfo.max or new_min < iinfo.min:
+            if new_max > info.max or new_min < info.min:
                 raise OverflowError(
                     "Values given do not fit after applying offest and scale"
                 )

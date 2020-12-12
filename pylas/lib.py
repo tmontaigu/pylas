@@ -231,7 +231,9 @@ def create_las(
     else:
         file_version = dims.min_file_version_for_point_format(point_format.id)
 
-    header = LasHeader(point_format=point_format, version=Version.from_str(file_version))
+    header = LasHeader(
+        point_format=point_format, version=Version.from_str(file_version)
+    )
     return LasData(header=header)
 
 
@@ -308,8 +310,7 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     version = Version.from_str(file_version)
 
     point_format = PointFormat(point_format_id)
-    for dim in source_las.point_format.extra_dimensions:
-        point_format.add_extra_dimension(dim.name, dim.type_str(), dim.description)
+    point_format.dimensions.extend(source_las.point_format.extra_dimensions)
 
     header = copy.deepcopy(source_las.header)
     header.set_version_and_point_format(version, point_format)
@@ -319,7 +320,9 @@ def convert(source_las, *, point_format_id=None, file_version=None):
     else:
         evlrs = None
 
-    points = record.PackedPointRecord.from_point_record(source_las.points, header.point_format)
+    points = record.PackedPointRecord.from_point_record(
+        source_las.points, header.point_format
+    )
     las = LasData(header=header, points=points)
 
     if file_version < "1.4" and evlrs is not None and evlrs:
