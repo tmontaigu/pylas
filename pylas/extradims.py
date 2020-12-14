@@ -1,7 +1,7 @@
 from . import errors
 from .point.dims import DimensionKind
 
-_extra_dims_base_style_1 = (
+_extra_dims_base = (
     "",
     "u1",
     "i1",
@@ -15,20 +15,12 @@ _extra_dims_base_style_1 = (
     "f8",
 )
 
-_extra_dims_style_1_array_2 = tuple(
-    "2{}".format(_type) for _type in _extra_dims_base_style_1[1:]
-)
-_extra_dims_style_1_array_3 = tuple(
-    "3{}".format(_type) for _type in _extra_dims_base_style_1[1:]
-)
+_extra_dims_array_2 = tuple("2{}".format(_type) for _type in _extra_dims_base[1:])
+_extra_dims_array_3 = tuple("3{}".format(_type) for _type in _extra_dims_base[1:])
 
-_extra_dims_style_1 = (
-    _extra_dims_base_style_1 + _extra_dims_style_1_array_2 + _extra_dims_style_1_array_3
-)
+_extra_dims = _extra_dims_base + _extra_dims_array_2 + _extra_dims_array_3
 
-_type_to_extra_dim_id_style_1 = {
-    type_str: i for i, type_str in enumerate(_extra_dims_style_1)
-}
+_type_to_extra_dim_id = {type_str: i for i, type_str in enumerate(_extra_dims)}
 
 
 def get_kind_of_extra_dim(type_index: int) -> DimensionKind:
@@ -45,7 +37,7 @@ def get_kind_of_extra_dim(type_index: int) -> DimensionKind:
         the enum variant
     """
     try:
-        t = _extra_dims_style_1[type_index]
+        t = _extra_dims[type_index]
         if t[0] == "i":
             return DimensionKind.UnsignedInteger
         elif t[0] == "u":
@@ -70,9 +62,9 @@ def get_type_for_extra_dim(type_index: int) -> str:
 
     """
     try:
-        return _extra_dims_style_1[type_index]
+        return _extra_dims[type_index]
     except IndexError:
-        raise errors.UnknownExtraType(type_index)
+        raise errors.UnknownExtraType(type_index) from None
 
 
 def get_id_for_extra_dim_type(type_str: str) -> int:
@@ -89,6 +81,6 @@ def get_id_for_extra_dim_type(type_str: str) -> int:
 
     """
     try:
-        return _type_to_extra_dim_id_style_1[type_str]
+        return _type_to_extra_dim_id[type_str]
     except KeyError:
         raise errors.UnknownExtraType(type_str) from None

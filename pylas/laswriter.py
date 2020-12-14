@@ -1,27 +1,29 @@
 import abc
 import io
 import logging
-import subprocess
 from copy import copy
 from typing import BinaryIO, Optional, Union, Iterable
 
 import numpy as np
 
 from .compression import LazBackend
-from .compression import find_laszip_executable
-from .errors import PylasError, LazError
+from .errors import PylasError
 from .evlrs import EVLRList, RawEVLRList
 from .header import LasHeader
 from .point import dims
 from .point.format import PointFormat
 from .point.record import PointRecord
-from .utils import ConveyorThread
 from .vlrs.known import LasZipVlr
 
 logger = logging.getLogger(__name__)
 
 try:
     import lazrs
+except ModuleNotFoundError:
+    pass
+
+try:
+    import laszipy
 except ModuleNotFoundError:
     pass
 
@@ -109,7 +111,6 @@ class LasWriter:
             self.done = True
             self.header.number_of_evlrs = len(evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
-            # self.header.update_evlrs_info_in_stream(self.dest)
             raw_evlrs = RawEVLRList.from_list(evlrs)
             raw_evlrs.write_to(self.dest)
 
@@ -136,7 +137,7 @@ class LasWriter:
                     raise PylasError(f"The '{backend}' is not available")
 
                 if backend == LazBackend.Laszip:
-                    return LasZipProcessPointWriter(self.dest)
+                    return LaszipPointWriter(self.dest, self.header)
                 elif backend == LazBackend.LazrsParallel:
                     return LazrsPointWriter(
                         self.dest, self.header.point_format, parallel=True
@@ -178,120 +179,40 @@ class UncompressedPointWriter(PointWriter):
         pass
 
 
-class LasZipProcessPointWriter(PointWriter):
-    def __init__(self, dest):
-        laszip_binary = find_laszip_executable()
+class LaszipPointWriter(PointWriter):
+    def __init__(self, dest: BinaryIO, header: LasHeader):
         self.dest = dest
+        header.set_compressed(False)
+        with io.BytesIO() as tmp:
+            header.write_to(tmp)
+            header_bytes = tmp.getvalue()
 
-        self.conveyor: Optional[ConveyorThread]
-        try:
-            _ = dest.fileno()
-        except OSError:
-            # FIXME
-            # For some reason, when piping to stdout, creates files
-            # that are missing the chunk table
-            self.process = subprocess.Popen(
-                [laszip_binary, "-stdin", "-olaz", "-stdout"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
+        self.zipper = laszipy.LasZipper(self.dest, header_bytes)
+        zipper_header = self.zipper.header
+        assert zipper_header.point_data_format == header.point_format.id
+        assert zipper_header.point_data_record_length == header.point_format.size
 
-            self.conveyor = ConveyorThread(self.process.stdout, self.dest)
-            self.conveyor.start()
-        else:
-            self.conveyor = None
-            self.process = subprocess.Popen(
-                [laszip_binary, "-stdin", "-olaz", "-stdout"],
-                stdin=subprocess.PIPE,
-                stdout=self.dest,
-                stderr=subprocess.PIPE,
-            )
+        header.set_compressed(True)
 
     @property
     def destination(self):
-        return self.process.stdin
-
-    def write_initial_header_and_vlrs(self, header):
-        # If the header we sent to laszip has a point_count
-        # that is less than the number of points that will get
-        # pass to calls to write_points, the laszip process
-        # will quit with an error, that's why we set it to max
-        header.point_count = np.iinfo(np.uint32).max - 1
-        header.set_compressed(False)
-        super(LasZipProcessPointWriter, self).write_initial_header_and_vlrs(header)
-        header.set_compressed(True)
-        header.point_count = 0
+        return self.dest
 
     def write_points(self, points):
-        if self.process.poll() is not None:
-            self.raise_if_bad_err_code()
-        else:
-            try:
-                self.process.stdin.write(points.memoryview())
-            except BrokenPipeError:
-                raise LazError(
-                    "Laszip process failed: {}".format(
-                        self.process.stderr.read().decode()
-                    )
-                ) from None
+        points_bytes = np.frombuffer(points.array, np.uint8)
+        self.zipper.compress(points_bytes)
 
     def done(self):
-        self.process.stdin.flush()
-        self.process.stdin.close()
-        if self.conveyor is not None:
-            self.conveyor.join()
+        self.zipper.done()
 
-        self.process.wait()
-        self.process.poll()
-        self.raise_if_bad_err_code()
-        self._rewrite_chunk_table_offset()
-
-    def _rewrite_chunk_table_offset(self):
-        position_backup = self.dest.tell()
-        self.dest.seek(0, io.SEEK_SET)
-        hdr = LasHeader.read_from(self.dest)
-        self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
-        offset_to_chunk_table = int.from_bytes(self.dest.read(8), "little", signed=True)
-        if offset_to_chunk_table == -1:
-            self.dest.seek(-8, io.SEEK_END)
-            offset_to_chunk_table = int.from_bytes(
-                self.dest.read(8), "little", signed=True
-            )
-            self.dest.seek(hdr.offset_to_point_data, io.SEEK_SET)
-            self.dest.write(offset_to_chunk_table.to_bytes(8, "little", signed=True))
-            self.dest.seek(-8, io.SEEK_END)
-            self.dest.truncate()
-        else:
-            self.dest.seek(position_backup, io.SEEK_SET)
+    def write_initial_header_and_vlrs(self, header: LasHeader):
+        # Do nothing as creating the laszip zipper writes the header and vlrs
+        pass
 
     def write_updated_header(self, header):
-        position_save = self.dest.tell()
-        self.dest.seek(0, io.SEEK_SET)
-        hdr = LasHeader.read_from(self.dest)
-        hdr.point_count = header.point_count
-        hdr.maxs = header.maxs
-        hdr.mins = header.mins
-        hdr.number_of_points_by_return = header.number_of_points_by_return
-
-        if header.version.minor >= 4:
-            hdr.number_of_evlrs = header.number_of_evlrs
-            hdr.start_of_first_evlr = header.start_of_first_evlr
-
-        self.dest.seek(0, io.SEEK_SET)
-        hdr.write_to(self.dest)
-        self.dest.seek(position_save, io.SEEK_SET)
-
-    def raise_if_bad_err_code(self):
-        if self.process.returncode != 0:
-            error_msg = self.process.stderr.read().decode()
-            raise LazError(
-                "Laszip failed to {} with error code {}\n\t{}".format(
-                    "compress",
-                    self.process.returncode,
-                    "\n\t".join(error_msg.splitlines()),
-                )
-            )
+        # Again, do nothing as the closing the laszip zipper will
+        # update the header for us
+        pass
 
 
 class LazrsPointWriter(PointWriter):
@@ -301,7 +222,9 @@ class LazrsPointWriter(PointWriter):
             point_format.id, point_format.num_extra_bytes
         )
         self.parallel = parallel
-        self.compressor = None
+        self.compressor: Optional[
+            Union[lazrs.ParLasZipCompressor, lazrs.LasZipCompressor]
+        ] = None
 
     def write_initial_header_and_vlrs(self, header):
         laszip_vlr = LasZipVlr(self.vlr.record_data())
@@ -320,6 +243,9 @@ class LazrsPointWriter(PointWriter):
         return self.dest
 
     def write_points(self, points):
+        assert (
+            self.compressor is not None
+        ), "Trying to write points without having written header"
         points_bytes = np.frombuffer(points.array, np.uint8)
         self.compressor.compress_many(points_bytes)
 

@@ -5,7 +5,7 @@ in the context of Las point data
 """
 import logging
 from abc import ABC, abstractmethod
-from typing import NoReturn, List, Tuple
+from typing import NoReturn
 
 import numpy as np
 
@@ -26,7 +26,7 @@ def unscale_dimension(array_dim, scale, offset):
 
 
 def raise_not_enough_bytes_error(
-        expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
+    expected_bytes_len, missing_bytes_len, point_data_buffer_len, points_dtype
 ) -> NoReturn:
     raise errors.PylasError(
         "The file does not contain enough bytes to store the expected number of points\n"

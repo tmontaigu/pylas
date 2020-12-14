@@ -12,12 +12,11 @@ from typing import List, Optional, Any
 import numpy as np
 
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
-from .. import extradims
 from ..extradims import (
     get_type_for_extra_dim,
     get_kind_of_extra_dim,
 )
-from ..point.dims import DimensionInfo, DimensionKind
+from ..point.dims import DimensionKind
 from ..point.format import ExtraBytesParams
 
 abstractmethod = abc.abstractmethod
@@ -306,7 +305,6 @@ class ExtraBytesVlr(BaseKnownVLR):
     def type_of_extra_dims(self) -> List[ExtraBytesParams]:
         dim_info_list: List[ExtraBytesParams] = []
         for eb_struct in self.extra_bytes_structs:
-            # TODO offsets scale
             scales = eb_struct.scale
             if scales is not None:
                 scales = np.array(scales)
@@ -314,17 +312,17 @@ class ExtraBytesVlr(BaseKnownVLR):
             offsets = eb_struct.offset
             if offsets is not None:
                 offsets = np.array(offsets)
+
             dim_info_list.append(
                 ExtraBytesParams(
                     eb_struct.format_name(),
                     eb_struct.type_str(),
                     description=eb_struct.description.rstrip(NULL_BYTE).decode(),
                     scales=scales,
-                    offsets=offsets
-                    )
+                    offsets=offsets,
+                )
             )
         return dim_info_list
-
 
     def __repr__(self):
         return "<ExtraBytesVlr(extra bytes structs: {})>".format(

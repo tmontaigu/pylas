@@ -1,10 +1,10 @@
 from itertools import zip_longest
-from typing import Tuple, Optional, Iterable, NamedTuple
+from typing import Optional, Iterable, NamedTuple
 
 import numpy as np
 
-from ..errors import PylasError
 from . import dims
+from ..errors import PylasError
 
 
 class ExtraBytesParams(NamedTuple):
@@ -127,7 +127,10 @@ class PointFormat:
             offsets=param.offsets,
             scales=param.scales,
         )
-        if dim_info.num_elements > 3 and dim_info.kind != dims.DimensionKind.UnsignedInteger:
+        if (
+            dim_info.num_elements > 3
+            and dim_info.kind != dims.DimensionKind.UnsignedInteger
+        ):
             raise PylasError("Extra Dimensions do not support more than 3 elements")
         self.dimensions.append(dim_info)
 

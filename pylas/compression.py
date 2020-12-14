@@ -12,7 +12,7 @@ class LazBackend(enum.Enum):
 
     LazrsParallel = 0
     Lazrs = 1
-    Laszip = 2  # laszip executable, used through a Popen
+    Laszip = 2
 
     def is_available(self) -> bool:
         """Returns true if the backend is available"""
@@ -25,8 +25,8 @@ class LazBackend(enum.Enum):
                 return True
         elif self == LazBackend.Laszip:
             try:
-                find_laszip_executable()
-            except FileNotFoundError:
+                import laszipy
+            except ModuleNotFoundError:
                 return False
             else:
                 return True
@@ -64,16 +64,3 @@ def compressed_id_to_uncompressed(point_format_id: int) -> int:
 
 def uncompressed_id_to_compressed(point_format_id: int) -> int:
     return (2 ** 7) | point_format_id
-
-
-def find_laszip_executable() -> str:
-    laszip_names = ("laszip", "laszip.exe", "laszip-cli", "laszip-cli.exe")
-
-    for binary in laszip_names:
-        in_path = (
-            os.path.isfile(os.path.join(x, binary))
-            for x in os.environ["PATH"].split(os.pathsep)
-        )
-        if any(in_path):
-            return binary
-    raise FileNotFoundError("Could not find laszip executable")

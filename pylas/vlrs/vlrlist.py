@@ -171,7 +171,7 @@ class VLRList:
         """
         return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
 
-    def extract(self, vlr_type: Type[IKnownVLR]) -> List[IKnownVLR]:
+    def extract(self, vlr_type: str) -> List[IKnownVLR]:
         """Returns the list of vlrs of the requested type
         The difference with get is that the returned vlrs will be removed from the list
 

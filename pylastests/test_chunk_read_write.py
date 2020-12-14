@@ -33,14 +33,11 @@ def test_chunked_laz_reading_gives_expected_points(laz_file_path, laz_backend):
             )
 
 
-# @pytest.mark.parametrize("backend", pylas.LazBackend.detect_available() + (None,))
-@pytest.mark.parametrize("backend", [pylas.LazBackend.Laszip])
+@pytest.mark.parametrize("backend", pylas.LazBackend.detect_available() + (None,))
 def test_chunked_writing_gives_expected_points(file_path, backend):
     """
     Write in chunked mode then test that the points are correct
     """
-    if backend != pylas.LazBackend.Laszip:
-        pytest.skip("sfsdf")
     original_las = pylas.read(file_path)
     iter_size = 51
 

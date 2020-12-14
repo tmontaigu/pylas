@@ -265,7 +265,10 @@ class LasData:
             )
 
     def write_to_file(
-        self, filename: Union[str, pathlib.Path], do_compress: Optional[bool] = None
+        self,
+        filename: Union[str, pathlib.Path],
+        do_compress: Optional[bool] = None,
+        laz_backend=LazBackend.detect_available(),
     ) -> None:
         """Writes the las data into a file
 
@@ -283,7 +286,7 @@ class LasData:
             do_compress = True
 
         with open(filename, mode="wb+") as out:
-            self.write_to(out, do_compress=do_compress)
+            self.write_to(out, do_compress=do_compress, laz_backend=laz_backend)
 
     def write(
         self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
@@ -320,7 +323,7 @@ class LasData:
             By default, pylas detect available backends
         """
         if isinstance(destination, (str, pathlib.Path)):
-            self.write_to_file(destination)
+            self.write_to_file(destination, laz_backend=laz_backend)
         else:
             if do_compress is None:
                 do_compress = False
