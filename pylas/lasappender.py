@@ -6,7 +6,7 @@ from .compression import LazBackend
 from .errors import PylasError
 from .evlrs import EVLRList, RawEVLRList
 from .laswriter import UncompressedPointWriter
-from .point.record import PointRecord
+from .point.record import PackedPointRecord
 from .header import LasHeader
 
 try:
@@ -76,7 +76,7 @@ class LazrsAppender:
         self.dest.seek(sum(self.chunk_table), io.SEEK_CUR)
         self.compressor.compress_many(points_of_last_chunk)
 
-    def write_points(self, points: PointRecord) -> None:
+    def write_points(self, points: PackedPointRecord) -> None:
         self.compressor.compress_many(points.memoryview())
 
     def done(self) -> None:
@@ -135,7 +135,7 @@ class LasAppender:
 
         self.closefd = closefd
 
-    def append_points(self, points: PointRecord) -> None:
+    def append_points(self, points: PackedPointRecord) -> None:
         if points.point_format != self.header.point_format:
             raise PylasError("Point formats do not match")
 

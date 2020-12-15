@@ -1,15 +1,16 @@
 import logging
 import pathlib
-from typing import Union, Optional, Tuple, List
+from typing import Union, Optional, List, Sequence, overload, BinaryIO
 
 import numpy as np
 
-from pylas import errors
-from pylas.compression import LazBackend
-from pylas.header import LasHeader
-from pylas.laswriter import LasWriter
-from pylas.point import record, dims, ExtraBytesParams, PointFormat
-from pylas.point.dims import ScaledArrayView
+from . import errors
+from .compression import LazBackend
+from .header import LasHeader
+from .laswriter import LasWriter
+from .point import record, dims, ExtraBytesParams, PointFormat
+from .point.dims import ScaledArrayView
+from .vlrs.vlrlist import VLRList
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class LasData:
 
     def __init__(
         self, header: LasHeader, points: Optional[record.PackedPointRecord] = None
-    ):
+    ) -> None:
         if points is None:
             points = record.PackedPointRecord.zeros(
                 header.point_format, header.point_count
@@ -47,48 +48,50 @@ class LasData:
             self.evlrs: Optional[List] = None
 
     @property
-    def x(self):
+    def x(self) -> ScaledArrayView:
         """Returns the scaled x positions of the points as doubles"""
         return ScaledArrayView(self.X, self.header.x_scale, self.header.x_offset)
 
     @x.setter
-    def x(self, value):
+    def x(self, value) -> None:
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.x[:] = value
 
     @property
-    def y(self):
+    def y(self) -> ScaledArrayView:
         """Returns the scaled y positions of the points as doubles"""
         return ScaledArrayView(self.Y, self.header.y_scale, self.header.y_offset)
 
     @y.setter
-    def y(self, value):
+    def y(self, value) -> None:
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.y[:] = value
 
     @property
-    def z(self):
+    def z(self) -> ScaledArrayView:
         """Returns the scaled z positions of the points as doubles"""
         return ScaledArrayView(self.Z, self.header.z_scale, self.header.z_offset)
 
     @z.setter
-    def z(self, value):
+    def z(self, value) -> None:
         if len(value) > len(self.points):
             self.points.resize(len(value))
         self.z[:] = value
 
     @property
     def point_format(self) -> PointFormat:
+        """Shortcut to get the point format"""
         return self.points.point_format
 
     @property
-    def points(self):
+    def points(self) -> record.PackedPointRecord:
+        """Returns the point record"""
         return self._points
 
     @points.setter
-    def points(self, new_points):
+    def points(self, new_points: record.PackedPointRecord) -> None:
         if new_points.point_format != self._points.point_format:
             raise errors.IncompatibleDataFormat(
                 "Cannot set points with a different point format, convert first"
@@ -97,7 +100,7 @@ class LasData:
         self.update_header()
 
     @property
-    def vlrs(self):
+    def vlrs(self) -> VLRList:
         return self.header.vlrs
 
     def change_scaling(self, scales=None, offsets=None) -> None:
@@ -110,6 +113,143 @@ class LasData:
 
         self.header.scales = scales
         self.header.offsets = offsets
+
+    def add_extra_dim(self, params: ExtraBytesParams) -> None:
+        """Adds a new extra dimension to the point record
+
+        .. note::
+
+            If you plan on adding multiple extra dimensions,
+            prefer :meth:`pylas.LasBase.add_extra_dims` as it will
+            save re-allocations and data copy
+
+        Parameters
+        ----------
+        params : ExtraBytesParams
+            parameters of the new extra dimension to add
+
+        """
+        self.add_extra_dims([params])
+
+    def add_extra_dims(self, params: List[ExtraBytesParams]) -> None:
+        """Add multiple extra dimensions at once
+
+        Parameters
+        ----------
+
+        params: list of parameters of the new extra dimensions to add
+        """
+        self.header.add_extra_dims(params)
+        new_point_record = record.PackedPointRecord.from_point_record(
+            self.points, self.header.point_format
+        )
+        self.points = new_point_record
+
+    def update_header(self) -> None:
+        """Update the information stored in the header
+        to be in sync with the actual data.
+
+        This method is called automatically when you save a file using
+        :meth:`pylas.lasdatas.base.LasBase.write`
+        """
+        self.header.point_format_id = self.points.point_format.id
+        self.header.point_count = len(self.points)
+        self.header.point_data_record_length = self.points.point_size
+
+        if len(self.points) > 0:
+            self.header.x_max = self.x.max()
+            self.header.y_max = self.y.max()
+            self.header.z_max = self.z.max()
+
+            self.header.x_min = self.x.min()
+            self.header.y_min = self.y.min()
+            self.header.z_min = self.z.min()
+
+            unique, counts = np.unique(self.return_number, return_counts=True)
+            self.header.number_of_points_by_return = counts
+
+        if self.header.version.minor >= 4:
+            if self.evlrs is not None:
+                self.header.number_of_evlrs = len(self.evlrs)
+            self.header.start_of_waveform_data_packet_record = 0
+            # TODO
+            # if len(self.vlrs.get("WktCoordinateSystemVlr")) == 1:
+            #     self.header.global_encoding.wkt = 1
+        else:
+            self.header.number_of_evlrs = 0
+
+    @overload
+    def write(
+        self,
+        destination: str,
+        laz_backend: Union[LazBackend, Sequence[LazBackend]] = ...,
+    ) -> None:
+        ...
+
+    @overload
+    def write(
+        self,
+        destination: BinaryIO,
+        do_compress: Optional[bool] = ...,
+        laz_backend: Union[LazBackend, Sequence[LazBackend]] = ...,
+    ) -> None:
+        ...
+
+    def write(
+        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
+    ):
+        """Writes to a stream or file
+
+        .. note::
+
+            When destination is a string, it will be interpreted as the path were the file should be written to,
+            and whether the file will be compressed depends on the extension used (case insensitive):
+
+                - .laz -> compressed
+                - .las -> uncompressed
+
+            And the do_compress option will be ignored
+
+
+        Parameters
+        ----------
+        destination: str or file object
+            filename or stream to write to
+        do_compress: bool, optional
+            Flags to indicate if you want to compress the data
+        laz_backend: optional, the laz backend to use
+            By default, pylas detect available backends
+        """
+        if isinstance(destination, (str, pathlib.Path)):
+            do_compress = pathlib.Path(destination).suffix.lower() == ".laz"
+
+            with open(destination, mode="wb+") as out:
+                self._write_to(out, do_compress=do_compress, laz_backend=laz_backend)
+        else:
+            if do_compress is None:
+                do_compress = False
+            self._write_to(
+                destination, do_compress=do_compress, laz_backend=laz_backend
+            )
+
+    def _write_to(
+        self,
+        out_stream: BinaryIO,
+        do_compress: bool = False,
+        laz_backend: Union[
+            LazBackend, Sequence[LazBackend]
+        ] = LazBackend.detect_available(),
+    ) -> None:
+        with LasWriter(
+            out_stream,
+            self.header,
+            do_compress=do_compress,
+            closefd=False,
+            laz_backend=laz_backend,
+        ) as writer:
+            writer.write(self.points)
+            if self.header.version.minor >= 4 and self.evlrs is not None:
+                writer.write_evlrs(self.evlrs)
 
     def __getattr__(self, item):
         """Automatically called by Python when the attribute
@@ -160,176 +300,7 @@ class LasData:
     def __setitem__(self, key, value):
         self.points[key] = value
 
-    def add_extra_dim(self, params: ExtraBytesParams):
-        """Adds a new extra dimension to the point record
-
-        .. note::
-
-            If you plan on adding multiple extra dimensions,
-            prefer :meth:`pylas.LasBase.add_extra_dims` as it will
-            save re-allocations and data copy
-
-        Parameters
-        ----------
-        name: str
-            the name of the dimension, spaces are replaced with '_'.
-        type: str
-            type of the dimension (eg 'uint8' or 'u1')
-        description: str, optional
-            a small description of the dimension
-        """
-        self.add_extra_dims([params])
-
-    def add_extra_dims(self, params: List[ExtraBytesParams]):
-        """Add multiple extra dimensions at once
-
-        Parameters
-        ----------
-
-        type_tuples:
-               a list of tuple describing the dimensions to add
-               [(name, type, description), (name2, other_type)]
-               The description is optional
-        """
-        self.header.add_extra_dims(params)
-        new_point_record = record.PackedPointRecord.from_point_record(
-            self.points, self.header.point_format
-        )
-        self.points = new_point_record
-
-    def update_header(self):
-        """Update the information stored in the header
-        to be in sync with the actual data.
-
-        This method is called automatically when you save a file using
-        :meth:`pylas.lasdatas.base.LasBase.write`
-        """
-        self.header.point_format_id = self.points.point_format.id
-        self.header.point_count = len(self.points)
-        self.header.point_data_record_length = self.points.point_size
-
-        if len(self.points) > 0:
-            self.header.x_max = self.x.max()
-            self.header.y_max = self.y.max()
-            self.header.z_max = self.z.max()
-
-            self.header.x_min = self.x.min()
-            self.header.y_min = self.y.min()
-            self.header.z_min = self.z.min()
-
-            unique, counts = np.unique(self.return_number, return_counts=True)
-            self.header.number_of_points_by_return = counts
-
-        if self.header.version.minor >= 4:
-            if self.evlrs is not None:
-                self.header.number_of_evlrs = len(self.evlrs)
-            self.header.start_of_waveform_data_packet_record = 0
-            # TODO
-            # if len(self.vlrs.get("WktCoordinateSystemVlr")) == 1:
-            #     self.header.global_encoding.wkt = 1
-        else:
-            self.header.number_of_evlrs = 0
-
-    def write_to(
-        self, out_stream, do_compress=False, laz_backend=LazBackend.detect_available()
-    ):
-        """writes the data to a stream
-
-        Parameters
-        ----------
-        out_stream: file object
-            the destination stream, implementing the write method
-        do_compress: bool, optional, default False
-            Flag to indicate if you want the data to be compressed
-        laz_backend: optional, the laz backend to use
-            By default, pylas detect available backends
-        """
-        with LasWriter(
-            out_stream,
-            self.header,
-            do_compress=do_compress,
-            closefd=False,
-            laz_backend=laz_backend,
-        ) as writer:
-            writer.write(self.points)
-            if self.header.version.minor >= 4 and self.evlrs is not None:
-                writer.write_evlrs(self.evlrs)
-
-    @staticmethod
-    def _raise_if_not_expected_pos(stream, expected_pos):
-        if not stream.tell() == expected_pos:
-            raise RuntimeError(
-                "Writing, expected to be at pos {} but stream is at pos {}".format(
-                    expected_pos, stream.tell()
-                )
-            )
-
-    def write_to_file(
-        self,
-        filename: Union[str, pathlib.Path],
-        do_compress: Optional[bool] = None,
-        laz_backend=LazBackend.detect_available(),
-    ) -> None:
-        """Writes the las data into a file
-
-        Parameters
-        ----------
-        filename : str
-            The file where the data should be written.
-        do_compress: bool, optional, default None
-            if None the extension of the filename will be used
-            to determine if the data should be compressed
-            otherwise the do_compress flag indicate if the data should be compressed
-        """
-        is_ext_laz = pathlib.Path(filename).suffix.lower() == ".laz"
-        if is_ext_laz and do_compress is None:
-            do_compress = True
-
-        with open(filename, mode="wb+") as out:
-            self.write_to(out, do_compress=do_compress, laz_backend=laz_backend)
-
-    def write(
-        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
-    ):
-        """Writes to a stream or file
-
-        When destination is a string, it will be interpreted as the path were the file should be written to,
-        also if do_compress is None, the compression will be guessed from the file extension:
-
-        - .laz -> compressed
-        - .las -> uncompressed
-
-        .. note::
-
-            This means that you could do something like:
-                # Create .laz but not compressed
-
-                las.write('out.laz', do_compress=False)
-
-                # Create .las but compressed
-
-                las.write('out.las', do_compress=True)
-
-            While it should not confuse Las/Laz readers, it will confuse humans so avoid doing it
-
-
-        Parameters
-        ----------
-        destination: str or file object
-            filename or stream to write to
-        do_compress: bool, optional
-            Flags to indicate if you want to compress the data
-        laz_backend: optional, the laz backend to use
-            By default, pylas detect available backends
-        """
-        if isinstance(destination, (str, pathlib.Path)):
-            self.write_to_file(destination, laz_backend=laz_backend)
-        else:
-            if do_compress is None:
-                do_compress = False
-            self.write_to(destination, do_compress=do_compress, laz_backend=laz_backend)
-
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<LasData({}.{}, point fmt: {}, {} points, {} vlrs)>".format(
             self.header.version.major,
             self.header.version.minor,

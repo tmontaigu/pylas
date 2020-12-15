@@ -13,10 +13,10 @@ from .compression import (
     is_point_format_compressed,
     uncompressed_id_to_compressed,
 )
-from .errors import PylasError, UnknownExtraType
+from .errors import PylasError
 from .point import dims
 from .point.format import PointFormat, ExtraBytesParams
-from .point.record import PointRecord
+from .point.record import PackedPointRecord
 from .vlrs.known import ExtraBytesStruct, ExtraBytesVlr
 from .vlrs.vlrlist import VLRList, RawVLRList
 
@@ -149,7 +149,7 @@ class LasHeader:
         self.offset_to_point_data: int = 0
         self.are_points_compressed: bool = False
 
-        self.sync_extra_bytes_vlr()
+        self._sync_extra_bytes_vlr()
 
     @property
     def point_format(self) -> PointFormat:
@@ -161,7 +161,7 @@ class LasHeader:
             new_point_format.id, str(self.version)
         )
         self._point_format = new_point_format
-        self.sync_extra_bytes_vlr()
+        self._sync_extra_bytes_vlr()
 
     @property
     def version(self) -> Version:
@@ -277,7 +277,7 @@ class LasHeader:
     def add_extra_dims(self, params: List[ExtraBytesParams]) -> None:
         for param in params:
             self.point_format.add_extra_dimension(param)
-        self.sync_extra_bytes_vlr()
+        self._sync_extra_bytes_vlr()
 
     def add_extra_dim(self, params: ExtraBytesParams):
         self.add_extra_dims([params])
@@ -300,7 +300,7 @@ class LasHeader:
         self.start_of_first_evlr = 0
         self.number_of_evlrs = 0
 
-    def update(self, points: PointRecord) -> None:
+    def update(self, points: PackedPointRecord) -> None:
         self.x_max = max(
             self.x_max,
             (points["X"].max() * self.x_scale) + self.x_offset,
@@ -561,7 +561,7 @@ class LasHeader:
 
         raw_vlrs.write_to(stream)
 
-    def sync_extra_bytes_vlr(self) -> None:
+    def _sync_extra_bytes_vlr(self) -> None:
         try:
             self.vlrs.extract("ExtraBytesVlr")
         except IndexError:

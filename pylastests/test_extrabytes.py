@@ -21,7 +21,7 @@ def test_read_example_extra_bytes_las(las_file_path_with_extra_bytes):
         "Intensity",
         "Time",
     ]
-    assert expected_names == list(las.points.extra_dimensions_names)
+    assert expected_names == list(las.point_format.extra_dimension_names)
 
 
 def test_read_write_example_extra_bytes_file(las_file_path_with_extra_bytes):
@@ -68,12 +68,18 @@ def test_creating_extra_bytes(extra_bytes_params, simple_las_path):
 
 def test_creating_scaled_extra_bytes(extra_bytes_params, simple_las_path):
     las = pylas.read(simple_las_path)
+
+
+    try:
+        num_elements = int(extra_bytes_params.type_str[0])
+    except ValueError:
+        num_elements = 1
+
     params = pylas.ExtraBytesParams(
         extra_bytes_params.name,
         extra_bytes_params.type_str,
-        extra_bytes_params.type_str,
-        offsets=np.array([2.0, 2.0, 2.0]),
-        scales=np.array([1.0, 1.0, 1.0])
+        offsets=np.array([2.0] * num_elements),
+        scales=np.array([1.0] * num_elements)
     )
     las.add_extra_dim(params)
 
@@ -85,6 +91,35 @@ def test_creating_scaled_extra_bytes(extra_bytes_params, simple_las_path):
     las = write_then_read_again(las)
     assert np.allclose(las[extra_bytes_params.name], 42.0)
 
+def test_scaled_extra_byte_array_type(simple_las_path):
+    """
+    To make sure we handle scaled extra bytes
+    """
+    las = pylas.read(simple_las_path)
+
+    las.add_extra_dim(pylas.ExtraBytesParams(
+        name="test_dim",
+        type_str="3int32",
+        scales=np.array([1.0, 2.0, 3.0], np.float64),
+        offsets=np.array([10.0, 20.0, 30.0], np.float64),
+    ))
+
+    assert np.allclose(las.test_dim[..., 0], 10.0)
+    assert np.allclose(las.test_dim[..., 1], 20.0)
+    assert np.allclose(las.test_dim[..., 2], 30.0)
+
+    las.test_dim[..., 0][:] = 42.0
+    las.test_dim[..., 1][:] = 82.0
+    las.test_dim[..., 2][:] = 123.0
+
+    assert np.allclose(las.test_dim[..., 0], 42.0)
+    assert np.allclose(las.test_dim[..., 1], 82.0)
+    assert np.allclose(las.test_dim[..., 2], 123.0)
+
+    las = write_then_read_again(las)
+    assert np.allclose(las.test_dim[..., 0], 42.0)
+    assert np.allclose(las.test_dim[..., 1], 82.0)
+    assert np.allclose(las.test_dim[..., 2], 123.0)
 
 def test_extra_bytes_description_is_ok(extra_bytes_params, simple_las_path):
     """
@@ -102,6 +137,9 @@ def test_extra_bytes_description_is_ok(extra_bytes_params, simple_las_path):
     extra_dim_info = list(las.point_format.extra_dimensions)
     assert len(extra_dim_info) == 1
     assert extra_dim_info[0].description == extra_bytes_params.description
+
+
+
 
 
 def test_extra_bytes_with_spaces_in_name(simple_las_path):
@@ -133,7 +171,7 @@ def test_conversion_keeps_eb(las_file_path_with_extra_bytes):
             list(converted_las.point_format.extra_dimension_names)
             == list(original.point_format.extra_dimension_names)
     )
-    for name in converted_las.points.extra_dimensions_names:
+    for name in converted_las.point_format.extra_dimension_names:
         assert np.allclose(converted_las[name], original[name])
 
     converted_las = pylas.lib.write_then_read_again(converted_las)
@@ -180,6 +218,6 @@ def test_creating_extra_byte_with_invalid_type(simple_las_path):
     Test the error message when creating extra bytes with invalid type
     """
     las = pylas.read(simple_las_path)
-    with pytest.raises(TypeError) as error:
+    with pytest.raises(TypeError):
         las.add_extra_dim(pylas.ExtraBytesParams("just_a_test", 'i16'))
-    assert str(error.value) == "data type 'i16' not understood"
+

@@ -1,7 +1,6 @@
 """ The functions related to the LAZ format (compressed LAS)
 """
 import enum
-import os
 from typing import Tuple
 
 
@@ -34,7 +33,7 @@ class LazBackend(enum.Enum):
             return False
 
     @staticmethod
-    def detect_available() -> Tuple["LazBackend"]:
+    def detect_available() -> Tuple["LazBackend", ...]:
         """Returns a tuple containing the available backends in the current
         python environment
         """

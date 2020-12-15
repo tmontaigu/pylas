@@ -127,18 +127,16 @@ def test_change_format(las):
     assert dim_does_not_exists(las, "nir")
 
 
-
-
 def test_rw_all_set_one(las):
-    for dim_name in las.points.dimensions_names:
+    for dim_name in las.point_format.dimension_names:
         las[dim_name][:] = 1
 
-    for dim_name in las.points.dimensions_names:
+    for dim_name in las.point_format.dimension_names:
         assert np.alltrue(las[dim_name] == 1), "{} not equal".format(dim_name)
 
     las2 = write_then_read_again(las)
 
-    for dim_name in las.points.dimensions_names:
+    for dim_name in las.point_format.dimension_names:
         assert np.alltrue(las[dim_name] == las2[dim_name]), "{} not equal".format(
             dim_name
         )
@@ -184,7 +182,7 @@ def test_coords_when_using_create_from_header(las):
 
 
 def test_slicing(las):
-    las.points = las.points[len(las.points) // 2 :]
+    las.points = las.points[len(las.points) // 2:]
 
 
 @pytest.mark.parametrize("do_compress", do_compression)

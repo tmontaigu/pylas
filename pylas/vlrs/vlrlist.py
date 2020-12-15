@@ -31,7 +31,7 @@ class RawVLRList:
     def total_size_in_bytes(self):
         return sum(v.size_in_bytes() for v in self.vlrs)
 
-    def write_to(self, out_stream):
+    def write_to(self, out_stream: BinaryIO):
         """Writes all the raw vlrs contained in list to
         the out_stream
 

@@ -12,7 +12,7 @@ from .evlrs import EVLRList, RawEVLRList
 from .header import LasHeader
 from .point import dims
 from .point.format import PointFormat
-from .point.record import PointRecord
+from .point.record import PackedPointRecord
 from .vlrs.known import LasZipVlr
 
 logger = logging.getLogger(__name__)
@@ -26,28 +26,6 @@ try:
     import laszipy
 except ModuleNotFoundError:
     pass
-
-
-class PointWriter(abc.ABC):
-    @property
-    @abc.abstractmethod
-    def destination(self):
-        ...
-
-    def write_initial_header_and_vlrs(self, header: LasHeader):
-        header.write_to(self.destination)
-
-    @abc.abstractmethod
-    def write_points(self, points):
-        ...
-
-    @abc.abstractmethod
-    def done(self):
-        ...
-
-    def write_updated_header(self, header):
-        self.destination.seek(0, io.SEEK_SET)
-        header.write_to(self.destination)
 
 
 class LasWriter:
@@ -73,7 +51,7 @@ class LasWriter:
         self.done = False
 
         # These will be initialized on the first call to `write`
-        self.point_writer: PointWriter
+        self.point_writer: IPointWriter
 
         dims.raise_if_version_not_compatible_with_fmt(
             header.point_format.id, str(self.header.version)
@@ -87,7 +65,7 @@ class LasWriter:
 
         self.point_writer.write_initial_header_and_vlrs(self.header)
 
-    def write(self, points: PointRecord) -> None:
+    def write(self, points: PackedPointRecord) -> None:
         if not points:
             return
 
@@ -124,7 +102,7 @@ class LasWriter:
 
     def _create_laz_backend(
         self, laz_backends: Union[LazBackend, Iterable[LazBackend]]
-    ) -> PointWriter:
+    ) -> "IPointWriter":
         try:
             laz_backends = iter(laz_backends)
         except TypeError:
@@ -164,23 +142,58 @@ class LasWriter:
         self.close()
 
 
-class UncompressedPointWriter(PointWriter):
-    def __init__(self, dest):
+class IPointWriter(abc.ABC):
+    """Interface to be implemented by the actual
+    PointWriter backend
+
+    """
+
+    @property
+    @abc.abstractmethod
+    def destination(self) -> BinaryIO:
+        ...
+
+    def write_initial_header_and_vlrs(self, header: LasHeader) -> None:
+        header.write_to(self.destination)
+
+    @abc.abstractmethod
+    def write_points(self, points: PackedPointRecord) -> None:
+        ...
+
+    @abc.abstractmethod
+    def done(self) -> None:
+        ...
+
+    def write_updated_header(self, header):
+        self.destination.seek(0, io.SEEK_SET)
+        header.write_to(self.destination)
+
+
+class UncompressedPointWriter(IPointWriter):
+    """
+    Writing points in the simple uncompressed case.
+    """
+
+    def __init__(self, dest: BinaryIO) -> None:
         self.dest = dest
 
     @property
-    def destination(self):
+    def destination(self) -> BinaryIO:
         return self.dest
 
-    def write_points(self, points):
+    def write_points(self, points: PackedPointRecord) -> None:
         self.dest.write(points.memoryview())
 
-    def done(self):
+    def done(self) -> None:
         pass
 
 
-class LaszipPointWriter(PointWriter):
-    def __init__(self, dest: BinaryIO, header: LasHeader):
+class LaszipPointWriter(IPointWriter):
+    """
+    Compressed point writer using laszip backend
+    """
+
+    def __init__(self, dest: BinaryIO, header: LasHeader) -> None:
         self.dest = dest
         header.set_compressed(False)
         with io.BytesIO() as tmp:
@@ -195,28 +208,34 @@ class LaszipPointWriter(PointWriter):
         header.set_compressed(True)
 
     @property
-    def destination(self):
+    def destination(self) -> BinaryIO:
         return self.dest
 
-    def write_points(self, points):
+    def write_points(self, points: PackedPointRecord) -> None:
         points_bytes = np.frombuffer(points.array, np.uint8)
         self.zipper.compress(points_bytes)
 
-    def done(self):
+    def done(self) -> None:
         self.zipper.done()
 
-    def write_initial_header_and_vlrs(self, header: LasHeader):
+    def write_initial_header_and_vlrs(self, header: LasHeader) -> None:
         # Do nothing as creating the laszip zipper writes the header and vlrs
         pass
 
-    def write_updated_header(self, header):
-        # Again, do nothing as the closing the laszip zipper will
+    def write_updated_header(self, header: LasHeader) -> None:
+        # Again, do nothing as closing the laszip zipper will
         # update the header for us
         pass
 
 
-class LazrsPointWriter(PointWriter):
-    def __init__(self, dest: BinaryIO, point_format: PointFormat, parallel: bool):
+class LazrsPointWriter(IPointWriter):
+    """
+    Compressed point writer using lasrs backend
+    """
+
+    def __init__(
+        self, dest: BinaryIO, point_format: PointFormat, parallel: bool
+    ) -> None:
         self.dest = dest
         self.vlr = lazrs.LazVlr.new_for_compression(
             point_format.id, point_format.num_extra_bytes
@@ -226,7 +245,7 @@ class LazrsPointWriter(PointWriter):
             Union[lazrs.ParLasZipCompressor, lazrs.LasZipCompressor]
         ] = None
 
-    def write_initial_header_and_vlrs(self, header):
+    def write_initial_header_and_vlrs(self, header: LasHeader) -> None:
         laszip_vlr = LasZipVlr(self.vlr.record_data())
         header.vlrs.append(laszip_vlr)
         super().write_initial_header_and_vlrs(header)
@@ -239,16 +258,16 @@ class LazrsPointWriter(PointWriter):
             self.compressor = lazrs.LasZipCompressor(self.dest, self.vlr)
 
     @property
-    def destination(self):
+    def destination(self) -> BinaryIO:
         return self.dest
 
-    def write_points(self, points):
+    def write_points(self, points: PackedPointRecord) -> None:
         assert (
             self.compressor is not None
         ), "Trying to write points without having written header"
         points_bytes = np.frombuffer(points.array, np.uint8)
         self.compressor.compress_many(points_bytes)
 
-    def done(self):
+    def done(self) -> None:
         if self.compressor is not None:
             self.compressor.done()

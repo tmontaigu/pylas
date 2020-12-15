@@ -17,6 +17,7 @@ from typing import (
     TypeVar,
     Generic,
     List,
+    Union,
 )
 
 import numpy as np
@@ -544,7 +545,12 @@ class SubFieldView:
 
 
 class ScaledArrayView:
-    def __init__(self, array, scale: float, offset: float) -> None:
+    def __init__(
+        self,
+        array: np.ndarray,
+        scale: Union[float, np.ndarray],
+        offset: Union[float, np.ndarray],
+    ) -> None:
         self.array = array
         self.scale = scale
         self.offset = offset
@@ -647,14 +653,17 @@ class ScaledArrayView:
     def __getitem__(self, item):
         if isinstance(item, int):
             return self._apply_scale(self.array[item])
-        return self.__class__(self.array[item], self.scale, self.offset)
+        elif isinstance(item, slice):
+            return self.__class__(self.array[item], self.scale, self.offset)
+        else:
+            return self.__class__(self.array[item], self.scale[item], self.offset[item])
 
     def __setitem__(self, key, value):
         if isinstance(value, ScaledArrayView):
             iinfo = np.iinfo(self.array.dtype)
             if value.array.max() > iinfo.max or value.array.min() < iinfo.min:
                 raise OverflowError(
-                    "Values given do not fit after applying offest and scale"
+                    "Values given do not fit after applying offset and scale"
                 )
             self.array[key] = value.array[key]
         else:
@@ -665,9 +674,9 @@ class ScaledArrayView:
 
             new_max = self._remove_scale(np.max(value))
             new_min = self._remove_scale(np.min(value))
-            if new_max > info.max or new_min < info.min:
+            if np.all(new_max > info.max) or np.all(new_min < info.min):
                 raise OverflowError(
-                    "Values given do not fit after applying offest and scale"
+                    "Values given do not fit after applying offset and scale"
                 )
             self.array[key] = self._remove_scale(value)
 

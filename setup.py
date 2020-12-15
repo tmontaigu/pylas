@@ -24,7 +24,7 @@ setup(
             "sphinx-rtd-theme"
         ],
         "lazrs": [
-            "lazrs>=0.2.0, < 0.3.0"
+            "lazrs>=0.2.1, < 0.3.0"
         ]
     }
 )

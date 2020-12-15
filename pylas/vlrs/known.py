@@ -7,7 +7,7 @@ import abc
 import ctypes
 import logging
 import struct
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Tuple, Dict
 
 import numpy as np
 
@@ -34,13 +34,13 @@ class IKnownVLR(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def official_user_id():
+    def official_user_id() -> str:
         """Shall return the official user_id as described in the documentation"""
         pass
 
     @staticmethod
     @abstractmethod
-    def official_record_ids():
+    def official_record_ids() -> Tuple[int, ...]:
         """Shall return the official record_id for the VLR
 
         .. note::
@@ -55,7 +55,7 @@ class IKnownVLR(abc.ABC):
         pass
 
     @abstractmethod
-    def record_data_bytes(self):
+    def record_data_bytes(self) -> bytes:
         """Shall return the bytes corresponding to the record_data part of the VLR
         as they should be written in the file.
 
@@ -68,7 +68,7 @@ class IKnownVLR(abc.ABC):
         pass
 
     @abstractmethod
-    def parse_record_data(self, record_data):
+    def parse_record_data(self, record_data: bytes) -> None:
         """Shall parse the given record_data into a user-friendlier structure
 
         Parameters
@@ -112,9 +112,9 @@ class ClassificationLookupVlr(BaseKnownVLR):
 
     def __init__(self):
         super().__init__(description="Classification Lookup")
-        self.lookups = {}
+        self.lookups: Dict[int, str] = {}
 
-    def parse_record_data(self, record_data):
+    def parse_record_data(self, record_data: bytes) -> None:
         for class_id, desc in struct.iter_unpack("<B15s", record_data):
             # index using desc[i:i+1], because desc[i] gives an int, and we want a byte
             description = b"".join(
@@ -124,7 +124,7 @@ class ClassificationLookupVlr(BaseKnownVLR):
             ).decode()
             self.lookups[class_id] = description
 
-    def record_data_bytes(self):
+    def record_data_bytes(self) -> bytes:
         def lookup_converter(lookup_dict):
             for class_id, description in lookup_dict.items():
                 description_bytes = description.encode("ascii")
@@ -141,21 +141,21 @@ class ClassificationLookupVlr(BaseKnownVLR):
             for class_id, desc in lookup_converter(self.lookups)
         )
 
-    def __getitem__(self, class_id):
+    def __getitem__(self, class_id: int) -> str:
         return self.lookups[class_id]
 
-    def __setitem__(self, class_id, description):
+    def __setitem__(self, class_id: int, description: str):
         if class_id not in range(256):
             raise ValueError("Class id {} is not in range [0, 255]".format(class_id))
 
         self.lookups[class_id] = description
 
     @staticmethod
-    def official_user_id():
+    def official_user_id() -> str:
         return "LASF_Spec"
 
     @staticmethod
-    def official_record_ids():
+    def official_record_ids() -> Tuple[int, ...]:
         return (0,)
 
 
@@ -164,23 +164,23 @@ class LasZipVlr(BaseKnownVLR):
     to compress the point records.
     """
 
-    def __init__(self, data):
+    def __init__(self, data: bytes) -> None:
         super().__init__(description="http://laszip.org")
         self.record_data = data
 
-    def parse_record_data(self, record_data):
+    def parse_record_data(self, record_data: bytes) -> None:
         # Only laz backends know how to parse this
         pass
 
-    def record_data_bytes(self):
+    def record_data_bytes(self) -> bytes:
         return self.record_data
 
     @staticmethod
-    def official_user_id():
+    def official_user_id() -> str:
         return "laszip encoded"
 
     @staticmethod
-    def official_record_ids():
+    def official_record_ids() -> Tuple[int, ...]:
         return (22204,)
 
     @classmethod
@@ -274,7 +274,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
     def __repr__(self):
         return "<ExtraBytesStruct({}, {}, {})>".format(
-            *self.type_tuple(), self.description
+            self.format_name(), self.data_type, self.description
         )
 
 

@@ -4,7 +4,6 @@ The PointRecord classes provide a few extra things to manage these arrays
 in the context of Las point data
 """
 import logging
-from abc import ABC, abstractmethod
 from typing import NoReturn
 
 import numpy as np
@@ -43,167 +42,7 @@ def raise_not_enough_bytes_error(
     )
 
 
-class IPointRecord(ABC):
-    """Wraps the numpy structured array contained the points data"""
-
-    @property
-    @abstractmethod
-    def point_format(self) -> PointFormat:
-        ...
-
-    @property
-    @abstractmethod
-    def array(self) -> np.ndarray:
-        ...
-
-    @property
-    @abstractmethod
-    def point_size(self):
-        """Shall return the point size as that will be written in the header"""
-        return self.point_format.size
-
-    @property
-    @abstractmethod
-    def actual_point_size(self):
-        """Shall return the actual size in bytes that the points take in memory"""
-        return self.array.dtype.itemsize
-
-    @abstractmethod
-    def __getitem__(self, item):
-        pass
-
-    @abstractmethod
-    def __setitem__(self, key, value):
-        pass
-
-    @abstractmethod
-    def __len__(self):
-        pass
-
-    @abstractmethod
-    def raw_bytes(self):
-        pass
-
-    @abstractmethod
-    def write_to(self, out):
-        pass
-
-    @classmethod
-    @abstractmethod
-    def from_stream(cls, stream, point_format_id, count):
-        pass
-
-    @classmethod
-    @abstractmethod
-    def empty(cls, point_format_id):
-        pass
-
-
-class PointRecord(IPointRecord, ABC):
-    def __init__(self, data, point_format: PointFormat):
-        self._array = data
-        self._point_format = point_format
-
-    @property
-    def point_format(self) -> PointFormat:
-        return self._point_format
-
-    @property
-    def array(self) -> np.ndarray:
-        return self._array
-
-    @property
-    def dimensions_names(self):
-        return self.point_format.dimension_names
-
-    @property
-    def extra_dimensions_names(self):
-        """Returns the names of extra-dimensions contained in the PointRecord"""
-        return self.point_format.extra_dimension_names
-
-    @property
-    def actual_point_size(self):
-        """Returns the point size in bytes taken by each points of the record
-
-        Returns
-        -------
-        int
-            The point size in byte
-
-        """
-        return self.array.dtype.itemsize
-
-    @classmethod
-    def from_point_record(cls, other_point_record, new_point_format):
-        """Construct a new PackedPointRecord from an existing one with the ability to change
-        to point format while doing so
-        """
-        array = np.zeros_like(other_point_record.array, dtype=new_point_format.dtype())
-        new_record = cls(array, new_point_format)
-        new_record.copy_fields_from(other_point_record)
-        return new_record
-
-    def copy_fields_from(self, other_record: "PointRecord"):
-        """Tries to copy the values of the current dimensions from other_record"""
-        for dim_name in self.dimensions_names:
-            try:
-                self[dim_name] = np.array(other_record[dim_name])
-            except ValueError:
-                pass
-
-    def copy_fields_from_numpy_array(self, array: np.ndarray):
-        for dim_name in self.array.dtype.names:
-            try:
-                self[dim_name] = array[dim_name]
-            except ValueError:
-                pass
-
-    def memoryview(self):
-        return memoryview(self.array)
-
-    def raw_bytes(self):
-        return self.array.tobytes()
-
-    def __getitem__(self, item):
-        return self.array[item]
-
-    def __setitem__(self, key, value):
-        self._append_zeros_if_too_small(value)
-        self.array[key] = np.array(value)
-
-    def resize(self, new_size):
-        size_diff = new_size - len(self.array)
-        if size_diff > 0:
-            self._array = np.append(
-                self.array, np.zeros(size_diff, dtype=self.array.dtype)
-            )
-        elif size_diff < 0:
-            self._array = self._array[:new_size].copy()
-
-    def _append_zeros_if_too_small(self, value):
-        """Appends zeros to the points stored if the value we are trying to
-        fit is bigger
-        """
-        size_diff = len(value) - len(self.array)
-        if size_diff > 0:
-            self.resize(size_diff)
-
-    def __eq__(self, other):
-        return self.point_format == other.point_format and np.all(
-            self.array == other.array
-        )
-
-    def __getattr__(self, item):
-        try:
-            return self[item]
-        except ValueError:
-            raise AttributeError("{} is not a valid dimension".format(item)) from None
-
-    def __len__(self):
-        return self.array.shape[0]
-
-
-class PackedPointRecord(PointRecord):
+class PackedPointRecord:
     """
     In the PackedPointRecord, fields that are a combinations of many sub-fields (fields stored on less than a byte)
     are still packed together and are only de-packed and re-packed when accessed.
@@ -221,8 +60,9 @@ class PackedPointRecord(PointRecord):
     True
     """
 
-    def __init__(self, data, point_format):
-        super().__init__(data, point_format)
+    def __init__(self, data: np.ndarray, point_format: PointFormat):
+        self.array = data
+        self.point_format = point_format
         self.sub_fields_dict = dims.get_sub_fields_dict(point_format.id)
 
     @property
@@ -273,35 +113,16 @@ class PackedPointRecord(PointRecord):
         return cls.zeros(point_format, point_count=0)
 
     @classmethod
-    def from_stream(cls, stream, point_format, count):
-        """Construct the point record by reading the points from the stream"""
-        points_dtype = point_format.dtype
-        point_data_buffer = bytearray(stream.read(count * points_dtype.itemsize))
-
-        try:
-            data = np.frombuffer(point_data_buffer, dtype=points_dtype, count=count)
-        except ValueError:
-            expected_bytes_len = count * points_dtype.itemsize
-            if len(point_data_buffer) % points_dtype.itemsize != 0:
-                missing_bytes_len = expected_bytes_len - len(point_data_buffer)
-                raise_not_enough_bytes_error(
-                    expected_bytes_len,
-                    missing_bytes_len,
-                    len(point_data_buffer),
-                    points_dtype,
-                )
-            else:
-                actual_count = len(point_data_buffer) // points_dtype.itemsize
-                logger.critical(
-                    "Expected {} points, there are {} ({} missing)".format(
-                        count, actual_count, count - actual_count
-                    )
-                )
-                data = np.frombuffer(
-                    point_data_buffer, dtype=points_dtype, count=actual_count
-                )
-
-        return cls(data, point_format)
+    def from_point_record(
+        cls, other_point_record: "PackedPointRecord", new_point_format: PointFormat
+    ) -> "PackedPointRecord":
+        """Construct a new PackedPointRecord from an existing one with the ability to change
+        to point format while doing so
+        """
+        array = np.zeros_like(other_point_record.array, dtype=new_point_format.dtype())
+        new_record = cls(array, new_point_format)
+        new_record.copy_fields_from(other_point_record)
+        return new_record
 
     @classmethod
     def from_buffer(cls, buffer, point_format, count, offset=0):
@@ -310,11 +131,43 @@ class PackedPointRecord(PointRecord):
 
         return cls(data, point_format)
 
-    def write_to(self, out):
-        """ Writes the points to the output stream"""
-        out.write(self.raw_bytes())
+    def copy_fields_from(self, other_record: "PackedPointRecord") -> None:
+        """Tries to copy the values of the current dimensions from other_record"""
+        for dim_name in self.point_format.dimension_names:
+            try:
+                self[dim_name] = np.array(other_record[dim_name])
+            except ValueError:
+                pass
 
-    def __getitem__(self, item):
+    def memoryview(self) -> memoryview:
+        return memoryview(self.array)
+
+    def resize(self, new_size: int) -> None:
+        size_diff = new_size - len(self.array)
+        if size_diff > 0:
+            self.array = np.append(
+                self.array, np.zeros(size_diff, dtype=self.array.dtype)
+            )
+        elif size_diff < 0:
+            self.array = self._array[:new_size].copy()
+
+    def _append_zeros_if_too_small(self, value):
+        """Appends zeros to the points stored if the value we are trying to
+        fit is bigger
+        """
+        size_diff = len(value) - len(self.array)
+        if size_diff > 0:
+            self.resize(size_diff)
+
+    def __eq__(self, other):
+        return self.point_format == other.point_format and np.all(
+            self.array == other.array
+        )
+
+    def __len__(self):
+        return self.array.shape[0]
+
+    def __getitem__(self, item: str):
         """Gives access to the underlying numpy array
         Unpack the dimension if item is the name a sub-field
         """
@@ -330,15 +183,23 @@ class PackedPointRecord(PointRecord):
             dim_info = self.point_format.dimension_by_name(item)
             if dim_info.is_standard is False:
                 if dim_info.scales is not None or dim_info.offsets is not None:
-                    scale = 1.0 if dim_info.scales is None else dim_info.scales[0]
-                    offset = 0.0 if dim_info.offsets is None else dim_info.offsets[0]
+                    scale = (
+                        np.ones(dim_info.num_elements, np.float64)
+                        if dim_info.scales is None
+                        else dim_info.scales[: dim_info.num_elements]
+                    )
+                    offset = (
+                        np.zeros(dim_info.num_elements, np.float64)
+                        if dim_info.offsets is None
+                        else dim_info.offsets[: dim_info.num_elements]
+                    )
                     return ScaledArrayView(self.array[item], scale, offset)
         except ValueError:
             pass
 
         return self.array[item]
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value):
         """Sets elements in the array"""
         self._append_zeros_if_too_small(value)
         try:
@@ -358,9 +219,15 @@ class PackedPointRecord(PointRecord):
         except KeyError:
             self.array[key] = np.array(value)
 
+    def __getattr__(self, item):
+        try:
+            return self[item]
+        except ValueError:
+            raise AttributeError("{} is not a valid dimension".format(item)) from None
+
     def __repr__(self):
         return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
-            self.point_format, len(self), self.actual_point_size
+            self.point_format, len(self), self.point_format.size
         )
 
 
