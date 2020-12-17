@@ -8,9 +8,6 @@ import os
 from pathlib import Path
 from typing import Union, Optional
 
-import numpy as np
-
-from . import utils
 from .compression import LazBackend
 from .errors import PylasError
 from .header import LasHeader, Version
@@ -336,65 +333,6 @@ def convert(source_las, *, point_format_id=None, file_version=None):
         las.evlrs = evlrs
 
     return las
-
-
-def merge_las(*las_files):
-    """Merges multiple las files into one
-
-    merged = merge_las(las_1, las_2)
-    merged = merge_las([las_1, las_2, las_3])
-
-    Parameters
-    ----------
-    las_files: Iterable of LasData or LasData
-
-    Returns
-    -------
-    pylas.lasdatas.base.LasBase
-        The result of the merging
-
-    """
-    if len(las_files) == 1:
-        las_files = las_files[0]
-
-    if not las_files:
-        raise ValueError("No files to merge")
-
-    if not utils.files_have_same_dtype(las_files):
-        raise ValueError("All files must have the same point format")
-
-    header = las_files[0].header
-    num_pts_merged = sum(len(las.points) for las in las_files)
-
-    # scaled x, y, z have to be set manually
-    # to be sure to have a good offset in the header
-    merged = LasData(header)
-    # TODO extra dimensions should be managed better here
-
-    for dim_name, dim_type in las_files[0].points.point_format.extra_dims:
-        # TODO
-        merged.add_extra_dim(dim_name, dim_type)
-
-    merged.points = np.zeros(num_pts_merged, merged.points.dtype)
-    merged_x = np.zeros(num_pts_merged, np.float64)
-    merged_y = np.zeros(num_pts_merged, np.float64)
-    merged_z = np.zeros(num_pts_merged, np.float64)
-
-    offset = 0
-    for i, las in enumerate(las_files, start=1):
-        slc = slice(offset, offset + len(las.points))
-        merged.points[slc] = las.points
-        merged_x[slc] = las.x
-        merged_y[slc] = las.y
-        merged_z[slc] = las.z
-        merged["point_source_id"][slc] = i
-        offset += len(las.points)
-
-    merged.x = merged_x
-    merged.y = merged_y
-    merged.z = merged_z
-
-    return merged
 
 
 def write_then_read_again(
