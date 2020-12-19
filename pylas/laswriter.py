@@ -23,7 +23,7 @@ except ModuleNotFoundError:
     pass
 
 try:
-    import laszipy
+    import laszip
 except ModuleNotFoundError:
     pass
 
@@ -200,7 +200,7 @@ class LaszipPointWriter(IPointWriter):
             header.write_to(tmp)
             header_bytes = tmp.getvalue()
 
-        self.zipper = laszipy.LasZipper(self.dest, header_bytes)
+        self.zipper = laszip.LasZipper(self.dest, header_bytes)
         zipper_header = self.zipper.header
         assert zipper_header.point_data_format == header.point_format.id
         assert zipper_header.point_data_record_length == header.point_format.size

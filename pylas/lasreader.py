@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     pass
 
 try:
-    import laszipy
+    import laszip
 except ModuleNotFoundError:
     pass
 
@@ -213,7 +213,7 @@ class LaszipPointReader(IPointReader):
     def __init__(self, source: BinaryIO, header: LasHeader) -> None:
         self.source = source
         self.source.seek(0)
-        self.unzipper = laszipy.LasUnZipper(source)
+        self.unzipper = laszip.LasUnZipper(source)
         unzipper_header = self.unzipper.header
         assert unzipper_header.point_data_format == header.point_format.id
         assert unzipper_header.point_data_record_length == header.point_format.size

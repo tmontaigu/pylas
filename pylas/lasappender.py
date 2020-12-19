@@ -2,6 +2,8 @@ import io
 import math
 from typing import Union, Iterable, BinaryIO
 
+import numpy as np
+
 from .compression import LazBackend
 from .errors import PylasError
 from .evlrs import EVLRList, RawEVLRList
@@ -77,7 +79,8 @@ class LazrsAppender:
         self.compressor.compress_many(points_of_last_chunk)
 
     def write_points(self, points: PackedPointRecord) -> None:
-        self.compressor.compress_many(points.memoryview())
+        points_bytes = np.frombuffer(points.array, np.uint8)
+        self.compressor.compress_many(points_bytes)
 
     def done(self) -> None:
         # The chunk table written is at the good position

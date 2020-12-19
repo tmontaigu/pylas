@@ -24,7 +24,7 @@ class LazBackend(enum.Enum):
                 return True
         elif self == LazBackend.Laszip:
             try:
-                import laszipy
+                import laszip
             except ModuleNotFoundError:
                 return False
             else:
