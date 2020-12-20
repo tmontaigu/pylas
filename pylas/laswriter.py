@@ -222,14 +222,21 @@ class LaszipPointWriter(IPointWriter):
         pass
 
     def write_updated_header(self, header: LasHeader) -> None:
-        # Again, do nothing as closing the laszip zipper will
-        # update the header for us
-        pass
+        if header.number_of_evlrs != 0:
+            # We wrote some evlrs, we have to update the header
+            self.dest.seek(0, io.SEEK_SET)
+            file_header = LasHeader.read_from(self.dest)
+            end_of_header_pos = self.dest.tell()
+            file_header.number_of_evlrs = header.number_of_evlrs
+            file_header.start_of_first_evlr = header.start_of_first_evlr
+            self.dest.seek(0, io.SEEK_SET)
+            file_header.write_to(self.dest)
+            assert self.dest.tell() == end_of_header_pos
 
 
 class LazrsPointWriter(IPointWriter):
     """
-    Compressed point writer using lasrs backend
+    Compressed point writer using lazrs backend
     """
 
     def __init__(

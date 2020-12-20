@@ -100,10 +100,10 @@ class LasHeader:
     DEFAULT_POINT_FORMAT = PointFormat(3)
 
     def __init__(
-            self,
-            *,
-            version: Optional[Version] = None,
-            point_format: Optional[PointFormat] = None,
+        self,
+        *,
+        version: Optional[Version] = None,
+        point_format: Optional[PointFormat] = None,
     ) -> None:
         if version is None and point_format is None:
             version = LasHeader.DEFAULT_VERSION
@@ -284,7 +284,7 @@ class LasHeader:
         self.add_extra_dims([params])
 
     def set_version_and_point_format(
-            self, version: Version, point_format: PointFormat
+        self, version: Version, point_format: PointFormat
     ) -> None:
         dims.raise_if_version_not_compatible_with_fmt(point_format.id, str(version))
         self._version = version
@@ -328,7 +328,7 @@ class LasHeader:
         )
 
         for return_number, count in zip(
-                *np.unique(points.return_number, return_counts=True)
+            *np.unique(points.return_number, return_counts=True)
         ):
             if return_number == 0:
                 continue

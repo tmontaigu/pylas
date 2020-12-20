@@ -5,18 +5,9 @@ import numpy as np
 
 from .known import vlr_factory, IKnownVLR
 from .vlr import VLR
+from ..utils import encode_to_len
 
 logger = logging.getLogger(__name__)
-
-
-def encode_to_len(string: str, wanted_len: int) -> bytes:
-    encoded_str = string.encode()
-
-    missing_bytes = wanted_len - len(encoded_str)
-    if missing_bytes < 0:
-        raise ValueError(f"encoded str does not fit in {wanted_len} bytes")
-
-    return encoded_str + (b"\0" * missing_bytes)
 
 
 class VLRList:
@@ -230,9 +221,13 @@ class VLRList:
             if as_extended:
                 if len(record_data) > np.iinfo("uint16").max:
                     raise ValueError("vlr record_data is too long")
-                stream.write(len(record_data).to_bytes(8, byteorder="little", signed=False))
+                stream.write(
+                    len(record_data).to_bytes(8, byteorder="little", signed=False)
+                )
             else:
-                stream.write(len(record_data).to_bytes(2, byteorder="little", signed=False))
+                stream.write(
+                    len(record_data).to_bytes(2, byteorder="little", signed=False)
+                )
             stream.write(encode_to_len(vlr.description, 32))
             stream.write(record_data)
 

@@ -1,4 +1,5 @@
 import abc
+import io
 import logging
 from typing import Optional, BinaryIO, Iterable, Union
 
@@ -91,6 +92,7 @@ class LasReader:
                 raise errors.PylasError(
                     "source must be seekable, to read evlrs form LAZ file"
                 )
+            self.point_source.source.seek(self.header.start_of_first_evlr, io.SEEK_SET)
             las_data.evlrs = self._read_evlrs(self.point_source.source, seekable=True)
 
         return las_data
