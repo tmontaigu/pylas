@@ -1,74 +1,22 @@
 import logging
-from typing import BinaryIO, Type, List
+from typing import BinaryIO, List
+
+import numpy as np
 
 from .known import vlr_factory, IKnownVLR
-from .rawvlr import RawVLR
+from .vlr import VLR
 
 logger = logging.getLogger(__name__)
 
 
-class RawVLRList:
-    """A RawVLRList is like a VLR list but it should only
-    hold RawVLRs.
+def encode_to_len(string: str, wanted_len: int) -> bytes:
+    encoded_str = string.encode()
 
-    This class is meant to make it easier to write VLRS the the file and know in advance
-    the size in bytes taken by all the VLRs combined
+    missing_bytes = wanted_len - len(encoded_str)
+    if missing_bytes < 0:
+        raise ValueError(f"encoded str does not fit in {wanted_len} bytes")
 
-    """
-
-    def __init__(self, iterable=None):
-        if iterable is not None:
-            self.vlrs = list(iterable)
-        else:
-            self.vlrs = []
-
-    def append(self, raw_vlr):
-        self.vlrs.append(raw_vlr)
-
-    def __len__(self):
-        return len(self.vlrs)
-
-    def total_size_in_bytes(self):
-        return sum(v.size_in_bytes() for v in self.vlrs)
-
-    def write_to(self, out_stream: BinaryIO):
-        """Writes all the raw vlrs contained in list to
-        the out_stream
-
-        Parameters
-        ----------
-        out_stream: io.RawIOBase
-            The stream where vlrs will be written to
-
-        """
-        for vlr in self.vlrs:
-            vlr.write_to(out_stream)
-
-    def __iter__(self):
-        return iter(self.vlrs)
-
-    @classmethod
-    def from_list(cls, vlrs):
-        """Construct a RawVLR list from a list of vlrs
-
-        Parameters
-        ----------
-        vlrs: iterable of VLR
-
-        Returns
-        -------
-        RawVLRList
-
-        """
-        raw_vlrs = cls()
-        for vlr in vlrs:
-            raw = RawVLR()
-            raw.header.user_id = vlr.user_id.encode("utf8")
-            raw.header.description = vlr.description.encode("utf8")
-            raw.header.record_id = vlr.record_id
-            raw.record_data = vlr.record_data_bytes()
-            raw_vlrs.append(raw)
-        return raw_vlrs
+    return encoded_str + (b"\0" * missing_bytes)
 
 
 class VLRList:
@@ -226,7 +174,9 @@ class VLRList:
         return "[{}]".format(", ".join(repr(vlr) for vlr in self.vlrs))
 
     @classmethod
-    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> "VLRList":
+    def read_from(
+            cls, data_stream: BinaryIO, num_to_read: int, extended: bool = False
+    ) -> "VLRList":
         """Reads vlrs and parse them if possible from the stream
 
         Parameters
@@ -236,6 +186,9 @@ class VLRList:
         num_to_read : int
                       number of vlrs to be read
 
+        extended : bool
+                      whether the vlrs are regular vlr or extended vlr
+
         Returns
         -------
         pylas.vlrs.vlrlist.VLRList
@@ -244,10 +197,49 @@ class VLRList:
         """
         vlrlist = cls()
         for _ in range(num_to_read):
-            raw = RawVLR.read_from(data_stream)
-            vlrlist.append(vlr_factory(raw))
+            data_stream.read(2)
+            user_id = data_stream.read(16).decode().rstrip("\0")
+            record_id = int.from_bytes(
+                data_stream.read(2), byteorder="little", signed=False
+            )
+            if extended:
+                record_data_len = int.from_bytes(
+                    data_stream.read(8), byteorder="little", signed=False
+                )
+            else:
+                record_data_len = int.from_bytes(
+                    data_stream.read(2), byteorder="little", signed=False
+                )
+            description = data_stream.read(32).decode().rstrip("\0")
+            record_data_bytes = data_stream.read(record_data_len)
+
+            vlr = VLR(user_id, record_id, description, record_data_bytes)
+
+            vlrlist.append(vlr_factory(vlr))
 
         return vlrlist
+
+    def write_to(self, stream: BinaryIO, as_extended: bool = False) -> int:
+        bytes_written = 0
+        for vlr in self.vlrs:
+            record_data = vlr.record_data_bytes()
+
+            stream.write(b"\0\0")
+            stream.write(encode_to_len(vlr.user_id, 16))
+            stream.write(vlr.record_id.to_bytes(2, byteorder="little", signed=False))
+            if as_extended:
+                if len(record_data) > np.iinfo("uint16").max:
+                    raise ValueError("vlr record_data is too long")
+                stream.write(len(record_data).to_bytes(8, byteorder="little", signed=False))
+            else:
+                stream.write(len(record_data).to_bytes(2, byteorder="little", signed=False))
+            stream.write(encode_to_len(vlr.description, 32))
+            stream.write(record_data)
+
+            bytes_written += 54 if not as_extended else 60
+            bytes_written += len(record_data)
+
+        return bytes_written
 
     @classmethod
     def from_list(cls, vlr_list):

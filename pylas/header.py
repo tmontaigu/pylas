@@ -1,8 +1,9 @@
 import enum
+import io
 import logging
 import struct
 from datetime import date, timedelta
-from typing import NamedTuple, BinaryIO, Optional, Tuple, List
+from typing import NamedTuple, BinaryIO, Optional, List
 from uuid import UUID
 
 import numpy as np
@@ -18,7 +19,7 @@ from .point import dims
 from .point.format import PointFormat, ExtraBytesParams
 from .point.record import PackedPointRecord
 from .vlrs.known import ExtraBytesStruct, ExtraBytesVlr
-from .vlrs.vlrlist import VLRList, RawVLRList
+from .vlrs.vlrlist import VLRList
 
 logger = logging.getLogger(__name__)
 
@@ -99,10 +100,10 @@ class LasHeader:
     DEFAULT_POINT_FORMAT = PointFormat(3)
 
     def __init__(
-        self,
-        *,
-        version: Optional[Version] = None,
-        point_format: Optional[PointFormat] = None,
+            self,
+            *,
+            version: Optional[Version] = None,
+            point_format: Optional[PointFormat] = None,
     ) -> None:
         if version is None and point_format is None:
             version = LasHeader.DEFAULT_VERSION
@@ -283,7 +284,7 @@ class LasHeader:
         self.add_extra_dims([params])
 
     def set_version_and_point_format(
-        self, version: Version, point_format: PointFormat
+            self, version: Version, point_format: PointFormat
     ) -> None:
         dims.raise_if_version_not_compatible_with_fmt(point_format.id, str(version))
         self._version = version
@@ -327,7 +328,7 @@ class LasHeader:
         )
 
         for return_number, count in zip(
-            *np.unique(points.return_number, return_counts=True)
+                *np.unique(points.return_number, return_counts=True)
         ):
             if return_number == 0:
                 continue
@@ -458,8 +459,9 @@ class LasHeader:
 
     def write_to(self, stream: BinaryIO) -> None:
         little_endian = "little"
-        raw_vlrs = RawVLRList.from_list(self.vlrs)
-        assert len(raw_vlrs) == len(self.vlrs)
+        with io.BytesIO() as tmp:
+            self.vlrs.write_to(tmp)
+            vlr_bytes = tmp.getvalue()
 
         stream.write(LAS_FILE_SIGNATURE)
         stream.write(self.file_source_id.to_bytes(2, little_endian, signed=False))
@@ -499,11 +501,11 @@ class LasHeader:
         )
 
         header_size = LAS_HEADERS_SIZE[str(self.version)]
-        self.offset_to_point_data = header_size + raw_vlrs.total_size_in_bytes()
+        self.offset_to_point_data = header_size + len(vlr_bytes)
 
         stream.write(header_size.to_bytes(2, little_endian, signed=False))
         stream.write(self.offset_to_point_data.to_bytes(4, little_endian, signed=False))
-        stream.write(len(raw_vlrs).to_bytes(4, little_endian, signed=False))
+        stream.write(len(self.vlrs).to_bytes(4, little_endian, signed=False))
 
         point_format_id = self.point_format.id
         if self.are_points_compressed:
@@ -559,7 +561,7 @@ class LasHeader:
                     )
                 )
 
-        raw_vlrs.write_to(stream)
+        stream.write(vlr_bytes)
 
     def _sync_extra_bytes_vlr(self) -> None:
         try:

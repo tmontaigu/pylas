@@ -1,15 +1,15 @@
 import io
 import math
-from typing import Union, Iterable, BinaryIO
+from typing import Union, Iterable, BinaryIO, Optional
 
 import numpy as np
 
 from .compression import LazBackend
 from .errors import PylasError
-from .evlrs import EVLRList, RawEVLRList
+from .header import LasHeader
 from .laswriter import UncompressedPointWriter
 from .point.record import PackedPointRecord
-from .header import LasHeader
+from .vlrs.vlrlist import VLRList
 
 try:
     import lazrs
@@ -99,13 +99,13 @@ class LazrsAppender:
 
 class LasAppender:
     def __init__(
-        self,
-        dest: BinaryIO,
-        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-            LazBackend.LazrsParallel,
-            LazBackend.Lazrs,
-        ),
-        closefd: bool = True,
+            self,
+            dest: BinaryIO,
+            laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
+                    LazBackend.LazrsParallel,
+                    LazBackend.Lazrs,
+            ),
+            closefd: bool = True,
     ) -> None:
         if not dest.seekable():
             raise TypeError("Expected the 'dest' to be a seekable file object")
@@ -126,15 +126,17 @@ class LasAppender:
 
         if header.version.minor >= 4 and header.number_of_evlrs > 0:
             assert (
-                self.dest.tell() <= self.header.start_of_first_evlr
+                    self.dest.tell() <= self.header.start_of_first_evlr
             ), "The position is past the start of evlrs"
             pos = self.dest.tell()
             self.dest.seek(self.header.start_of_first_evlr, io.SEEK_SET)
-            self.evlrs = EVLRList.read_from(self.dest, self.header.number_of_evlrs)
+            self.evlrs: Optional[VLRList] = VLRList.read_from(
+                self.dest, self.header.number_of_evlrs, extended=True
+            )
             dest.seek(self.header.start_of_first_evlr, io.SEEK_SET)
             self.dest.seek(pos, io.SEEK_SET)
-        elif header.version.minor >= 4:
-            self.evlrs = []
+        else:
+            self.evlrs: Optional[VLRList] = None
 
         self.closefd = closefd
 
@@ -154,11 +156,10 @@ class LasAppender:
             self.dest.close()
 
     def _write_evlrs(self) -> None:
-        if self.header.version.minor >= 4 and len(self.evlrs) > 0:
+        if self.header.version.minor >= 4 and self.evlrs is not None and len(self.evlrs) > 0:
             self.header.number_of_evlr = len(self.evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
-            raw_evlrs = RawEVLRList.from_list(self.evlrs)
-            raw_evlrs.write_to(self.dest)
+            self.evlrs.write_to(self.dest, as_extended=True)
 
     def _write_updated_header(self) -> None:
         pos = self.dest.tell()
@@ -167,11 +168,11 @@ class LasAppender:
         self.dest.seek(pos, io.SEEK_SET)
 
     def _create_laz_backend(
-        self,
-        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-            LazBackend.LazrsParallel,
-            LazBackend.Lazrs,
-        ),
+            self,
+            laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
+                    LazBackend.LazrsParallel,
+                    LazBackend.Lazrs,
+            ),
     ) -> LazrsAppender:
         try:
             laz_backend = iter(laz_backend)

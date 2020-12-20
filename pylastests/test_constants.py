@@ -2,10 +2,6 @@ import pylas
 from pylas import PointFormat
 
 
-def test_vlr_header_size():
-    assert pylas.vlrs.rawvlr.VLR_HEADER_SIZE == 54
-
-
 def test_lost_dims():
     assert set(pylas.point.format.lost_dimensions(3, 0)) == {
         "red",

@@ -4,7 +4,6 @@ import logging
 
 from . import errors, vlrs
 from .errors import PylasError
-from .evlrs import EVLR
 from .laswriter import LasWriter
 from .lib import LazBackend, convert
 from .lib import create_las as create
@@ -16,5 +15,6 @@ from .point.dims import supported_point_formats, supported_versions
 from .point.format import lost_dimensions
 from .header import LasHeader
 from .lasdata import LasData
+from .vlrs import VLR
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())

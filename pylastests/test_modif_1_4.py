@@ -38,8 +38,7 @@ def test_writing_las_with_evlrs():
     las = pylas.read(test1_4_las)
     assert las.evlrs == []
 
-    evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
-    evlr.record_data = b"And so he grinds his own hands"
+    evlr = pylas.VLR(user_id="pylastest", record_id=42, description="Just a test", record_data=b"And so he grinds his own hands")
     las.evlrs.append(evlr)
 
     las_1 = write_then_read_again(las, do_compress=False)
@@ -51,8 +50,7 @@ def test_writing_laz_with_evlrs(laz_backend):
     las = pylas.read(test1_4_las)
     assert las.evlrs == []
 
-    evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
-    evlr.record_data = b"And so he grinds his own hands"
+    evlr = pylas.VLR(user_id="pylastest", record_id=42, description="Just a test", record_data=b"And so he grinds he own hands")
     las.evlrs.append(evlr)
 
     if laz_backend == LazBackend.Laszip:

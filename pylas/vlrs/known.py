@@ -11,7 +11,7 @@ from typing import List, Optional, Any, Tuple, Dict
 
 import numpy as np
 
-from .rawvlr import NULL_BYTE, BaseVLR, VLR
+from .vlr import BaseVLR, VLR
 from ..extradims import (
     get_type_for_extra_dim,
     get_kind_of_extra_dim,
@@ -22,6 +22,8 @@ from ..point.format import ExtraBytesParams
 abstractmethod = abc.abstractmethod
 
 logger = logging.getLogger(__name__)
+
+NULL_BYTE = b"\0"
 
 
 class IKnownVLR(abc.ABC):
@@ -80,7 +82,7 @@ class IKnownVLR(abc.ABC):
         pass
 
 
-class BaseKnownVLR(BaseVLR, IKnownVLR):
+class BaseKnownVLR(BaseVLR, IKnownVLR, abc.ABC):
     """Base Class to factorize common code between the different type of Known VLRs"""
 
     def __init__(self, record_id=None, description=""):
@@ -91,11 +93,11 @@ class BaseKnownVLR(BaseVLR, IKnownVLR):
         )
 
     @classmethod
-    def from_raw(cls, raw):
-        vlr = cls()
-        vlr.description = raw.header.description.decode("ascii")
-        vlr.parse_record_data(raw.record_data)
-        return vlr
+    def from_raw(cls, raw: VLR):
+        know_vlr = cls()
+        know_vlr._description = raw.description
+        know_vlr.parse_record_data(raw.record_data)
+        return know_vlr
 
 
 class ClassificationLookupVlr(BaseKnownVLR):
@@ -588,22 +590,22 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
         return (2112,)
 
 
-def vlr_factory(raw_vlr):
-    """Given a raw_vlr tries to find its corresponding KnownVLR class
+def vlr_factory(vlr: VLR):
+    """Given a vlr tries to find its corresponding KnownVLR class
     that can parse its data.
-    If no KnownVLR implementation is found, returns a VLR (record_data will still be bytes)
+    If no KnownVLR implementation is found, returns the input vlr unchanged
     """
-    user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
+    user_id = vlr.user_id
     known_vlrs = BaseKnownVLR.__subclasses__()
     for known_vlr in known_vlrs:
         if (
             known_vlr.official_user_id() == user_id
-            and raw_vlr.header.record_id in known_vlr.official_record_ids()
+            and vlr.record_id in known_vlr.official_record_ids()
         ):
             try:
-                return known_vlr.from_raw(raw_vlr)
+                return known_vlr.from_raw(vlr)
             except Exception as err:
                 logger.warning(f"Failed to parse {known_vlr}: {err}")
-                return VLR.from_raw(raw_vlr)
+                return vlr
 
-    return VLR.from_raw(raw_vlr)
+    return vlr

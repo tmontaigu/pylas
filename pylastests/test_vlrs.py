@@ -1,9 +1,6 @@
-import io
-
 import pytest
 
 import pylas
-from pylas.evlrs import RawEVLR, EVLR_HEADER_SIZE, EVLRList, EVLR, RawEVLRList
 from pylastests import test_common
 
 
@@ -51,43 +48,3 @@ def test_adding_extra_bytes_vlr_by_hand():
     las = pylas.lib.write_then_read_again(simple)
     assert simple.points.point_size == las.points.point_size
     assert len(las.vlrs.get("ExtraBytesVlr")) == 0
-
-
-def test_raw_evlr_read_write():
-    raw_evlr = RawEVLR()
-    raw_evlr.header.user_id = b"Ascalon"
-    raw_evlr.header.record_id = 17
-
-    assert raw_evlr.size_in_bytes() == EVLR_HEADER_SIZE
-
-    with io.BytesIO() as o:
-        raw_evlr.write_to(o)
-        o.seek(0)
-
-        assert len(o.getvalue()) == EVLR_HEADER_SIZE
-
-        r = RawEVLR.read_from(o)
-    assert raw_evlr == r
-
-
-def test_evlr():
-    evlr = EVLR(user_id="pylastest", record_id=42, description="Just a test")
-    evlr.record_data = b"While he grinds his own hands"
-
-    evlrs = EVLRList()
-    evlrs.append(evlr)
-
-    raws_evlrs = RawEVLRList.from_list(evlrs)
-    assert len(raws_evlrs) == 1
-
-    raw = next(iter(raws_evlrs))
-    assert raw.header.user_id == b"pylastest"
-    assert raw.header.record_id == 42
-    assert raw.header.description == b"Just a test"
-    assert raw.header.record_length_after_header == len(evlr.record_data)
-    assert raw.record_data == evlr.record_data
-
-    with io.BytesIO() as o:
-        raws_evlrs.write_to(o)
-
-        assert len(o.getvalue()) == raw.size_in_bytes()

@@ -2,12 +2,13 @@ import abc
 import logging
 from typing import Optional, BinaryIO, Iterable, Union
 
-from . import errors, evlrs
+from . import errors
 from .compression import LazBackend
 from .header import LasHeader
 from .lasdata import LasData
 from .point import record
 from .vlrs.known import LasZipVlr
+from .vlrs.vlrlist import VLRList
 
 try:
     import lazrs
@@ -132,7 +133,7 @@ class LasReader:
             except errors.LazError as e:
                 logger.error(e)
 
-    def _read_evlrs(self, source, seekable=False) -> Optional[evlrs.EVLRList]:
+    def _read_evlrs(self, source, seekable=False) -> Optional[VLRList]:
         """Reads the EVLRs of the file, will fail if the file version
         does not support evlrs
         """
@@ -142,7 +143,7 @@ class LasReader:
         ):
             if seekable:
                 source.seek(self.header.start_of_first_evlr)
-            return evlrs.EVLRList.read_from(source, self.header.number_of_evlrs)
+            return VLRList.read_from(source, self.header.number_of_evlrs, extended=True)
         else:
             return None
 

@@ -8,12 +8,12 @@ import numpy as np
 
 from .compression import LazBackend
 from .errors import PylasError
-from .evlrs import EVLRList, RawEVLRList
 from .header import LasHeader
 from .point import dims
 from .point.format import PointFormat
 from .point.record import PackedPointRecord
 from .vlrs.known import LasZipVlr
+from .vlrs.vlrlist import VLRList
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class LasWriter:
         self.header.update(points)
         self.point_writer.write_points(points)
 
-    def write_evlrs(self, evlrs: EVLRList) -> None:
+    def write_evlrs(self, evlrs: VLRList) -> None:
         if self.header.version.minor < 4:
             raise PylasError(
                 "EVLRs are not supported on files with version less than 1.4"
@@ -89,8 +89,7 @@ class LasWriter:
             self.done = True
             self.header.number_of_evlrs = len(evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
-            raw_evlrs = RawEVLRList.from_list(evlrs)
-            raw_evlrs.write_to(self.dest)
+            evlrs.write_to(self.dest, as_extended=True)
 
     def close(self) -> None:
         if self.point_writer is not None:

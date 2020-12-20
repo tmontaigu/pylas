@@ -43,9 +43,9 @@ class LasData:
         self.points: record.PackedPointRecord
         self.header: LasHeader = header
         if header.version.minor >= 4:
-            self.evlrs: Optional[List] = []
+            self.evlrs: Optional[VLRList] = VLRList()
         else:
-            self.evlrs: Optional[List] = None
+            self.evlrs: Optional[VLRList] = None
 
     @property
     def x(self) -> ScaledArrayView:
