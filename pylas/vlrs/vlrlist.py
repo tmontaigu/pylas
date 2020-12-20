@@ -10,28 +10,21 @@ from ..utils import encode_to_len
 logger = logging.getLogger(__name__)
 
 
-class VLRList:
+class VLRList(list):
     """Class responsible for managing the vlrs"""
 
-    def __init__(self):
-        self.vlrs = []
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def append(self, vlr):
-        """append a vlr to the list
-
-        Parameters
-        ----------
-        vlr: RawVlR or VLR or KnownVlr
-
-        Returns
-        -------
-
-        """
-        self.vlrs.append(vlr)
-
-    def extend(self, vlr_list):
-        """append all elements of the vlr_list into self"""
-        self.vlrs.extend(vlr_list)
+    def index(self, value, start: int = 0, stop: int = None) -> int:
+        if stop is None:
+            stop = len(self)
+        if isinstance(value, str):
+            for i, vlr in enumerate(self[start: stop]):
+                if vlr.__class__.__name__ == value:
+                    return i + start
+        else:
+            return super().index(value, start, stop)
 
     def get_by_id(self, user_id="", record_ids=(None,)):
         """Function to get vlrs by user_id and/or record_ids.
@@ -68,17 +61,17 @@ class VLRList:
         if user_id != "" and record_ids != (None,):
             return [
                 vlr
-                for vlr in self.vlrs
+                for vlr in self
                 if vlr.user_id == user_id and vlr.record_id in record_ids
             ]
         else:
             return [
                 vlr
-                for vlr in self.vlrs
+                for vlr in self
                 if vlr.user_id == user_id or vlr.record_id in record_ids
             ]
 
-    def get(self, vlr_type):
+    def get(self, vlr_type: str) -> List[IKnownVLR]:
         """Returns the list of vlrs of the requested type
         Always returns a list even if there is only one VLR of type vlr_type.
 
@@ -108,7 +101,7 @@ class VLRList:
             a List of vlrs matching the user_id and records_ids
 
         """
-        return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
+        return [v for v in self if v.__class__.__name__ == vlr_type]
 
     def extract(self, vlr_type: str) -> List[IKnownVLR]:
         """Returns the list of vlrs of the requested type
@@ -126,43 +119,17 @@ class VLRList:
 
         """
         kept_vlrs, extracted_vlrs = [], []
-        for vlr in self.vlrs:
+        for vlr in self:
             if vlr.__class__.__name__ == vlr_type:
                 extracted_vlrs.append(vlr)
             else:
                 kept_vlrs.append(vlr)
-        self.vlrs = kept_vlrs
+        self.clear()
+        self.extend(kept_vlrs)
         return extracted_vlrs
 
-    def pop(self, index):
-        return self.vlrs.pop(index)
-
-    def index(self, vlr_type):
-        for i, v in enumerate(self.vlrs):
-            if v.__class__.__name__ == vlr_type:
-                return i
-        raise ValueError("{} is not in the VLR list".format(vlr_type))
-
-    def copy(self):
-        vlrs = VLRList()
-        vlrs.vlrs = self.vlrs.copy()
-        return vlrs
-
-    def __iter__(self):
-        yield from iter(self.vlrs)
-
-    def __getitem__(self, item):
-        return self.vlrs[item]
-
-    def __len__(self):
-        return len(self.vlrs)
-
-    def __eq__(self, other):
-        if isinstance(other, list):
-            return self.vlrs == other
-
     def __repr__(self):
-        return "[{}]".format(", ".join(repr(vlr) for vlr in self.vlrs))
+        return "[{}]".format(", ".join(repr(vlr) for vlr in self))
 
     @classmethod
     def read_from(
@@ -212,7 +179,7 @@ class VLRList:
 
     def write_to(self, stream: BinaryIO, as_extended: bool = False) -> int:
         bytes_written = 0
-        for vlr in self.vlrs:
+        for vlr in self:
             record_data = vlr.record_data_bytes()
 
             stream.write(b"\0\0")
@@ -235,9 +202,3 @@ class VLRList:
             bytes_written += len(record_data)
 
         return bytes_written
-
-    @classmethod
-    def from_list(cls, vlr_list):
-        vlrs = cls()
-        vlrs.vlrs = vlr_list
-        return vlrs
