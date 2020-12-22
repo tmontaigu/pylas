@@ -6,6 +6,7 @@ pylas package
 .. autofunction:: open
 .. autofunction:: create
 .. autofunction:: convert
+.. autoclass:: LasReader
 
 
 Submodules
@@ -14,14 +15,13 @@ Submodules
 .. toctree::
 
    pylas.lib
-   pylas.lasdatas
+   pylas.header
    pylas.lasreader
+   pylas.lasdata
    pylas.vlrs.vlrlist
    pylas.point.record
-   pylas.evlrs
    pylas.errors
    pylas.compression
-   pylas.headers
    pylas.point.format
    pylas.vlrs.known
    pylas.lasmmap

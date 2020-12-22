@@ -5,6 +5,7 @@ import logging
 from . import errors, vlrs
 from .errors import PylasError
 from .laswriter import LasWriter
+from .lasreader import LasReader
 from .lib import LazBackend, convert
 from .lib import create_las as create
 from .lib import mmap_las as mmap

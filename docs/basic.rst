@@ -2,7 +2,6 @@
 Basic Manipulation
 ==================
 
-
 Opening & Reading
 =================
 
@@ -18,7 +17,7 @@ that you can use to access to the data.
     print(np.unique(las.classification))
 
 pylas can also :func:`pylas.open` files reading just the header and vlrs but not the points, this is useful
-if you need metada informations that are contained in the header.
+if you are interested in metadas that are contained in the header and do not need to read the points.
 
 .. code:: python
 
@@ -46,8 +45,6 @@ processing on large files (splitting, filtering, etc)
 
 
 
-
-
 Converting
 ==========
 
@@ -66,9 +63,9 @@ Use :func:`pylas.create`.
 Writing
 =======
 
-To be able to write a las file you will need a :class:`pylas.lasdatas.base.LasBase` (or one if its subclasses).
-You obtain this type of object by using one of the function above,
-use its method :meth:`pylas.lasdatas.base.LasBase.write` to write to a file or a stream.
+To be able to write a las file you will need a :class:`pylas.lasdata.LasData`.
+You obtain this type of object by using one of the function described in the section above
+use its method :meth:`pylas.lasdata.LasData.write` to write to a file or a stream.
 
 
 Similar to :class:`pylas.lasreader.LasReader` there exists a way to write a file
@@ -105,7 +102,7 @@ You can access the header of a las file you read or opened by retrieving the 'he
 
 
 
-you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_1` and its sub-classes.
+you can see the accessible fields in :class:`pylas.header.LasHeader` and its sub-classes.
 
 
 Accessing Points Records

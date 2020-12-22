@@ -18,7 +18,8 @@ except ModuleNotFoundError:
 
 
 class LazrsAppender:
-    """Appending in LAZ file works by seeking to start of the last chunk
+    """Appending in LAZ file
+    works by seeking to start of the last chunk
     of compressed points, decompress it while keeping the points in
     memory.
 
@@ -98,6 +99,10 @@ class LazrsAppender:
 
 
 class LasAppender:
+    """ Allows to append points to and existing LAS/LAZ file.
+
+    Appending to LAZ is only supported by the lazrs backend
+    """
     def __init__(
         self,
         dest: BinaryIO,
@@ -141,6 +146,12 @@ class LasAppender:
         self.closefd = closefd
 
     def append_points(self, points: PackedPointRecord) -> None:
+        """ Append the points to the file, the points
+        must have the same point format as the points
+        already contained within the file.
+
+        :param points: The points to append
+        """
         if points.point_format != self.header.point_format:
             raise PylasError("Point formats do not match")
 

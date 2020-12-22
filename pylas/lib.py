@@ -29,7 +29,16 @@ def open_las(
     header=None,
     do_compress=None,
 ) -> Union[LasReader, LasWriter, LasAppender]:
-    """Opens and reads the header of the las content in the source
+    """ The pylas.open opens a LAS/LAZ file in one of the 3 supported
+    mode:
+
+     - "r" => Reading => a :class:`pylas.LasReader` will be returned
+     - "w" => Writing => a :class:`pylas.LasWriter` will be returned
+     - "a" => Appending => a :class:`pylas.LasAppender` will be returned
+
+
+    When opening a file in 'w' mode, a header (:class:`pylas.LasHeader`)
+    is required
 
         >>> with open_las('pylastests/simple.las') as f:
         ...     print(f.header.point_format.id)
@@ -57,32 +66,28 @@ def open_las(
     ----------
     source: str or bytes or io.BytesIO
         if source is a str it must be a filename
-        a stream if a file object with the methods read, seek, tell
 
-    mode: Optional, the mode to open the file "r" for reading, "w" for writing
-          "r" by default
+    mode: Optional, the mode to open the file:
+        - "r" for reading (default)
+        - "w" for writing
+        - "a" for appending
 
     laz_backend: Optional, the LAZ backend to use to handle decompression/comression
-                 By default available_backends are detected, see LazBacked to see the
-                 preference order when multiple backends are available
+
+        By default available backends are detected, see LazBackend to see the
+        preference order when multiple backends are available
 
     header: The header to use when opening in write mode.
 
-    do_compress: optional, bool
-                 -> None (default) guess if compression is needed using the file extension
-                 -> True compresses the file
-                 -> False do not compress the file
+    do_compress: optional, bool, only meaningful in writing mode:
+        - None (default) guess if compression is needed using the file extension
+        - True compresses the file
+        - False do not compress the file
 
-    closefd: bool
+    closefd: optional, bool, True by default
         Whether the stream/file object shall be closed, this only work
         when using open_las in a with statement. An exception is raised if
         closefd is specified and the source is a filename
-
-
-    Returns
-    -------
-    pylas.lasreader.LasReader
-
     """
     if mode == "r":
         if header is not None:
@@ -170,8 +175,7 @@ def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
 
 
 def mmap_las(filename):
-    """MMap a file, much like laspy did, very experimental
-    not well tested
+    """MMap a file, much like laspy did
     """
     return LasMMAP(filename)
 

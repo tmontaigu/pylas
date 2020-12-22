@@ -10,6 +10,7 @@ Another way of reading LAS/LAZ in Python.
 
 .. image:: https://travis-ci.org/tmontaigu/pylas.svg?branch=master
 
+
 Example
 -------
 
@@ -28,19 +29,27 @@ Example
             las = f.read()
     print(las.vlrs)
 
-Some rough documentation is available on ReadTheDocs_ .
+Documentation is hosted on ReadTheDocs_ .
 
 .. _ReadTheDocs: http://pylas.readthedocs.io/en/latest/index.html
+
+
+Installation
+------------
+
+See the Installation_ section of the documentation:
+
+.. _Installation: https://pylas.readthedocs.io/en/latest/installation.html
 
 Dependencies & Requirements
 ---------------------------
 
-Python 3 Only.
+Supported CPython versions are: 3.6, 3.7, 3.8, 3.9
 
-lazperf_ is an optional, but recommended dependency that allows pylas to read and write compressed LAZ files.
+pylas supports LAS natively,to support LAZ it needs one of its supported backend to be installed:
 
-.. _lazperf: https://github.com/hobu/laz-perf
-
+ - lazrs
+ - laszip
 
 
 Installation

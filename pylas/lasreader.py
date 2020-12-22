@@ -57,6 +57,12 @@ class LasReader:
         self.points_read = 0
 
     def read_n_points(self, n: int) -> Optional[record.ScaleAwarePointRecord]:
+        """ Read n points from the file
+
+        Parameters
+        ----------
+        n: The number of points to read
+        """
         points_left = self.header.point_count - self.points_read
         if points_left <= 0:
             return None

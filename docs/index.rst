@@ -51,8 +51,8 @@ User Guide
 .. toctree::
     :maxdepth: 2
 
-    intro
     installation
+    intro
     basic
     examples
     lessbasic

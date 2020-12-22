@@ -65,7 +65,7 @@ and an array field of 3 doubles for each points.
 
 .. note::
 
-   If you are adding multiple extra dimensions use :meth:`pylas.LasBase.add_extra_dims`
+   If you are adding multiple extra dimensions use :meth:`pylas.LasData.add_extra_dims`
    as it is more efficient (it allows to allocate all the dimensions at once instead
    of re-allocating each time a new dimension is added.
 
