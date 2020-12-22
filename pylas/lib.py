@@ -182,7 +182,7 @@ def mmap_las(filename):
 
 def create_las(
     *,
-    point_format: Union[int, PointFormat] = PointFormat(0),
+    point_format: Optional[Union[int, PointFormat]] = None,
     file_version: Optional[Union[str, Version]] = None
 ):
     """Function to create a new empty las data object
@@ -227,13 +227,8 @@ def create_las(
     if isinstance(point_format, int):
         point_format = PointFormat(point_format)
 
-    if file_version is not None:
-        dims.raise_if_version_not_compatible_with_fmt(point_format.id, file_version)
-    else:
-        file_version = dims.min_file_version_for_point_format(point_format.id)
-
     header = LasHeader(
-        point_format=point_format, version=Version.from_str(file_version)
+        point_format=point_format, version=file_version
     )
     return LasData(header=header)
 
