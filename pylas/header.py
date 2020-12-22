@@ -569,8 +569,12 @@ class LasHeader:
         except IndexError:
             pass
 
+        extra_dimensions = list(self.point_format.extra_dimensions)
+        if not extra_dimensions:
+            return
+
         eb_vlr = ExtraBytesVlr()
-        for extra_dimension in self.point_format.extra_dimensions:
+        for extra_dimension in extra_dimensions:
             type_str = extra_dimension.type_str()
             assert type_str is not None
 
