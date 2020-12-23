@@ -535,7 +535,7 @@ class SubFieldView:
                 f"value {np.max(value)} is greater than allowed (max: {self.max_value_allowed})"
             )
         self.array[key] &= ~self.bit_mask
-        self.array[key] |= value << self.lsb
+        self.array[key] |= np.array(value, copy=False) << self.lsb
 
     def __getitem__(self, item):
         return SubFieldView(self.array[item], int(self.bit_mask))

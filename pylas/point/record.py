@@ -202,22 +202,7 @@ class PackedPointRecord:
     def __setitem__(self, key: str, value):
         """Sets elements in the array"""
         self._append_zeros_if_too_small(value)
-        try:
-            composed_dim, sub_field = self.sub_fields_dict[key]
-            if isinstance(value, SubFieldView):
-                value = np.array(value)
-            try:
-                packing.pack(
-                    self.array[composed_dim], value, sub_field.mask, inplace=True
-                )
-            except OverflowError as e:
-                raise OverflowError(
-                    "Overflow when packing {} into {}: {}".format(
-                        sub_field.name, composed_dim, e
-                    )
-                )
-        except KeyError:
-            self.array[key] = np.array(value)
+        self[key][:] = value
 
     def __getattr__(self, item):
         try:

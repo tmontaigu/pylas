@@ -15,7 +15,6 @@ def test_number_of_points_return_is_updated(all_las_but_1_4):
     for i in reversed(range(nb_slice)):
         r[i * (nb_points // nb_slice) : (i + 1) * (nb_points // nb_slice)] = i + 1
 
-    las.return_number = r
     las = test_common.write_then_read_again(las)
 
     assert (

@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import numpy as np
@@ -188,3 +187,20 @@ def test_slicing(las):
 @pytest.mark.parametrize("do_compress", do_compression)
 def test_can_write_then_re_read_files(las, do_compress):
     _las = write_then_read_again(las, do_compress=do_compress)
+
+
+def test_point_record_setitem_scaled_view():
+    las = pylas.read("pylastests/simple.las")
+    las.add_extra_dim(
+        pylas.ExtraBytesParams(
+            'lol',
+            'uint64',
+            scales=np.array([2.0]),
+            offsets=np.array([0.0])
+        )
+    )
+
+    new_values = np.ones(len(las.points)) * 4
+    las.lol = new_values
+
+    assert np.allclose(las.lol, new_values)
