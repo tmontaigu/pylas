@@ -1,5 +1,5 @@
-def encode_to_len(string: str, wanted_len: int) -> bytes:
-    encoded_str = string.encode()
+def encode_to_len(string: str, wanted_len: int, codec='ascii') -> bytes:
+    encoded_str = string.encode(codec)
 
     missing_bytes = wanted_len - len(encoded_str)
     if missing_bytes < 0:

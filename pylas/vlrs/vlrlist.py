@@ -9,6 +9,10 @@ from ..utils import encode_to_len
 
 logger = logging.getLogger(__name__)
 
+RESERVED_LEN = 2
+USER_ID_LEN = 16
+DESCRIPTION_LEN = 32
+
 
 class VLRList(list):
     """Class responsible for managing the vlrs"""
@@ -155,8 +159,8 @@ class VLRList(list):
         """
         vlrlist = cls()
         for _ in range(num_to_read):
-            data_stream.read(2)
-            user_id = data_stream.read(16).decode().rstrip("\0")
+            data_stream.read(RESERVED_LEN)
+            user_id = data_stream.read(USER_ID_LEN).decode().rstrip("\0")
             record_id = int.from_bytes(
                 data_stream.read(2), byteorder="little", signed=False
             )
@@ -168,7 +172,7 @@ class VLRList(list):
                 record_data_len = int.from_bytes(
                     data_stream.read(2), byteorder="little", signed=False
                 )
-            description = data_stream.read(32).decode().rstrip("\0")
+            description = data_stream.read(DESCRIPTION_LEN).decode().rstrip("\0")
             record_data_bytes = data_stream.read(record_data_len)
 
             vlr = VLR(user_id, record_id, description, record_data_bytes)
@@ -183,7 +187,7 @@ class VLRList(list):
             record_data = vlr.record_data_bytes()
 
             stream.write(b"\0\0")
-            stream.write(encode_to_len(vlr.user_id, 16))
+            stream.write(encode_to_len(vlr.user_id, USER_ID_LEN))
             stream.write(vlr.record_id.to_bytes(2, byteorder="little", signed=False))
             if as_extended:
                 if len(record_data) > np.iinfo("uint16").max:
@@ -195,7 +199,7 @@ class VLRList(list):
                 stream.write(
                     len(record_data).to_bytes(2, byteorder="little", signed=False)
                 )
-            stream.write(encode_to_len(vlr.description, 32))
+            stream.write(encode_to_len(vlr.description, DESCRIPTION_LEN))
             stream.write(record_data)
 
             bytes_written += 54 if not as_extended else 60
