@@ -7,7 +7,7 @@
 pylas: Python library for lidar LAS/LAZ IO.
 ===========================================
 
-A popular format for lidar pointcloud and full waveform data is `LAS`_, and it's compressed counterpart LAZ.
+`LAS`_ (and it's compressed counterpart LAZ), is a popular format for lidar pointcloud and full waveform,
 pylas reads and writes these formats and provides a Python API via Numpy Arrays.
 
 .. _LAS: https://www.asprs.org/committee-general/laser-las-file-format-exchange-activities.html

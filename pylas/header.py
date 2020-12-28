@@ -94,9 +94,26 @@ class LasHeader:
     stored in more ergonomic classes.
 
     This header also contains the VLRs
+
+    Examples
+    --------
+
+    Creating a default header:
+
+    >>> header = LasHeader()
+    >>> header
+    <LasHeader(1.2, <PointFormat(3, 0 bytes of extra dims)>)>
+
+    Creating a header with the wanted version and point format:
+
+    >>> header = LasHeader(version=Version(1, 4), point_format=PointFormat(6))
+    >>> header
+    <LasHeader(1.4, <PointFormat(6, 0 bytes of extra dims)>)>
     """
 
+    #: The default version used when None is given to init
     DEFAULT_VERSION = Version(1, 2)
+    #: The default point format Used when None is given to init
     DEFAULT_POINT_FORMAT = PointFormat(3)
 
     def __init__(
@@ -116,34 +133,52 @@ class LasHeader:
             )
         dims.raise_if_version_not_compatible_with_fmt(point_format.id, str(version))
 
+        #: File source id
         self.file_source_id: int = 0
         self.global_encoding: GlobalEncoding = GlobalEncoding()
+        #: Project ID
+        #: Initialized to null UUID
         self.uuid: UUID = UUID(bytes_le=b"\0" * 16)
         self._version: Version = version
+        #: System identifier
+        #: Initialized to 'OTHER'
         self.system_identifier: str = "OTHER"
+        #: The software which generated the file
+        #: Initialized to 'pylas'
         self.generating_software: str = "pylas"
         self._point_format: PointFormat = point_format
+        #: Day the file was created, initialized to date.today()
         self.creation_date: Optional[date] = date.today()
+        #: The number of points in the file
         self.point_count: int = 0
+        #: The numbers used to scale the x,y,z coordinates
         self.scales: np.ndarray = np.array([0.01, 0.01, 0.01], dtype=np.float64)
+        #: The numbers used to offset the x,y,z coordinates
         self.offsets: np.ndarray = np.zeros(3, dtype=np.float64)
+        # The max values for x,y,z
         self.maxs: np.ndarray = np.zeros(3, dtype=np.float64)
+        # The min values for x,y,z
         self.mins: np.ndarray = np.zeros(3, dtype=np.float64)
 
+        #: Number of points by return
+        #: for las <= 1.2 only the first 5 elements matters
         self.number_of_points_by_return: np.ndarray = np.zeros(15, dtype=np.uint32)
 
+        #: The VLRS
         self.vlrs: VLRList = VLRList()
 
-        # Extra bytes between end of header and first vlrs
+        #: Extra bytes between end of header and first vlrs
         self.extra_header_bytes: bytes = b""
-        # Extra bytes between end of vlr end first point
+        #: Extra bytes between end of vlr end first point
         self.extra_vlr_bytes: bytes = b""
 
-        # Las >= 1.3
+        #: Las >= 1.3
         self.start_of_waveform_data_packet_record: int = 0
 
-        # Las >= 1.4
+        #: Las >= 1.4
+        #: Offset to the first evlr in the file
         self.start_of_first_evlr: int = 0
+        #: The number of evlrs in the file
         self.number_of_evlrs: int = 0
 
         # Info we keep because its useful for us but not the user
@@ -154,6 +189,8 @@ class LasHeader:
 
     @property
     def point_format(self) -> PointFormat:
+        """ The point format
+        """
         return self._point_format
 
     @point_format.setter
@@ -166,6 +203,8 @@ class LasHeader:
 
     @property
     def version(self) -> Version:
+        """ The version
+        """
         return self._version
 
     @version.setter

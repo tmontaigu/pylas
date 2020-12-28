@@ -103,24 +103,13 @@ class LasData:
     def vlrs(self) -> VLRList:
         return self.header.vlrs
 
-    def change_scaling(self, scales=None, offsets=None) -> None:
-        if scales is None:
-            scales = self.header.scales
-        if offsets is None:
-            offsets = self.header.offsets
-
-        record.apply_new_scaling(self, scales, offsets)
-
-        self.header.scales = scales
-        self.header.offsets = offsets
-
     def add_extra_dim(self, params: ExtraBytesParams) -> None:
         """Adds a new extra dimension to the point record
 
         .. note::
 
             If you plan on adding multiple extra dimensions,
-            prefer :meth:`pylas.LasBase.add_extra_dims` as it will
+            prefer :meth:`.add_extra_dims` as it will
             save re-allocations and data copy
 
         Parameters
@@ -250,6 +239,17 @@ class LasData:
             writer.write(self.points)
             if self.header.version.minor >= 4 and self.evlrs is not None:
                 writer.write_evlrs(self.evlrs)
+
+    def change_scaling(self, scales=None, offsets=None) -> None:
+        if scales is None:
+            scales = self.header.scales
+        if offsets is None:
+            offsets = self.header.offsets
+
+        record.apply_new_scaling(self, scales, offsets)
+
+        self.header.scales = scales
+        self.header.offsets = offsets
 
     def __getattr__(self, item):
         """Automatically called by Python when the attribute

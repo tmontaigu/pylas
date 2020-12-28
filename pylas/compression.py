@@ -10,8 +10,11 @@ class LazBackend(enum.Enum):
     # type_hint = Union[LazBackend, Iterable[LazBackend]]
 
     LazrsParallel = 0
+    """lazrs in multi-thread mode"""
     Lazrs = 1
+    """lazrs in single-thread mode"""
     Laszip = 2
+    """laszip backend"""
 
     def is_available(self) -> bool:
         """Returns true if the backend is available"""

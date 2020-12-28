@@ -42,3 +42,11 @@ This example shows how you can create a new LAS file from scratch.
     las.write('diagonal.las')
 
 
+Using chunked reading & writing
+-------------------------------
+
+This example shows how to use the 'chunked' reading and writing feature
+to split potentially large LAS/LAZ file into multiple smaller file.
+
+.. literalinclude:: ../examples/recursive-split.py
+    :language: Python

@@ -1,7 +1,11 @@
 pylas.lasdata module
 ======================
 
-.. automodule:: pylas.lasdata
+
+LasData
+-------
+
+.. autoclass:: pylas.lasdata.LasData
     :members:
     :undoc-members:
     :show-inheritance:

@@ -47,6 +47,7 @@ class BaseVLR(IVLR, ABC):
 class VLR(BaseVLR):
     def __init__(self, user_id, record_id, description="", record_data=b""):
         super().__init__(user_id, record_id, description=description)
+        #: The record_data as bytes
         self.record_data = record_data
 
     def record_data_bytes(self) -> bytes:
