@@ -12,7 +12,7 @@ setup(
     author="Thomas Montaigu",
     author_email="thomas.montaigu@laposte.net",
     python_requires=">=3.6",
-    keywords="las lidar",
+    keywords="las laz lidar",
     license="BSD 3-Clause",
     packages=find_packages(exclude=("pylastests",)),
     zip_safe=False,
@@ -21,10 +21,14 @@ setup(
         "dev": [
             "pytest",
             "sphinx",
-            "sphinx-rtd-theme"
+            "sphinx-rtd-theme",
+            "nox"
         ],
         "lazrs": [
-            "lazrs>=0.2.1, < 0.3.0"
+            "lazrs>=0.2.3, < 0.3.0"
+        ],
+        "laszip": [
+            "laszip >= 0.1.0, < 0.2.0"
         ]
     }
 )
