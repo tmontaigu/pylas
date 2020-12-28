@@ -17,6 +17,7 @@ from typing import (
     TypeVar,
     Generic,
     List,
+    Union,
 )
 
 import numpy as np
@@ -210,7 +211,6 @@ COMPOSED_FIELDS_0: Dict[str, List[SubField]] = {
     ],
 }
 
-
 COMPOSED_FIELDS_6: Dict[str, List[SubField]] = {
     "bit_fields": [
         SubField("return_number", RETURN_NUMBER_MASK_6),
@@ -316,22 +316,40 @@ class DimensionInfo(NamedTuple):
     num_bits: int
     num_elements: int = 1
     is_standard: bool = True
+    description: str = ""
+    offsets: Optional[np.ndarray] = None
+    scales: Optional[np.ndarray] = None
 
     @classmethod
     def from_type_str(
-        cls, name: str, type_str: str, is_standard: bool = True
+        cls,
+        name: str,
+        type_str: str,
+        is_standard: bool = True,
+        description: str = "",
+        offsets: Optional[np.ndarray] = None,
+        scales: Optional[np.ndarray] = None,
     ) -> "DimensionInfo":
         first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
         if first_digits:
             num_elements = int(first_digits)
-            type_str = type_str[len(first_digits):]
+            type_str = type_str[len(first_digits) :]
         else:
             num_elements = 1
 
+        dtype = np.dtype(type_str)
         kind = DimensionKind.from_letter(type_str[0])
-        num_bits = int(type_str[1:]) * 8 * num_elements
-
-        return cls(name, kind, num_bits, num_elements, is_standard)
+        num_bits = num_elements * dtype.itemsize * 8
+        return cls(
+            name,
+            kind,
+            num_bits,
+            num_elements,
+            is_standard,
+            description=description,
+            offsets=offsets,
+            scales=scales,
+        )
 
     @classmethod
     def from_bitmask(
@@ -391,6 +409,10 @@ def min_file_version_for_point_format(point_format_id: int) -> str:
         if point_format_id in point_formats:
             return version
     raise errors.PointFormatNotSupported(point_format_id)
+
+
+def min_point_format_for_version(version: str) -> int:
+    return VERSION_TO_POINT_FMT[version][0]
 
 
 def supported_versions() -> Set[str]:
@@ -513,7 +535,7 @@ class SubFieldView:
                 f"value {np.max(value)} is greater than allowed (max: {self.max_value_allowed})"
             )
         self.array[key] &= ~self.bit_mask
-        self.array[key] |= value << self.lsb
+        self.array[key] |= np.array(value, copy=False) << self.lsb
 
     def __getitem__(self, item):
         return SubFieldView(self.array[item], int(self.bit_mask))
@@ -523,7 +545,12 @@ class SubFieldView:
 
 
 class ScaledArrayView:
-    def __init__(self, array, scale: float, offset: float) -> None:
+    def __init__(
+        self,
+        array: np.ndarray,
+        scale: Union[float, np.ndarray],
+        offset: Union[float, np.ndarray],
+    ) -> None:
         self.array = array
         self.scale = scale
         self.offset = offset
@@ -559,7 +586,7 @@ class ScaledArrayView:
                 top_level_args = converted_args
                 arg = [arg]
             top_level_args.extend(
-                a.array if isinstance(a, ScaledArrayView) else a for a in arg
+                np.array(a) if isinstance(a, ScaledArrayView) else a for a in arg
             )
 
         args = converted_args
@@ -567,10 +594,8 @@ class ScaledArrayView:
         if ret is not None:
             if isinstance(ret, np.ndarray) and ret.dtype != np.bool:
                 return self.__class__(ret, self.scale, self.offset)
-            if isinstance(ret, (bool, np.bool)):
-                return ret
             else:
-                return self._apply_scale(ret)
+                return ret
         return ret
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
@@ -628,23 +653,30 @@ class ScaledArrayView:
     def __getitem__(self, item):
         if isinstance(item, int):
             return self._apply_scale(self.array[item])
-        return self.__class__(self.array[item], self.scale, self.offset)
+        elif isinstance(item, slice):
+            return self.__class__(self.array[item], self.scale, self.offset)
+        else:
+            return self.__class__(self.array[item], self.scale[item], self.offset[item])
 
     def __setitem__(self, key, value):
         if isinstance(value, ScaledArrayView):
             iinfo = np.iinfo(self.array.dtype)
             if value.array.max() > iinfo.max or value.array.min() < iinfo.min:
                 raise OverflowError(
-                    "Values given do not fit after applying offest and scale"
+                    "Values given do not fit after applying offset and scale"
                 )
             self.array[key] = value.array[key]
         else:
-            iinfo = np.iinfo(self.array.dtype)
+            try:
+                info = np.iinfo(self.array.dtype)
+            except ValueError:
+                info = np.finfo(self.array.dtype)
+
             new_max = self._remove_scale(np.max(value))
             new_min = self._remove_scale(np.min(value))
-            if new_max > iinfo.max or new_min < iinfo.min:
+            if np.all(new_max > info.max) or np.all(new_min < info.min):
                 raise OverflowError(
-                    "Values given do not fit after applying offest and scale"
+                    "Values given do not fit after applying offset and scale"
                 )
             self.array[key] = self._remove_scale(value)
 

@@ -2,7 +2,6 @@
 Basic Manipulation
 ==================
 
-
 Opening & Reading
 =================
 
@@ -18,7 +17,7 @@ that you can use to access to the data.
     print(np.unique(las.classification))
 
 pylas can also :func:`pylas.open` files reading just the header and vlrs but not the points, this is useful
-if you need metada informations that are contained in the header.
+if you are interested in metadas that are contained in the header and do not need to read the points.
 
 .. code:: python
 
@@ -32,8 +31,8 @@ if you need metada informations that are contained in the header.
 
 
 Sometimes files are big, too big to be read entirely and fit into your RAM.
-The object returned by the :func:`pylas.open` function, :class:`pylas.lasreader.LasReader`
-can also be used to read points chunk by chunk by using :meth:`pylas.lasreader.LasReader.chunk_iterator`, which will allow you to do some
+The object returned by the :func:`pylas.open` function, :class:`.LasReader`
+can also be used to read points chunk by chunk by using :meth:`.LasReader.chunk_iterator`, which will allow you to do some
 processing on large files (splitting, filtering, etc)
 
 .. code:: python
@@ -43,8 +42,6 @@ processing on large files (splitting, filtering, etc)
     with pylas.open("some_big_file.laz") as f:
         for points in f.chunk_iterator(1_000_000):
             do_something_with(points)
-
-
 
 
 
@@ -66,12 +63,12 @@ Use :func:`pylas.create`.
 Writing
 =======
 
-To be able to write a las file you will need a :class:`pylas.lasdatas.base.LasBase` (or one if its subclasses).
-You obtain this type of object by using one of the function above,
-use its method :meth:`pylas.lasdatas.base.LasBase.write` to write to a file or a stream.
+To be able to write a las file you will need a :class:`.LasData`.
+You obtain this type of object by using one of the function described in the section above
+use its method :meth:`.LasData.write` to write to a file or a stream.
 
 
-Similar to :class:`pylas.lasreader.LasReader` there exists a way to write a file
+Similar to :class:`.LasReader` there exists a way to write a file
 chunk by chunk.
 
 
@@ -94,7 +91,7 @@ You can access the header of a las file you read or opened by retrieving the 'he
 >>> import pylas
 >>> las = pylas.read('pylastests/simple.las')
 >>> las.header
-<LasHeader(1.2)>
+<LasHeader(1.2, <PointFormat(3, 0 bytes of extra dims)>)>
 >>> las.header.point_count
 1065
 
@@ -105,7 +102,7 @@ You can access the header of a las file you read or opened by retrieving the 'he
 
 
 
-you can see the accessible fields in :class:`pylas.headers.rawheader.RawHeader1_1` and its sub-classes.
+you can see the accessible fields in :class:`.LasHeader`.
 
 
 Accessing Points Records
@@ -179,9 +176,9 @@ To access the VLRs stored in a file, simply access the `vlr` member of the las o
 [<ExtraBytesVlr(extra bytes structs: 5)>]
 
 >>> with pylas.open('pylastests/extrabytes.las') as f:
-...     f.vlrs
+...     f.header.vlrs
 [<ExtraBytesVlr(extra bytes structs: 5)>]
 
 
-To retrieve a particular vlr from the list there are 2 ways: :meth:`pylas.vlrs.vlrlist.VLRList.get` and
-:meth:`pylas.vlrs.vlrlist.VLRList.get_by_id`
+To retrieve a particular vlr from the list there are 2 ways: :meth:`.VLRList.get` and
+:meth:`.VLRList.get_by_id`

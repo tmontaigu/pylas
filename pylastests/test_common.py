@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import numpy as np
@@ -67,22 +66,20 @@ def dim_does_exists(las, dim_name):
     return True
 
 
-# TODO: should propably use ALL_POiNTS_FORMATS_DIMS dict
-# to do this test
 def test_change_format(las):
     in_version = las.header.version
 
     las = pylas.convert(las, point_format_id=2)
     las = write_then_read_again(las)
     assert las.points.point_format.id == 2
-    assert las.header.point_format_id == 2
+    assert las.header.point_format.id == 2
     assert las.header.version == in_version
     assert dim_does_not_exists(las, "gps_time")
 
     las = pylas.convert(las, point_format_id=1)
     las = write_then_read_again(las)
     assert las.points.point_format.id == 1
-    assert las.header.point_format_id == 1
+    assert las.header.point_format.id == 1
     assert las.header.version == in_version
     assert dim_does_not_exists(las, "red")
     assert dim_does_not_exists(las, "green")
@@ -91,7 +88,7 @@ def test_change_format(las):
     las = pylas.convert(las, point_format_id=0)
     las = write_then_read_again(las)
     assert las.points.point_format.id == 0
-    assert las.header.point_format_id == 0
+    assert las.header.point_format.id == 0
     assert las.header.version == in_version
     assert dim_does_not_exists(las, "red")
     assert dim_does_not_exists(las, "green")
@@ -100,9 +97,9 @@ def test_change_format(las):
 
     las = pylas.convert(las, point_format_id=8)
     las = write_then_read_again(las)
-    assert las.header.version == "1.4"
+    assert str(las.header.version) == "1.4"
     assert las.points.point_format.id == 8
-    assert las.header.point_format_id == 8
+    assert las.header.point_format.id == 8
     assert dim_does_exists(las, "red")
     assert dim_does_exists(las, "green")
     assert dim_does_exists(las, "blue")
@@ -110,9 +107,9 @@ def test_change_format(las):
 
     las = pylas.convert(las, point_format_id=7)
     las = write_then_read_again(las)
-    assert las.header.version == "1.4"
+    assert str(las.header.version) == "1.4"
     assert las.points.point_format.id == 7
-    assert las.header.point_format_id == 7
+    assert las.header.point_format.id == 7
     assert dim_does_exists(las, "red")
     assert dim_does_exists(las, "green")
     assert dim_does_exists(las, "blue")
@@ -120,52 +117,25 @@ def test_change_format(las):
 
     las = pylas.convert(las, point_format_id=6)
     las = write_then_read_again(las)
-    assert las.header.version == "1.4"
+    assert str(las.header.version) == "1.4"
     assert las.points.point_format.id == 6
-    assert las.header.point_format_id == 6
+    assert las.header.point_format.id == 6
     assert dim_does_not_exists(las, "red")
     assert dim_does_not_exists(las, "green")
     assert dim_does_not_exists(las, "blue")
     assert dim_does_not_exists(las, "nir")
 
 
-def test_conversion_file_version():
-    las = pylas.create(point_format_id=0, file_version="1.4")
-    las2 = pylas.convert(las, file_version="1.2")
-
-    assert las.points.point_format == las2.points.point_format
-    for dim_name in las.points.point_format.dimension_names:
-        assert np.allclose(
-            las.points[dim_name], las2.points[dim_name]
-        ), "{} not equal".format(dim_name)
-
-
-def test_conversion_copies_fields(all_las_but_1_4):
-    las = all_las_but_1_4
-    for i in (0, 1, 2, 3, 2, 1, 0):
-        old_record = las.points
-        las = pylas.convert(las, point_format_id=i)
-        las = write_then_read_again(las)
-
-        for dim_name in old_record.dimensions_names:
-            try:
-                assert np.allclose(
-                    las.points[dim_name], old_record[dim_name]
-                ), "{} not equal".format(dim_name)
-            except ValueError:
-                pass  # dim exists in old_record but not new
-
-
 def test_rw_all_set_one(las):
-    for dim_name in las.points.dimensions_names:
+    for dim_name in las.point_format.dimension_names:
         las[dim_name][:] = 1
 
-    for dim_name in las.points.dimensions_names:
+    for dim_name in las.point_format.dimension_names:
         assert np.alltrue(las[dim_name] == 1), "{} not equal".format(dim_name)
 
     las2 = write_then_read_again(las)
 
-    for dim_name in las.points.dimensions_names:
+    for dim_name in las.point_format.dimension_names:
         assert np.alltrue(las[dim_name] == las2[dim_name]), "{} not equal".format(
             dim_name
         )
@@ -199,7 +169,7 @@ def test_coords_when_setting_offsets_and_scales(las):
 
 
 def test_coords_when_using_create_from_header(las):
-    new_las = pylas.create_from_header(las.header)
+    new_las = pylas.LasData(las.header)
 
     new_las.x = las.x
     new_las.y = las.y
@@ -211,9 +181,26 @@ def test_coords_when_using_create_from_header(las):
 
 
 def test_slicing(las):
-    las.points = las.points[len(las.points) // 2 :]
+    las.points = las.points[len(las.points) // 2:]
 
 
 @pytest.mark.parametrize("do_compress", do_compression)
 def test_can_write_then_re_read_files(las, do_compress):
     _las = write_then_read_again(las, do_compress=do_compress)
+
+
+def test_point_record_setitem_scaled_view():
+    las = pylas.read("pylastests/simple.las")
+    las.add_extra_dim(
+        pylas.ExtraBytesParams(
+            'lol',
+            'uint64',
+            scales=np.array([2.0]),
+            offsets=np.array([0.0])
+        )
+    )
+
+    new_values = np.ones(len(las.points)) * 4
+    las.lol = new_values
+
+    assert np.allclose(las.lol, new_values)

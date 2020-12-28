@@ -1,7 +1,10 @@
 pylas.lasreader module
 ======================
 
-.. automodule:: pylas.lasreader
+LasReader
+---------
+
+.. autoclass:: pylas.lasreader.LasReader
     :members:
     :undoc-members:
     :show-inheritance:

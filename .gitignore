@@ -10,3 +10,4 @@ pylas.egg-info/
 .pytest_cache/
 .cache/
 .mypy_cache/
+.nox

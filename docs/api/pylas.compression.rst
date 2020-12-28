@@ -1,7 +1,10 @@
 pylas.compression module
 ========================
 
-.. automodule:: pylas.compression
+LazBackend
+----------
+
+.. autoclass:: pylas.compression.LazBackend
     :members:
     :undoc-members:
     :show-inheritance:

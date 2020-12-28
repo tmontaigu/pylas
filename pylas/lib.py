@@ -6,18 +6,16 @@ import io
 import logging
 import os
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 
-import numpy as np
-
-from . import headers, utils
 from .compression import LazBackend
 from .errors import PylasError
-from .lasdatas import las12, las14
+from .header import LasHeader, Version
+from .lasappender import LasAppender
+from .lasdata import LasData
 from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .laswriter import LasWriter
-from .lasappender import LasAppender
 from .point import dims, record, PointFormat
 
 logger = logging.getLogger(__name__)
@@ -31,17 +29,26 @@ def open_las(
     header=None,
     do_compress=None,
 ) -> Union[LasReader, LasWriter, LasAppender]:
-    """Opens and reads the header of the las content in the source
+    """ The pylas.open opens a LAS/LAZ file in one of the 3 supported
+    mode:
+
+     - "r" => Reading => a :class:`pylas.LasReader` will be returned
+     - "w" => Writing => a :class:`pylas.LasWriter` will be returned
+     - "a" => Appending => a :class:`pylas.LasAppender` will be returned
+
+
+    When opening a file in 'w' mode, a header (:class:`pylas.LasHeader`)
+    is required
 
         >>> with open_las('pylastests/simple.las') as f:
-        ...     print(f.header.point_format_id)
+        ...     print(f.header.point_format.id)
         3
 
 
         >>> f = open('pylastests/simple.las', mode='rb')
         >>> with open_las(f,closefd=False) as flas:
         ...     print(flas.header)
-        <LasHeader(1.2)>
+        <LasHeader(1.2, <PointFormat(3, 0 bytes of extra dims)>)>
         >>> f.closed
         False
         >>> f.close()
@@ -59,32 +66,28 @@ def open_las(
     ----------
     source: str or bytes or io.BytesIO
         if source is a str it must be a filename
-        a stream if a file object with the methods read, seek, tell
 
-    mode: Optional, the mode to open the file "r" for reading, "w" for writing
-          "r" by default
+    mode: Optional, the mode to open the file:
+        - "r" for reading (default)
+        - "w" for writing
+        - "a" for appending
 
     laz_backend: Optional, the LAZ backend to use to handle decompression/comression
-                 By default available_backends are detected, see LazBacked to see the
-                 preference order when multiple backends are available
+
+        By default available backends are detected, see LazBackend to see the
+        preference order when multiple backends are available
 
     header: The header to use when opening in write mode.
 
-    do_compress: optional, bool
-                 -> None (default) guess if compression is needed using the file extension
-                 -> True compresses the file
-                 -> False do not compress the file
+    do_compress: optional, bool, only meaningful in writing mode:
+        - None (default) guess if compression is needed using the file extension
+        - True compresses the file
+        - False do not compress the file
 
-    closefd: bool
+    closefd: optional, bool, True by default
         Whether the stream/file object shall be closed, this only work
         when using open_las in a with statement. An exception is raised if
         closefd is specified and the source is a filename
-
-
-    Returns
-    -------
-    pylas.lasreader.LasReader
-
     """
     if mode == "r":
         if header is not None:
@@ -172,35 +175,16 @@ def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
 
 
 def mmap_las(filename):
-    """MMap a file, much like laspy did, very experimental
-    not well tested
+    """MMap a file, much like laspy did
     """
     return LasMMAP(filename)
 
 
-def create_from_header(header):
-    """Creates a File from an existing header,
-    allocating the array of point according to the provided header.
-    The input header is copied.
-
-
-    Parameters
-    ----------
-    header : existing header to be used to create the file
-
-    Returns
-    -------
-    pylas.lasdatas.base.LasBase
-    """
-    header = copy.copy(header)
-    header.point_count = 0
-    points = record.PackedPointRecord.empty(PointFormat(header.point_format_id))
-    if header.version >= "1.4":
-        return las14.LasData(header=header, points=points)
-    return las12.LasData(header=header, points=points)
-
-
-def create_las(*, point_format_id=0, file_version=None):
+def create_las(
+    *,
+    point_format: Optional[Union[int, PointFormat]] = None,
+    file_version: Optional[Union[str, Version]] = None
+):
     """Function to create a new empty las data object
 
     .. note::
@@ -208,7 +192,7 @@ def create_las(*, point_format_id=0, file_version=None):
         If you provide both point_format and file_version
         an exception will be raised if they are not compatible
 
-    >>> las = create_las(point_format_id=6,file_version="1.2")
+    >>> las = create_las(point_format=6,file_version="1.2")
     Traceback (most recent call last):
      ...
     pylas.errors.PylasError: Point format 6 is not compatible with file version 1.2
@@ -217,21 +201,21 @@ def create_las(*, point_format_id=0, file_version=None):
     If you provide only the point_format the file_version will automatically
     selected for you.
 
-    >>> las = create_las(point_format_id=0)
+    >>> las = create_las(point_format=0)
     >>> las.header.version == '1.2'
     True
 
-    >>> las = create_las(point_format_id=6)
+    >>> las = create_las(point_format=PointFormat(6))
     >>> las.header.version == '1.4'
     True
 
 
     Parameters
     ----------
-    point_format_id: int
+    point_format:
         The point format you want the created file to have
 
-    file_version: str, optional, default=None
+    file_version:
         The las version you want the created las to have
 
     Returns
@@ -240,17 +224,13 @@ def create_las(*, point_format_id=0, file_version=None):
        A new las data object
 
     """
-    if file_version is not None:
-        dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
-    else:
-        file_version = dims.min_file_version_for_point_format(point_format_id)
+    if isinstance(point_format, int):
+        point_format = PointFormat(point_format)
 
-    header = headers.HeaderFactory.new(file_version)
-    header.point_format_id = point_format_id
-
-    if file_version >= "1.4":
-        return las14.LasData(header=header)
-    return las12.LasData(header=header)
+    header = LasHeader(
+        point_format=point_format, version=file_version
+    )
+    return LasData(header=header)
 
 
 def convert(source_las, *, point_format_id=None, file_version=None):
@@ -263,26 +243,26 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     >>> las = read_las('pylastests/simple.las')
     >>> las.header.version
-    '1.2'
+    Version(major=1, minor=2)
     >>> las = convert(las, point_format_id=0)
-    >>> las.header.point_format_id
+    >>> las.header.point_format.id
     0
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.2'
 
     convert to point format 6, which need version >= 1.4
     then convert back to point format 0, version is not downgraded
 
     >>> las = read_las('pylastests/simple.las')
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.2'
     >>> las = convert(las, point_format_id=6)
-    >>> las.header.point_format_id
+    >>> las.header.point_format.id
     6
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.4'
     >>> las = convert(las, point_format_id=0)
-    >>> las.header.version
+    >>> str(las.header.version)
     '1.4'
 
     an exception is raised if the requested point format is not compatible
@@ -316,99 +296,42 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
     if file_version is None:
         file_version = max(
-            source_las.header.version,
+            str(source_las.header.version),
             dims.min_file_version_for_point_format(point_format_id),
         )
     else:
         file_version = str(file_version)
         dims.raise_if_version_not_compatible_with_fmt(point_format_id, file_version)
 
-    header = headers.HeaderFactory.convert_header(source_las.header, file_version)
-    header.point_format_id = point_format_id
+    version = Version.from_str(file_version)
 
     point_format = PointFormat(point_format_id)
     point_format.dimensions.extend(source_las.point_format.extra_dimensions)
-    points = record.PackedPointRecord.from_point_record(source_las.points, point_format)
 
-    try:
-        evlrs = source_las.evlrs
-    except AttributeError:
-        evlrs = []
+    header = copy.deepcopy(source_las.header)
+    header.set_version_and_point_format(version, point_format)
 
-    if file_version >= "1.4":
+    if source_las.evlrs is not None:
+        evlrs = source_las.evlrs.copy()
+    else:
+        evlrs = None
 
-        las = las14.LasData(
-            header=header, vlrs=source_las.vlrs, points=points, evlrs=evlrs
+    points = record.PackedPointRecord.from_point_record(
+        source_las.points, header.point_format
+    )
+    las = LasData(header=header, points=points)
+
+    if file_version < "1.4" and evlrs is not None and evlrs:
+        logger.warning(
+            "The source contained {} EVLRs,"
+            " they will be lost as version {} doest not support them".format(
+                len(evlrs), file_version
+            )
         )
     else:
-        if evlrs:
-            logger.warning(
-                "The source contained {} EVLRs,"
-                " they will be lost as version {} doest not support them".format(
-                    len(evlrs), file_version
-                )
-            )
-        las = las12.LasData(header=header, vlrs=source_las.vlrs, points=points)
+        las.evlrs = evlrs
 
     return las
-
-
-def merge_las(*las_files):
-    """Merges multiple las files into one
-
-    merged = merge_las(las_1, las_2)
-    merged = merge_las([las_1, las_2, las_3])
-
-    Parameters
-    ----------
-    las_files: Iterable of LasData or LasData
-
-    Returns
-    -------
-    pylas.lasdatas.base.LasBase
-        The result of the merging
-
-    """
-    if len(las_files) == 1:
-        las_files = las_files[0]
-
-    if not las_files:
-        raise ValueError("No files to merge")
-
-    if not utils.files_have_same_dtype(las_files):
-        raise ValueError("All files must have the same point format")
-
-    header = las_files[0].header
-    num_pts_merged = sum(len(las.points) for las in las_files)
-
-    # scaled x, y, z have to be set manually
-    # to be sure to have a good offset in the header
-    merged = create_from_header(header)
-    # TODO extra dimensions should be managed better here
-
-    for dim_name, dim_type in las_files[0].points.point_format.extra_dims:
-        merged.add_extra_dim(dim_name, dim_type)
-
-    merged.points = np.zeros(num_pts_merged, merged.points.dtype)
-    merged_x = np.zeros(num_pts_merged, np.float64)
-    merged_y = np.zeros(num_pts_merged, np.float64)
-    merged_z = np.zeros(num_pts_merged, np.float64)
-
-    offset = 0
-    for i, las in enumerate(las_files, start=1):
-        slc = slice(offset, offset + len(las.points))
-        merged.points[slc] = las.points
-        merged_x[slc] = las.x
-        merged_y[slc] = las.y
-        merged_z[slc] = las.z
-        merged["point_source_id"][slc] = i
-        offset += len(las.points)
-
-    merged.x = merged_x
-    merged.y = merged_y
-    merged.z = merged_z
-
-    return merged
 
 
 def write_then_read_again(

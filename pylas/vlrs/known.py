@@ -7,18 +7,23 @@ import abc
 import ctypes
 import logging
 import struct
+from typing import List, Optional, Any, Tuple, Dict
 
-from .rawvlr import NULL_BYTE, BaseVLR, VLR
-from .. import extradims
+import numpy as np
+
+from .vlr import BaseVLR, VLR
 from ..extradims import (
     get_type_for_extra_dim,
     get_kind_of_extra_dim,
 )
-from ..point.dims import DimensionInfo, DimensionKind
+from ..point.dims import DimensionKind
+from ..point.format import ExtraBytesParams
 
 abstractmethod = abc.abstractmethod
 
 logger = logging.getLogger(__name__)
+
+NULL_BYTE = b"\0"
 
 
 class IKnownVLR(abc.ABC):
@@ -31,13 +36,13 @@ class IKnownVLR(abc.ABC):
 
     @staticmethod
     @abstractmethod
-    def official_user_id():
+    def official_user_id() -> str:
         """Shall return the official user_id as described in the documentation"""
         pass
 
     @staticmethod
     @abstractmethod
-    def official_record_ids():
+    def official_record_ids() -> Tuple[int, ...]:
         """Shall return the official record_id for the VLR
 
         .. note::
@@ -52,7 +57,7 @@ class IKnownVLR(abc.ABC):
         pass
 
     @abstractmethod
-    def record_data_bytes(self):
+    def record_data_bytes(self) -> bytes:
         """Shall return the bytes corresponding to the record_data part of the VLR
         as they should be written in the file.
 
@@ -65,7 +70,7 @@ class IKnownVLR(abc.ABC):
         pass
 
     @abstractmethod
-    def parse_record_data(self, record_data):
+    def parse_record_data(self, record_data: bytes) -> None:
         """Shall parse the given record_data into a user-friendlier structure
 
         Parameters
@@ -77,7 +82,7 @@ class IKnownVLR(abc.ABC):
         pass
 
 
-class BaseKnownVLR(BaseVLR, IKnownVLR):
+class BaseKnownVLR(BaseVLR, IKnownVLR, abc.ABC):
     """Base Class to factorize common code between the different type of Known VLRs"""
 
     def __init__(self, record_id=None, description=""):
@@ -88,11 +93,11 @@ class BaseKnownVLR(BaseVLR, IKnownVLR):
         )
 
     @classmethod
-    def from_raw(cls, raw):
-        vlr = cls()
-        vlr.description = raw.header.description.decode("ascii")
-        vlr.parse_record_data(raw.record_data)
-        return vlr
+    def from_raw(cls, raw: VLR):
+        know_vlr = cls()
+        know_vlr._description = raw.description
+        know_vlr.parse_record_data(raw.record_data)
+        return know_vlr
 
 
 class ClassificationLookupVlr(BaseKnownVLR):
@@ -109,17 +114,19 @@ class ClassificationLookupVlr(BaseKnownVLR):
 
     def __init__(self):
         super().__init__(description="Classification Lookup")
-        self.lookups = {}
+        self.lookups: Dict[int, str] = {}
 
-    def parse_record_data(self, record_data):
+    def parse_record_data(self, record_data: bytes) -> None:
         for class_id, desc in struct.iter_unpack("<B15s", record_data):
             # index using desc[i:i+1], because desc[i] gives an int, and we want a byte
             description = b"".join(
-                desc[i:i+1] for i in range(len(desc)) if desc[i:i+1].isalnum() or desc[i:i+1] == b' '
+                desc[i : i + 1]
+                for i in range(len(desc))
+                if desc[i : i + 1].isalnum() or desc[i : i + 1] == b" "
             ).decode()
             self.lookups[class_id] = description
 
-    def record_data_bytes(self):
+    def record_data_bytes(self) -> bytes:
         def lookup_converter(lookup_dict):
             for class_id, description in lookup_dict.items():
                 description_bytes = description.encode("ascii")
@@ -136,21 +143,21 @@ class ClassificationLookupVlr(BaseKnownVLR):
             for class_id, desc in lookup_converter(self.lookups)
         )
 
-    def __getitem__(self, class_id):
+    def __getitem__(self, class_id: int) -> str:
         return self.lookups[class_id]
 
-    def __setitem__(self, class_id, description):
+    def __setitem__(self, class_id: int, description: str):
         if class_id not in range(256):
             raise ValueError("Class id {} is not in range [0, 255]".format(class_id))
 
         self.lookups[class_id] = description
 
     @staticmethod
-    def official_user_id():
+    def official_user_id() -> str:
         return "LASF_Spec"
 
     @staticmethod
-    def official_record_ids():
+    def official_record_ids() -> Tuple[int, ...]:
         return (0,)
 
 
@@ -159,23 +166,23 @@ class LasZipVlr(BaseKnownVLR):
     to compress the point records.
     """
 
-    def __init__(self, data):
+    def __init__(self, data: bytes) -> None:
         super().__init__(description="http://laszip.org")
         self.record_data = data
 
-    def parse_record_data(self, record_data):
+    def parse_record_data(self, record_data: bytes) -> None:
         # Only laz backends know how to parse this
         pass
 
-    def record_data_bytes(self):
+    def record_data_bytes(self) -> bytes:
         return self.record_data
 
     @staticmethod
-    def official_user_id():
+    def official_user_id() -> str:
         return "laszip encoded"
 
     @staticmethod
-    def official_record_ids():
+    def official_record_ids() -> Tuple[int, ...]:
         return (22204,)
 
     @classmethod
@@ -194,14 +201,20 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         ("_no_data", (ctypes.c_byte * 8) * 3),
         ("_min", (ctypes.c_byte * 8) * 3),
         ("_max", (ctypes.c_byte * 8) * 3),
-        ("_scale", (ctypes.c_byte * 8) * 3),
-        ("_offset", (ctypes.c_byte * 8) * 3),
+        ("_scale", ctypes.c_double * 3),
+        ("_offset", ctypes.c_double * 3),
         ("description", ctypes.c_char * 32),
     ]
 
     _uint64t_struct = struct.Struct("<Q")
     _int64t_struct = struct.Struct("<q")
     _double_struct = struct.Struct("<d")
+
+    NO_DATA_BIT_MASK = 0b000_0001
+    MIN_BIT_MASK = 0b0000_0010
+    MAX_BIT_MASK = 0b0000_0100
+    SCALE_BIT_MASK = 0b000_1000
+    OFFSET_BIT_MASK = 0b0001_0000
 
     def _struct_parser_for_kind(self):
         signedness = get_kind_of_extra_dim(self.data_type)
@@ -219,35 +232,6 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         strct = self._struct_parser_for_kind()
         return tuple(strct.unpack(d)[0] for d in getattr(self, name))
 
-    @classmethod
-    def from_dimension_info(cls, info: DimensionInfo) -> "ExtraBytesStruct":
-        if info.is_standard:
-            raise ValueError("ExtraBytesStruct cannot describe standard dims")
-
-        if info.kind == DimensionKind.BitField:
-            raise ValueError("ExtraBytesStruct cannot describe bit fields")
-
-        type_str = info.type_str()
-        assert type_str is not None
-        if type_str.endswith("u1"):
-            extra_byte = cls(
-                data_type=0,
-                name=info.name.encode(),
-                description="".encode(),
-                options=int(type_str[:-2]),
-            )
-        else:
-            if info.num_elements > 3:
-                raise ValueError("Only u1 data type supports more than 3 elements")
-            type_id = extradims.get_id_for_extra_dim_type(type_str)
-            extra_byte = cls(
-                data_type=type_id,
-                name=info.name.encode(),
-                description="".encode(),
-            )
-
-        return extra_byte
-
     @property
     def no_data(self):
         return self._parse_special_property("_no_data")
@@ -261,20 +245,30 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
         return self._parse_special_property("_max")
 
     @property
-    def offset(self):
-        return self._parse_special_property("_offset")
+    def offset(self) -> Optional[Any]:
+        if self.options & self.OFFSET_BIT_MASK != 0:
+            return self._offset
+        return None
 
     @property
     def scale(self):
-        return self._parse_special_property("_scale")
+        if self.options & self.SCALE_BIT_MASK != 0:
+            return self._scale
+        return None
+
+    def set_scale_is_relevant(self) -> None:
+        self.options |= self.SCALE_BIT_MASK
+
+    def set_offset_is_relevant(self) -> None:
+        self.options |= self.OFFSET_BIT_MASK
 
     def format_name(self):
-        return self.name.rstrip(NULL_BYTE).decode().replace(" ", "_").replace("-", "_")
+        return self.name.rstrip(NULL_BYTE).decode()
 
-    def type_tuple(self):
+    def type_str(self):
         if self.data_type == 0:
-            return self.format_name(), "{}u1".format(self.options)
-        return self.format_name(), get_type_for_extra_dim(self.data_type)
+            return "{}u1".format(self.options)
+        return get_type_for_extra_dim(self.data_type)
 
     @staticmethod
     def size():
@@ -282,7 +276,7 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
 
     def __repr__(self):
         return "<ExtraBytesStruct({}, {}, {})>".format(
-            *self.type_tuple(), self.description
+            self.format_name(), self.data_type, self.description
         )
 
 
@@ -310,8 +304,27 @@ class ExtraBytesVlr(BaseKnownVLR):
             bytes(extra_struct) for extra_struct in self.extra_bytes_structs
         )
 
-    def type_of_extra_dims(self):
-        return [extra_dim.type_tuple() for extra_dim in self.extra_bytes_structs]
+    def type_of_extra_dims(self) -> List[ExtraBytesParams]:
+        dim_info_list: List[ExtraBytesParams] = []
+        for eb_struct in self.extra_bytes_structs:
+            scales = eb_struct.scale
+            if scales is not None:
+                scales = np.array(scales)
+
+            offsets = eb_struct.offset
+            if offsets is not None:
+                offsets = np.array(offsets)
+
+            dim_info_list.append(
+                ExtraBytesParams(
+                    eb_struct.format_name(),
+                    eb_struct.type_str(),
+                    description=eb_struct.description.rstrip(NULL_BYTE).decode(),
+                    scales=scales,
+                    offsets=offsets,
+                )
+            )
+        return dim_info_list
 
     def __repr__(self):
         return "<ExtraBytesVlr(extra bytes structs: {})>".format(
@@ -530,7 +543,10 @@ class WktMathTransformVlr(BaseKnownVLR):
         self.string = ""
 
     def _encode_string(self):
-        return self.string.encode("utf-8") + NULL_BYTE
+        byte_str = self.string.encode("utf-8")
+        if byte_str[-1] != 0:
+            byte_str += NULL_BYTE
+        return byte_str
 
     def parse_record_data(self, record_data):
         self.string = record_data.decode("utf-8")
@@ -574,22 +590,22 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
         return (2112,)
 
 
-def vlr_factory(raw_vlr):
-    """Given a raw_vlr tries to find its corresponding KnownVLR class
+def vlr_factory(vlr: VLR):
+    """Given a vlr tries to find its corresponding KnownVLR class
     that can parse its data.
-    If no KnownVLR implementation is found, returns a VLR (record_data will still be bytes)
+    If no KnownVLR implementation is found, returns the input vlr unchanged
     """
-    user_id = raw_vlr.header.user_id.rstrip(NULL_BYTE).decode()
+    user_id = vlr.user_id
     known_vlrs = BaseKnownVLR.__subclasses__()
     for known_vlr in known_vlrs:
         if (
             known_vlr.official_user_id() == user_id
-            and raw_vlr.header.record_id in known_vlr.official_record_ids()
+            and vlr.record_id in known_vlr.official_record_ids()
         ):
             try:
-                return known_vlr.from_raw(raw_vlr)
+                return known_vlr.from_raw(vlr)
             except Exception as err:
                 logger.warning(f"Failed to parse {known_vlr}: {err}")
-                return VLR.from_raw(raw_vlr)
+                return vlr
 
-    return VLR.from_raw(raw_vlr)
+    return vlr

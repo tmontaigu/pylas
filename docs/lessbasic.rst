@@ -9,7 +9,7 @@ Extra Dimensions
 The LAS Specification version 1.4 defines a standard way to add extra dimensions to
 a LAS file.
 
-In pylas you can add extra dimensions using the :meth:`pylas.lasdatas.base.LasBase.add_extra_dim` function
+In pylas you can add extra dimensions using the :meth:`pylas.lasdata.LasData.add_extra_dim` function
 
 
 The Allowed base types for an extra dimensions are:
@@ -52,9 +52,13 @@ and an array field of 3 doubles for each points.
     import pylas
     las = pylas.read("somefile.las")
 
-    las.add_extra_dim(name="codification", type="uint64", description="More classes available")
+    las.add_extra_dim(pylas.ExtraBytesParams(
+        name="codification",
+        type="uint64",
+        description="More classes available"
+    ))
 
-    las.add_extra_dim(name="mysterious", type="3f8")
+    las.add_extra_dim(pylas.ExtraBytesParams(name="mysterious", type="3f8"))
 
 
 
@@ -65,7 +69,7 @@ and an array field of 3 doubles for each points.
 
 .. note::
 
-   If you are adding multiple extra dimensions use :meth:`pylas.LasBase.add_extra_dims`
+   If you are adding multiple extra dimensions use :meth:`pylas.LasData.add_extra_dims`
    as it is more efficient (it allows to allocate all the dimensions at once instead
    of re-allocating each time a new dimension is added.
 

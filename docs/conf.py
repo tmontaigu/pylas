@@ -20,8 +20,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'pylas'
-copyright = '2018, pylas'
-author = 'pylas'
+copyright = '2018-2020, pylas'
+author = 'Thomas Montaigu'
 
 # Parse the version from setup.py.
 with open('../setup.py') as f:
@@ -53,7 +53,10 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx.ext.doctest',
+    # 'sphinx_autodoc_typehints'
 ]
+
+napoleon_use_param = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -82,6 +85,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+autodoc_member_order = 'bysource'
 
 # -- Options for HTML output -------------------------------------------------
 

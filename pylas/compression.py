@@ -1,7 +1,6 @@
 """ The functions related to the LAZ format (compressed LAS)
 """
 import enum
-import os
 from typing import Tuple
 
 
@@ -11,8 +10,11 @@ class LazBackend(enum.Enum):
     # type_hint = Union[LazBackend, Iterable[LazBackend]]
 
     LazrsParallel = 0
+    """lazrs in multi-thread mode"""
     Lazrs = 1
-    Laszip = 2  # laszip executable, used through a Popen
+    """lazrs in single-thread mode"""
+    Laszip = 2
+    """laszip backend"""
 
     def is_available(self) -> bool:
         """Returns true if the backend is available"""
@@ -25,8 +27,8 @@ class LazBackend(enum.Enum):
                 return True
         elif self == LazBackend.Laszip:
             try:
-                find_laszip_executable()
-            except FileNotFoundError:
+                import laszip
+            except ModuleNotFoundError:
                 return False
             else:
                 return True
@@ -34,7 +36,7 @@ class LazBackend(enum.Enum):
             return False
 
     @staticmethod
-    def detect_available() -> Tuple["LazBackend"]:
+    def detect_available() -> Tuple["LazBackend", ...]:
         """Returns a tuple containing the available backends in the current
         python environment
         """
@@ -64,16 +66,3 @@ def compressed_id_to_uncompressed(point_format_id: int) -> int:
 
 def uncompressed_id_to_compressed(point_format_id: int) -> int:
     return (2 ** 7) | point_format_id
-
-
-def find_laszip_executable() -> str:
-    laszip_names = ("laszip", "laszip.exe", "laszip-cli", "laszip-cli.exe")
-
-    for binary in laszip_names:
-        in_path = (
-            os.path.isfile(os.path.join(x, binary))
-            for x in os.environ["PATH"].split(os.pathsep)
-        )
-        if any(in_path):
-            return binary
-    raise FileNotFoundError("Could not find laszip executable")

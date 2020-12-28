@@ -20,35 +20,39 @@ The 2 supported options are:
 
 1) `lazrs`_ `[lazrs PyPi]`_
 
-2) `laszip.exe`_
+2) `laszip-python`_ (bindings to `laszip`_)
 
-When encountering LAZ data, pylas will try this options in the order described above.
+When encountering LAZ data, pylas will try to use one of the backend in the order described above.
 (Example: if lazrs is not installed or if it fails during, the process, pylas will try laszip)
 
 `lazrs`_ is a Rust port of the laszip compression and decompression.
 Its main advantage is that it is able to compress/decompress using multiple threads which can
 greatly speed up things.
 
-`laszip.exe`_  is the laszip executable from the original LAZ implementation found in `LAStools`_
-The advandage of `laszip.exe` is that its the official implementation, however due to the way it is
-used (pylas uses a python Popen and talks to the laszip exe via its stdin, stdout) there is some overhead
-giving slower compression / decompression times and a bit higher memory usage.
+`laszip`_  is the official and original LAZ implementation by Martin Isenburg.
+The advantage of the `laszip` backend is that its the official implementation,
+but does not offer multi-threaded compression/decompression.
 
 
-lazrs is available on pypi and can be installed via pip, for LAStools's laszip
-you have to either compile it yourself, download it from lastools website.
+Both the laszip bindings and lazrs are available on pip.
 
-You can `pip install` lazrs by yourself.
-
-Or use pip extra_requires (since pylas 0.4.0)
+To install pylas with one of its supported backend use one of the following commands
 
 .. code-block:: shell
 
+    # To install with lazrs only
     pip install pylas[lazrs]
 
+    # To install with laszip only
+    pip install pylas[laszip]
+
+    # To install with both
+    pip install pylas[lazrs,laszip]
+
+
 .. _lazrs: https://github.com/tmontaigu/laz-rs
-.. _LAStools: https://rapidlasso.com/lastools/
-.. _laszip.exe: https://rapidlasso.com/lastools/
+.. _laszip-python: https://github.com/tmontaigu/laszip-python
+.. _laszip: https://github.com/LASzip/LASzip
 .. _[lazrs PyPi]: https://pypi.org/project/lazrs/
 
 

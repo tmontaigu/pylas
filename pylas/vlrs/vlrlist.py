@@ -1,98 +1,34 @@
 import logging
-from typing import BinaryIO, Type, List
+from typing import BinaryIO, List
+
+import numpy as np
 
 from .known import vlr_factory, IKnownVLR
-from .rawvlr import RawVLR
+from .vlr import VLR
+from ..utils import encode_to_len
 
 logger = logging.getLogger(__name__)
 
-
-class RawVLRList:
-    """A RawVLRList is like a VLR list but it should only
-    hold RawVLRs.
-
-    This class is meant to make it easier to write VLRS the the file and know in advance
-    the size in bytes taken by all the VLRs combined
-
-    """
-
-    def __init__(self, iterable=None):
-        if iterable is not None:
-            self.vlrs = list(iterable)
-        else:
-            self.vlrs = []
-
-    def append(self, raw_vlr):
-        self.vlrs.append(raw_vlr)
-
-    def __len__(self):
-        return len(self.vlrs)
-
-    def total_size_in_bytes(self):
-        return sum(v.size_in_bytes() for v in self.vlrs)
-
-    def write_to(self, out_stream):
-        """Writes all the raw vlrs contained in list to
-        the out_stream
-
-        Parameters
-        ----------
-        out_stream: io.RawIOBase
-            The stream where vlrs will be written to
-
-        """
-        for vlr in self.vlrs:
-            vlr.write_to(out_stream)
-
-    def __iter__(self):
-        return iter(self.vlrs)
-
-    @classmethod
-    def from_list(cls, vlrs):
-        """Construct a RawVLR list from a list of vlrs
-
-        Parameters
-        ----------
-        vlrs: iterable of VLR
-
-        Returns
-        -------
-        RawVLRList
-
-        """
-        raw_vlrs = cls()
-        for vlr in vlrs:
-            raw = RawVLR()
-            raw.header.user_id = vlr.user_id.encode("utf8")
-            raw.header.description = vlr.description.encode("utf8")
-            raw.header.record_id = vlr.record_id
-            raw.record_data = vlr.record_data_bytes()
-            raw_vlrs.append(raw)
-        return raw_vlrs
+RESERVED_LEN = 2
+USER_ID_LEN = 16
+DESCRIPTION_LEN = 32
 
 
-class VLRList:
+class VLRList(list):
     """Class responsible for managing the vlrs"""
 
-    def __init__(self):
-        self.vlrs = []
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def append(self, vlr):
-        """append a vlr to the list
-
-        Parameters
-        ----------
-        vlr: RawVlR or VLR or KnownVlr
-
-        Returns
-        -------
-
-        """
-        self.vlrs.append(vlr)
-
-    def extend(self, vlr_list):
-        """append all elements of the vlr_list into self"""
-        self.vlrs.extend(vlr_list)
+    def index(self, value, start: int = 0, stop: int = None) -> int:
+        if stop is None:
+            stop = len(self)
+        if isinstance(value, str):
+            for i, vlr in enumerate(self[start: stop]):
+                if vlr.__class__.__name__ == value:
+                    return i + start
+        else:
+            return super().index(value, start, stop)
 
     def get_by_id(self, user_id="", record_ids=(None,)):
         """Function to get vlrs by user_id and/or record_ids.
@@ -129,17 +65,17 @@ class VLRList:
         if user_id != "" and record_ids != (None,):
             return [
                 vlr
-                for vlr in self.vlrs
+                for vlr in self
                 if vlr.user_id == user_id and vlr.record_id in record_ids
             ]
         else:
             return [
                 vlr
-                for vlr in self.vlrs
+                for vlr in self
                 if vlr.user_id == user_id or vlr.record_id in record_ids
             ]
 
-    def get(self, vlr_type):
+    def get(self, vlr_type: str) -> List[IKnownVLR]:
         """Returns the list of vlrs of the requested type
         Always returns a list even if there is only one VLR of type vlr_type.
 
@@ -169,9 +105,9 @@ class VLRList:
             a List of vlrs matching the user_id and records_ids
 
         """
-        return [v for v in self.vlrs if v.__class__.__name__ == vlr_type]
+        return [v for v in self if v.__class__.__name__ == vlr_type]
 
-    def extract(self, vlr_type: Type[IKnownVLR]) -> List[IKnownVLR]:
+    def extract(self, vlr_type: str) -> List[IKnownVLR]:
         """Returns the list of vlrs of the requested type
         The difference with get is that the returned vlrs will be removed from the list
 
@@ -187,41 +123,22 @@ class VLRList:
 
         """
         kept_vlrs, extracted_vlrs = [], []
-        for vlr in self.vlrs:
+        for vlr in self:
             if vlr.__class__.__name__ == vlr_type:
                 extracted_vlrs.append(vlr)
             else:
                 kept_vlrs.append(vlr)
-        self.vlrs = kept_vlrs
+        self.clear()
+        self.extend(kept_vlrs)
         return extracted_vlrs
 
-    def pop(self, index):
-        return self.vlrs.pop(index)
-
-    def index(self, vlr_type):
-        for i, v in enumerate(self.vlrs):
-            if v.__class__.__name__ == vlr_type:
-                return i
-        raise ValueError("{} is not in the VLR list".format(vlr_type))
-
-    def __iter__(self):
-        yield from iter(self.vlrs)
-
-    def __getitem__(self, item):
-        return self.vlrs[item]
-
-    def __len__(self):
-        return len(self.vlrs)
-
-    def __eq__(self, other):
-        if isinstance(other, list):
-            return self.vlrs == other
-
     def __repr__(self):
-        return "[{}]".format(", ".join(repr(vlr) for vlr in self.vlrs))
+        return "[{}]".format(", ".join(repr(vlr) for vlr in self))
 
     @classmethod
-    def read_from(cls, data_stream: BinaryIO, num_to_read: int) -> 'VLRList':
+    def read_from(
+            cls, data_stream: BinaryIO, num_to_read: int, extended: bool = False
+    ) -> "VLRList":
         """Reads vlrs and parse them if possible from the stream
 
         Parameters
@@ -231,6 +148,9 @@ class VLRList:
         num_to_read : int
                       number of vlrs to be read
 
+        extended : bool
+                      whether the vlrs are regular vlr or extended vlr
+
         Returns
         -------
         pylas.vlrs.vlrlist.VLRList
@@ -239,13 +159,50 @@ class VLRList:
         """
         vlrlist = cls()
         for _ in range(num_to_read):
-            raw = RawVLR.read_from(data_stream)
-            vlrlist.append(vlr_factory(raw))
+            data_stream.read(RESERVED_LEN)
+            user_id = data_stream.read(USER_ID_LEN).decode().rstrip("\0")
+            record_id = int.from_bytes(
+                data_stream.read(2), byteorder="little", signed=False
+            )
+            if extended:
+                record_data_len = int.from_bytes(
+                    data_stream.read(8), byteorder="little", signed=False
+                )
+            else:
+                record_data_len = int.from_bytes(
+                    data_stream.read(2), byteorder="little", signed=False
+                )
+            description = data_stream.read(DESCRIPTION_LEN).decode().rstrip("\0")
+            record_data_bytes = data_stream.read(record_data_len)
+
+            vlr = VLR(user_id, record_id, description, record_data_bytes)
+
+            vlrlist.append(vlr_factory(vlr))
 
         return vlrlist
 
-    @classmethod
-    def from_list(cls, vlr_list):
-        vlrs = cls()
-        vlrs.vlrs = vlr_list
-        return vlrs
+    def write_to(self, stream: BinaryIO, as_extended: bool = False) -> int:
+        bytes_written = 0
+        for vlr in self:
+            record_data = vlr.record_data_bytes()
+
+            stream.write(b"\0\0")
+            stream.write(encode_to_len(vlr.user_id, USER_ID_LEN))
+            stream.write(vlr.record_id.to_bytes(2, byteorder="little", signed=False))
+            if as_extended:
+                if len(record_data) > np.iinfo("uint16").max:
+                    raise ValueError("vlr record_data is too long")
+                stream.write(
+                    len(record_data).to_bytes(8, byteorder="little", signed=False)
+                )
+            else:
+                stream.write(
+                    len(record_data).to_bytes(2, byteorder="little", signed=False)
+                )
+            stream.write(encode_to_len(vlr.description, DESCRIPTION_LEN))
+            stream.write(record_data)
+
+            bytes_written += 54 if not as_extended else 60
+            bytes_written += len(record_data)
+
+        return bytes_written

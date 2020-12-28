@@ -1,21 +1,43 @@
 from itertools import zip_longest
-from typing import Tuple, Optional, Iterable
+from typing import Optional, Iterable
 
 import numpy as np
 
 from . import dims
-from .dims import DimensionInfo
+from ..errors import PylasError
+
+
+class ExtraBytesParams:
+    """ All parameters needed to create extra bytes
+    """
+
+    def __init__(self,
+                 name: str,
+                 type: str,
+                 description: str = "",
+                 offsets: Optional[np.ndarray] = None,
+                 scales: Optional[np.ndarray] = None) -> None:
+        if offsets is not None and scales is None or offsets is None and scales is not None:
+            raise ValueError("Both scales and offsets needs to be provided")
+
+        self.name = name
+        """ The name of the extra dimension """
+        self.type = type
+        """ The type of the extra dimension """
+        self.description = description
+        """ A description of the extra dimension """
+        self.offsets = offsets
+        """ The offsets to use if its a 'scaled dimension', can be none """
+        self.scales = scales
+        """ The scales to use if its a 'scaled dimension', can be none """
 
 
 class PointFormat:
-    """Class that contains the dimensions that forms a PointFormat
+    """Class that contains the informations about the dimensions that forms a PointFormat.
 
     A PointFormat has 'standard' dimensions (dimensions defined in the LAS standard, each
     point format has its set of dimensions), but it can also have extra (non-standard) dimensions
     defined by the user)
-
-    This class can be used to get information about dimensions of a point format.
-
 
     >>> fmt = PointFormat(3)
     >>> all(dim.is_standard for dim in fmt.dimensions)
@@ -31,17 +53,14 @@ class PointFormat:
     """
 
     def __init__(
-        self,
-        point_format_id: int,
-        extra_dims: Optional[Tuple[Tuple[str, str], ...]] = None,
+            self,
+            point_format_id: int,
     ):
         """
         Parameters
         ----------
         point_format_id: int
             point format id
-        extra_dims: list of tuple
-            [(name, type_str), ..] of extra dimensions attached to this point format
         """
         self.id = point_format_id
         self.dimensions = []
@@ -50,27 +69,34 @@ class PointFormat:
             try:
                 sub_fields = composed_dims[dim_name]
             except KeyError:
-                dimension = DimensionInfo.from_type_str(
+                dimension = dims.DimensionInfo.from_type_str(
                     dim_name, dims.DIMENSIONS_TO_TYPE[dim_name], is_standard=True
                 )
                 self.dimensions.append(dimension)
             else:
                 for sub_field in sub_fields:
-                    dimension = DimensionInfo.from_bitmask(
+                    dimension = dims.DimensionInfo.from_bitmask(
                         sub_field.name, sub_field.mask, is_standard=True
                     )
                     self.dimensions.append(dimension)
 
-        if extra_dims is not None:
-            for name, type_str in extra_dims:
-                self.add_extra_dimension(name, type_str)
-
     @property
-    def standard_dimensions(self) -> Iterable[DimensionInfo]:
+    def standard_dimensions(self) -> Iterable[dims.DimensionInfo]:
+        """ Returns an iterable of the standard dimensions
+
+        >>> fmt = PointFormat(0)
+        >>> standard_dims = list(fmt.standard_dimensions)
+        >>> len(standard_dims)
+        15
+        >>> standard_dims[4].name
+        'return_number'
+
+
+        """
         return (dim for dim in self.dimensions if dim.is_standard)
 
     @property
-    def extra_dimensions(self) -> Iterable[DimensionInfo]:
+    def extra_dimensions(self) -> Iterable[dims.DimensionInfo]:
         return (dim for dim in self.dimensions if dim.is_standard is False)
 
     @property
@@ -90,17 +116,38 @@ class PointFormat:
 
     @property
     def size(self) -> int:
-        """Returns the number of bytes (standard + extra)"""
+        """Returns the number of bytes (standard + extra) a point takes
+
+        >>> PointFormat(3).size
+        34
+
+        >>> fmt = PointFormat(3)
+        >>> fmt.add_extra_dimension(ExtraBytesParams("codification", "uint64"))
+        >>> fmt.size
+        42
+        """
         return int(sum(dim.num_bits for dim in self.dimensions) // 8)
 
     @property
     def num_standard_bytes(self) -> int:
-        """Returns the number of bytes used by standard dims"""
+        """Returns the number of bytes used by standard dims
+
+        >>> fmt = PointFormat(3)
+        >>> fmt.add_extra_dimension(ExtraBytesParams("codification", "uint64"))
+        >>> fmt.num_standard_bytes
+        34
+        """
         return int(sum(dim.num_bits for dim in self.standard_dimensions) // 8)
 
     @property
     def num_extra_bytes(self) -> int:
-        """Returns the number of extra bytes"""
+        """Returns the number of extra bytes
+
+        >>> fmt = PointFormat(3)
+        >>> fmt.add_extra_dimension(ExtraBytesParams("codification", "uint64"))
+        >>> fmt.num_extra_bytes
+        8
+        """
         return int(sum(dim.num_bits for dim in self.extra_dimensions) // 8)
 
     @property
@@ -109,16 +156,45 @@ class PointFormat:
         dimensions = set(self.dimension_names)
         return all(name in dimensions for name in dims.WAVEFORM_FIELDS_NAMES)
 
-    def dimension_by_name(self, name: str) -> DimensionInfo:
+    def dimension_by_name(self, name: str) -> dims.DimensionInfo:
+        """ Returns the dimension info for the dimension by name
+
+        ValueError is raised if the dimension does not exist un the point format
+
+        >>> info = PointFormat(2).dimension_by_name('number_of_returns')
+        >>> info.name == 'number_of_returns'
+        True
+        >>> info.num_bits == 3
+        True
+
+
+        >>> info = PointFormat(2).dimension_by_name('gps_time')
+        Traceback (most recent call last):
+        ...
+        ValueError: Dimension 'gps_time' does not exist
+        """
         for dim in self.dimensions:
             if dim.name == name:
                 return dim
         raise ValueError(f"Dimension '{name}' does not exist")
 
-    def add_extra_dimension(self, name: str, type_str: str) -> None:
-        self.dimensions.append(
-            DimensionInfo.from_type_str(name, type_str, is_standard=False)
+    def add_extra_dimension(self, param: ExtraBytesParams) -> None:
+        """ Add an extra, user-defined dimension
+        """
+        dim_info = dims.DimensionInfo.from_type_str(
+            param.name,
+            param.type,
+            is_standard=False,
+            description=param.description,
+            offsets=param.offsets,
+            scales=param.scales,
         )
+        if (
+                dim_info.num_elements > 3
+                and dim_info.kind != dims.DimensionKind.UnsignedInteger
+        ):
+            raise PylasError("Extra Dimensions do not support more than 3 elements")
+        self.dimensions.append(dim_info)
 
     def dtype(self):
         """Returns the numpy.dtype used to store the point records in a numpy array

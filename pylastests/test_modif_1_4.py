@@ -38,32 +38,19 @@ def test_writing_las_with_evlrs():
     las = pylas.read(test1_4_las)
     assert las.evlrs == []
 
-    evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
-    evlr.record_data = b"And so he grinds his own hands"
+    evlr = pylas.VLR(user_id="pylastest", record_id=42, description="Just a test", record_data=b"And so he grinds his own hands")
     las.evlrs.append(evlr)
 
     las_1 = write_then_read_again(las, do_compress=False)
     assert las_1.evlrs == [evlr]
 
 
-@pytest.mark.skip(reason="Writing LAZ with EVLRs is not well supported")
 def test_writing_laz_with_evlrs(laz_backend):
     las = pylas.read(test1_4_las)
     assert las.evlrs == []
 
-    evlr = pylas.EVLR(user_id="pylastest", record_id=42, description="Just a test")
-    evlr.record_data = b"And so he grinds his own hands"
+    evlr = pylas.VLR(user_id="pylastest", record_id=42, description="Just a test", record_data=b"And so he grinds he own hands")
     las.evlrs.append(evlr)
 
-    if laz_backend == LazBackend.Laszip:
-        with pytest.raises(PylasError) as exc_info:
-            las_1 = write_then_read_again(
-                las, do_compress=True, laz_backend=(laz_backend,)
-            )
-        assert (
-            "Reading a LAZ file that contains EVLR using laszip is not supported"
-            in exc_info.value
-        )
-    else:
-        las_1 = write_then_read_again(las, do_compress=True, laz_backend=(laz_backend,))
-        assert las_1.evlrs == [evlr]
+    las_1 = write_then_read_again(las, do_compress=True, laz_backend=laz_backend)
+    assert las_1.evlrs == [evlr]
