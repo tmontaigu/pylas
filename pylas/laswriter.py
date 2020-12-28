@@ -52,18 +52,15 @@ class LasWriter:
         self.dest = dest
         self.done = False
 
-        # These will be initialized on the first call to `write`
-        self.point_writer: IPointWriter
-
         dims.raise_if_version_not_compatible_with_fmt(
             header.point_format.id, str(self.header.version)
         )
         self.header.are_points_compressed = self.do_compress
 
         if self.do_compress:
-            self.point_writer = self._create_laz_backend(self.laz_backend)
+            self.point_writer: IPointWriter = self._create_laz_backend(self.laz_backend)
         else:
-            self.point_writer = UncompressedPointWriter(self.dest)
+            self.point_writer: IPointWriter = UncompressedPointWriter(self.dest)
 
         self.point_writer.write_initial_header_and_vlrs(self.header)
 

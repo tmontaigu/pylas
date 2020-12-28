@@ -44,54 +44,40 @@ def test_good_version_is_used():
         assert las.header.version.minor == 4
 
 
-def test_create_fmt_0(file):
+def test_create_fmt_0():
     new = pylas.create(point_format=0)
 
-    dim_names_fmt_0 = PointFormat(0).dimension_names
-
-    for dim_name in dim_names_fmt_0:
-        new[dim_name] = file[dim_name]
-
-    for dim_name in dim_names_fmt_0:
-        assert np.allclose(new[dim_name], file[dim_name])
+    with pytest.raises(ValueError):
+        new.red = np.zeros(len(new.points), np.uint16)
 
     with pytest.raises(ValueError):
-        new.red = file.red
+        new.red = np.zeros(len(new.points), np.uint16)
 
     with pytest.raises(ValueError):
-        new.red = file.green
+        new.red = np.zeros(len(new.points), np.uint16)
 
     with pytest.raises(ValueError):
-        new.red = file.blue
-
-    with pytest.raises(ValueError):
-        new.gps_time = file.gps_time
-
-    new = write_then_read_again(new)
-
-    for dim_name in dim_names_fmt_0:
-        assert np.allclose(new[dim_name], file[dim_name]), "{} not equal".format(
-            dim_name
-        )
+        new.gps_time = np.zeros(len(new.points), np.float64)
 
 
-def test_create_fmt_1(file):
+def test_create_fmt_1():
     new = pylas.create(point_format=1)
 
     with pytest.raises(ValueError):
-        new.red = file.red
+        new.red = np.zeros(len(new.points), np.uint16)
 
     with pytest.raises(ValueError):
-        new.red = file.green
+        new.red = np.zeros(len(new.points), np.uint16)
 
     with pytest.raises(ValueError):
-        new.red = file.blue
+        new.red = np.zeros(len(new.points), np.uint16)
 
-    new.gps_time = file.gps_time
-    assert np.allclose(new.gps_time, file.gps_time)
+    gps_time = np.random.uniform(0, 25641, len(new.points))
+    new.gps_time = gps_time
+    assert np.allclose(new.gps_time, gps_time)
 
     new = write_then_read_again(new)
-    assert np.allclose(new.gps_time, file.gps_time)
+    assert np.allclose(new.gps_time, gps_time)
 
 
 def test_create_fmt_2(file):

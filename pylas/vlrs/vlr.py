@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable, BinaryIO
-
-import numpy as np
+from typing import BinaryIO
 
 
 class IVLR(ABC):
@@ -66,10 +64,10 @@ class VLR(BaseVLR):
 
     def __eq__(self, other):
         return (
-            self.record_id == other.record_id
-            and self.user_id == other.user_id
-            and self.description == other.description
-            and self.record_data == other.record_data
+                self.record_id == other.record_id
+                and self.user_id == other.user_id
+                and self.description == other.description
+                and self.record_data == other.record_data
         )
 
     def __repr__(self):

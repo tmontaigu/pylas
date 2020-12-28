@@ -69,7 +69,6 @@ def test_creating_extra_bytes(extra_bytes_params, simple_las_path):
 def test_creating_scaled_extra_bytes(extra_bytes_params, simple_las_path):
     las = pylas.read(simple_las_path)
 
-
     try:
         num_elements = int(extra_bytes_params.type_str[0])
     except ValueError:
@@ -90,6 +89,7 @@ def test_creating_scaled_extra_bytes(extra_bytes_params, simple_las_path):
 
     las = write_then_read_again(las)
     assert np.allclose(las[extra_bytes_params.name], 42.0)
+
 
 def test_scaled_extra_byte_array_type(simple_las_path):
     """
@@ -121,6 +121,7 @@ def test_scaled_extra_byte_array_type(simple_las_path):
     assert np.allclose(las.test_dim[..., 1], 82.0)
     assert np.allclose(las.test_dim[..., 2], 123.0)
 
+
 def test_extra_bytes_description_is_ok(extra_bytes_params, simple_las_path):
     """
     Test that the description in ok
@@ -137,9 +138,6 @@ def test_extra_bytes_description_is_ok(extra_bytes_params, simple_las_path):
     extra_dim_info = list(las.point_format.extra_dimensions)
     assert len(extra_dim_info) == 1
     assert extra_dim_info[0].description == extra_bytes_params.description
-
-
-
 
 
 def test_extra_bytes_with_spaces_in_name(simple_las_path):
@@ -220,4 +218,3 @@ def test_creating_extra_byte_with_invalid_type(simple_las_path):
     las = pylas.read(simple_las_path)
     with pytest.raises(TypeError):
         las.add_extra_dim(pylas.ExtraBytesParams("just_a_test", 'i16'))
-
