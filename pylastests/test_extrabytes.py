@@ -70,13 +70,13 @@ def test_creating_scaled_extra_bytes(extra_bytes_params, simple_las_path):
     las = pylas.read(simple_las_path)
 
     try:
-        num_elements = int(extra_bytes_params.type_str[0])
+        num_elements = int(extra_bytes_params.type[0])
     except ValueError:
         num_elements = 1
 
     params = pylas.ExtraBytesParams(
         extra_bytes_params.name,
-        extra_bytes_params.type_str,
+        extra_bytes_params.type,
         offsets=np.array([2.0] * num_elements),
         scales=np.array([1.0] * num_elements)
     )
@@ -99,7 +99,7 @@ def test_scaled_extra_byte_array_type(simple_las_path):
 
     las.add_extra_dim(pylas.ExtraBytesParams(
         name="test_dim",
-        type_str="3int32",
+        type="3int32",
         scales=np.array([1.0, 2.0, 3.0], np.float64),
         offsets=np.array([10.0, 20.0, 30.0], np.float64),
     ))
@@ -148,7 +148,7 @@ def test_extra_bytes_with_spaces_in_name(simple_las_path):
     """
     las = pylas.read(simple_las_path)
     las.add_extra_dim(
-        pylas.ExtraBytesParams(name="Name With Spaces", type_str="int32"))
+        pylas.ExtraBytesParams(name="Name With Spaces", type="int32"))
 
     assert np.alltrue(las["Name With Spaces"] == 0)
     las["Name With Spaces"][:] = 789_464
@@ -190,7 +190,7 @@ def test_creating_bytes_with_name_too_long(simple_las_path):
         las.add_extra_dim(
             pylas.ExtraBytesParams(
                 name="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus",
-                type_str="int32"))
+                type="int32"))
 
     assert str(error.value) == "bytes too long (70, maximum length 32)"
 
@@ -204,7 +204,7 @@ def test_creating_bytes_with_description_too_long(simple_las_path):
         las.add_extra_dim(
             pylas.ExtraBytesParams(
                 name="a fine name",
-                type_str="int32",
+                type="int32",
                 description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
                             " Sed non risus"))
 

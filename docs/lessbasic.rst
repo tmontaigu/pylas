@@ -54,11 +54,11 @@ and an array field of 3 doubles for each points.
 
     las.add_extra_dim(pylas.ExtraBytesParams(
         name="codification",
-        type_str="uint64",
+        type="uint64",
         description="More classes available"
     ))
 
-    las.add_extra_dim(pylas.ExtraBytesParams(name="mysterious", type_str="3f8"))
+    las.add_extra_dim(pylas.ExtraBytesParams(name="mysterious", type="3f8"))
 
 
 

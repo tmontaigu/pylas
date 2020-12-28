@@ -43,7 +43,7 @@ def simple_las_path():
 def extra_bytes_params(request):
     return pylas.ExtraBytesParams(
         name="just_a_name",
-        type_str=request.param,
+        type=request.param,
         description="pylas test ExtraBytes"
     )
 

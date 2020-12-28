@@ -1,5 +1,5 @@
 from itertools import zip_longest
-from typing import Optional, Iterable, NamedTuple
+from typing import Optional, Iterable
 
 import numpy as np
 
@@ -7,14 +7,29 @@ from . import dims
 from ..errors import PylasError
 
 
-class ExtraBytesParams(NamedTuple):
+class ExtraBytesParams:
     """ All parameters needed to create extra bytes
     """
-    name: str
-    type_str: str
-    description: str = ""
-    offsets: Optional[np.ndarray] = None
-    scales: Optional[np.ndarray] = None
+
+    def __init__(self,
+                 name: str,
+                 type: str,
+                 description: str = "",
+                 offsets: Optional[np.ndarray] = None,
+                 scales: Optional[np.ndarray] = None) -> None:
+        if offsets is not None and scales is None or offsets is None and scales is not None:
+            raise ValueError("Both scales and offsets needs to be provided")
+
+        self.name = name
+        """ The name of the extra dimension """
+        self.type = type
+        """ The type of the extra dimension """
+        self.description = description
+        """ A description of the extra dimension """
+        self.offsets = offsets
+        """ The offsets to use if its a 'scaled dimension', can be none """
+        self.scales = scales
+        """ The scales to use if its a 'scaled dimension', can be none """
 
 
 class PointFormat:
@@ -168,7 +183,7 @@ class PointFormat:
         """
         dim_info = dims.DimensionInfo.from_type_str(
             param.name,
-            param.type_str,
+            param.type,
             is_standard=False,
             description=param.description,
             offsets=param.offsets,
