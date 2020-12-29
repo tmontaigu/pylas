@@ -236,7 +236,7 @@ class LasData:
             closefd=False,
             laz_backend=laz_backend,
         ) as writer:
-            writer.write(self.points)
+            writer.write_points(self.points)
             if self.header.version.minor >= 4 and self.evlrs is not None:
                 writer.write_evlrs(self.evlrs)
 

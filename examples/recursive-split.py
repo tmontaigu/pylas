@@ -73,7 +73,7 @@ def main():
                                                     mode='w',
                                                     header=file.header)
                         sub_points = points[mask]
-                        writers[i].write(sub_points)
+                        writers[i].write_points(sub_points)
 
                     point_piped += np.sum(mask)
                     if point_piped == len(points):

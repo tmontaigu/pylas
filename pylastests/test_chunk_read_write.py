@@ -56,7 +56,7 @@ def test_chunked_writing_gives_expected_points(file_path, backend):
                 original_points = original_las.points[
                                   i * iter_size: (i + 1) * iter_size
                                   ]
-                las.write(original_points)
+                las.write_points(original_points)
 
         tmp_output.seek(0)
         with pylas.open(tmp_output, closefd=False) as reader:
