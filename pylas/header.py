@@ -189,8 +189,7 @@ class LasHeader:
 
     @property
     def point_format(self) -> PointFormat:
-        """ The point format
-        """
+        """The point format"""
         return self._point_format
 
     @point_format.setter
@@ -203,8 +202,7 @@ class LasHeader:
 
     @property
     def version(self) -> Version:
-        """ The version
-        """
+        """The version"""
         return self._version
 
     @version.setter

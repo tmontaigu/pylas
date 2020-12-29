@@ -1,6 +1,22 @@
 on: [push, pull_request]
 
 jobs:
+  Formatting:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v2
+
+      - name: Install black
+        run: |
+          python3 -m pip install setuptools
+          python3 -m pip install black
+
+      - name: Run black check
+        run: python3 -m black --check pylas
+
+
   Tests:
     runs-on: ubuntu-latest
     strategy:

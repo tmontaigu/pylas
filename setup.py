@@ -22,7 +22,8 @@ setup(
             "pytest",
             "sphinx",
             "sphinx-rtd-theme",
-            "nox"
+            "nox",
+            "black"
         ],
         "lazrs": [
             "lazrs>=0.2.3, < 0.3.0"

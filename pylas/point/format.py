@@ -8,16 +8,22 @@ from ..errors import PylasError
 
 
 class ExtraBytesParams:
-    """ All parameters needed to create extra bytes
-    """
+    """All parameters needed to create extra bytes"""
 
-    def __init__(self,
-                 name: str,
-                 type: str,
-                 description: str = "",
-                 offsets: Optional[np.ndarray] = None,
-                 scales: Optional[np.ndarray] = None) -> None:
-        if offsets is not None and scales is None or offsets is None and scales is not None:
+    def __init__(
+        self,
+        name: str,
+        type: str,
+        description: str = "",
+        offsets: Optional[np.ndarray] = None,
+        scales: Optional[np.ndarray] = None,
+    ) -> None:
+        if (
+            offsets is not None
+            and scales is None
+            or offsets is None
+            and scales is not None
+        ):
             raise ValueError("Both scales and offsets needs to be provided")
 
         self.name = name
@@ -53,8 +59,8 @@ class PointFormat:
     """
 
     def __init__(
-            self,
-            point_format_id: int,
+        self,
+        point_format_id: int,
     ):
         """
         Parameters
@@ -82,7 +88,7 @@ class PointFormat:
 
     @property
     def standard_dimensions(self) -> Iterable[dims.DimensionInfo]:
-        """ Returns an iterable of the standard dimensions
+        """Returns an iterable of the standard dimensions
 
         >>> fmt = PointFormat(0)
         >>> standard_dims = list(fmt.standard_dimensions)
@@ -157,7 +163,7 @@ class PointFormat:
         return all(name in dimensions for name in dims.WAVEFORM_FIELDS_NAMES)
 
     def dimension_by_name(self, name: str) -> dims.DimensionInfo:
-        """ Returns the dimension info for the dimension by name
+        """Returns the dimension info for the dimension by name
 
         ValueError is raised if the dimension does not exist un the point format
 
@@ -179,8 +185,7 @@ class PointFormat:
         raise ValueError(f"Dimension '{name}' does not exist")
 
     def add_extra_dimension(self, param: ExtraBytesParams) -> None:
-        """ Add an extra, user-defined dimension
-        """
+        """Add an extra, user-defined dimension"""
         dim_info = dims.DimensionInfo.from_type_str(
             param.name,
             param.type,
@@ -190,8 +195,8 @@ class PointFormat:
             scales=param.scales,
         )
         if (
-                dim_info.num_elements > 3
-                and dim_info.kind != dims.DimensionKind.UnsignedInteger
+            dim_info.num_elements > 3
+            and dim_info.kind != dims.DimensionKind.UnsignedInteger
         ):
             raise PylasError("Extra Dimensions do not support more than 3 elements")
         self.dimensions.append(dim_info)

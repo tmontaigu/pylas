@@ -57,7 +57,7 @@ class LasReader:
         self.points_read = 0
 
     def read_points(self, n: int) -> Optional[record.ScaleAwarePointRecord]:
-        """ Read n points from the file
+        """Read n points from the file
 
         If there are no points left to read, returns None.
 
@@ -89,6 +89,8 @@ class LasReader:
         points = self.read_points(-1)
         if points is None:
             points = record.PackedPointRecord.empty(self.header.point_format)
+        else:
+            points = record.PackedPointRecord(points.array, points.point_format)
 
         las_data = LasData(header=self.header, points=points)
         if self.header.version.minor >= 4:

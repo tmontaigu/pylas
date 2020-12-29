@@ -18,19 +18,19 @@ except ModuleNotFoundError:
 
 
 class LasAppender:
-    """ Allows to append points to and existing LAS/LAZ file.
+    """Allows to append points to and existing LAS/LAZ file.
 
     Appending to LAZ is only supported by the lazrs backend
     """
 
     def __init__(
-            self,
-            dest: BinaryIO,
-            laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-                    LazBackend.LazrsParallel,
-                    LazBackend.Lazrs,
-            ),
-            closefd: bool = True,
+        self,
+        dest: BinaryIO,
+        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
+            LazBackend.LazrsParallel,
+            LazBackend.Lazrs,
+        ),
+        closefd: bool = True,
     ) -> None:
         if not dest.seekable():
             raise TypeError("Expected the 'dest' to be a seekable file object")
@@ -51,7 +51,7 @@ class LasAppender:
 
         if header.version.minor >= 4 and header.number_of_evlrs > 0:
             assert (
-                    self.dest.tell() <= self.header.start_of_first_evlr
+                self.dest.tell() <= self.header.start_of_first_evlr
             ), "The position is past the start of evlrs"
             pos = self.dest.tell()
             self.dest.seek(self.header.start_of_first_evlr, io.SEEK_SET)
@@ -66,7 +66,7 @@ class LasAppender:
         self.closefd = closefd
 
     def append_points(self, points: PackedPointRecord) -> None:
-        """ Append the points to the file, the points
+        """Append the points to the file, the points
         must have the same point format as the points
         already contained within the file.
 
@@ -88,9 +88,9 @@ class LasAppender:
 
     def _write_evlrs(self) -> None:
         if (
-                self.header.version.minor >= 4
-                and self.evlrs is not None
-                and len(self.evlrs) > 0
+            self.header.version.minor >= 4
+            and self.evlrs is not None
+            and len(self.evlrs) > 0
         ):
             self.header.number_of_evlr = len(self.evlrs)
             self.header.start_of_first_evlr = self.dest.tell()
@@ -103,11 +103,11 @@ class LasAppender:
         self.dest.seek(pos, io.SEEK_SET)
 
     def _create_laz_backend(
-            self,
-            laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-                    LazBackend.LazrsParallel,
-                    LazBackend.Lazrs,
-            ),
+        self,
+        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
+            LazBackend.LazrsParallel,
+            LazBackend.Lazrs,
+        ),
     ) -> "LazrsAppender":
         try:
             laz_backend = iter(laz_backend)

@@ -24,7 +24,7 @@ class VLRList(list):
         if stop is None:
             stop = len(self)
         if isinstance(value, str):
-            for i, vlr in enumerate(self[start: stop]):
+            for i, vlr in enumerate(self[start:stop]):
                 if vlr.__class__.__name__ == value:
                     return i + start
         else:
@@ -137,7 +137,7 @@ class VLRList(list):
 
     @classmethod
     def read_from(
-            cls, data_stream: BinaryIO, num_to_read: int, extended: bool = False
+        cls, data_stream: BinaryIO, num_to_read: int, extended: bool = False
     ) -> "VLRList":
         """Reads vlrs and parse them if possible from the stream
 

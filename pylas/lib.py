@@ -29,7 +29,7 @@ def open_las(
     header=None,
     do_compress=None,
 ) -> Union[LasReader, LasWriter, LasAppender]:
-    """ The pylas.open opens a LAS/LAZ file in one of the 3 supported
+    """The pylas.open opens a LAS/LAZ file in one of the 3 supported
     mode:
 
      - "r" => Reading => a :class:`pylas.LasReader` will be returned
@@ -175,8 +175,7 @@ def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
 
 
 def mmap_las(filename):
-    """MMap a file, much like laspy did
-    """
+    """MMap a file, much like laspy did"""
     return LasMMAP(filename)
 
 
@@ -227,9 +226,7 @@ def create_las(
     if isinstance(point_format, int):
         point_format = PointFormat(point_format)
 
-    header = LasHeader(
-        point_format=point_format, version=file_version
-    )
+    header = LasHeader(point_format=point_format, version=file_version)
     return LasData(header=header)
 
 

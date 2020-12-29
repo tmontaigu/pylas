@@ -29,8 +29,8 @@ except ModuleNotFoundError:
 
 
 class LasWriter:
-    """ Allows to write a complete LAS/LAZ file to the destination.
-    """
+    """Allows to write a complete LAS/LAZ file to the destination."""
+
     def __init__(
         self,
         dest: BinaryIO,

@@ -8,8 +8,8 @@ from typing import NoReturn
 
 import numpy as np
 
-from . import dims, packing
-from .dims import SubFieldView, ScaledArrayView
+from . import dims
+from .dims import ScaledArrayView
 from .. import errors
 from ..point import PointFormat
 
@@ -225,7 +225,7 @@ class PackedPointRecord:
         )
 
 
-def apply_new_scaling(record, scales, offsets) -> None:
+def apply_new_scaling(record, scales: np.ndarray, offsets: np.ndarray) -> None:
     record["X"] = unscale_dimension(np.asarray(record.x), scales[0], offsets[0])
     record["Y"] = unscale_dimension(np.asarray(record.y), scales[1], offsets[1])
     record["Z"] = unscale_dimension(np.asarray(record.x), scales[2], offsets[2])
