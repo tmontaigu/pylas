@@ -82,9 +82,9 @@ Installation
 
     pip install pylas # without LAZ support
     # Or
-    pip install pylas[laszip] # without LAZ support via LASzip
+    pip install pylas[laszip] # with LAZ support via LASzip
     # Or
-    pip install pylas[lazrs] # without LAZ support via lazrs
+    pip install pylas[lazrs] # with LAZ support via lazrs
 
 
 See the Installation_ section of the documentation for details:
