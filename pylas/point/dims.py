@@ -330,6 +330,14 @@ class DimensionInfo(NamedTuple):
         offsets: Optional[np.ndarray] = None,
         scales: Optional[np.ndarray] = None,
     ) -> "DimensionInfo":
+        if (
+            offsets is not None
+            and scales is None
+            or offsets is None
+            and scales is not None
+        ):
+            raise ValueError("Cannot provide scales without offsets and vice-versa")
+
         first_digits = "".join(itertools.takewhile(lambda l: l.isdigit(), type_str))
         if first_digits:
             num_elements = int(first_digits)
@@ -340,6 +348,17 @@ class DimensionInfo(NamedTuple):
         dtype = np.dtype(type_str)
         kind = DimensionKind.from_letter(type_str[0])
         num_bits = num_elements * dtype.itemsize * 8
+
+        if offsets is not None and len(offsets) != num_elements:
+            raise ValueError(
+                f"len(offsets) ({len(offsets)}) is not the same as the number of elements ({num_elements})"
+            )
+
+        if scales is not None and len(scales) != num_elements:
+            raise ValueError(
+                f"len(scales) ({len(scales)}) is not the same as the number of elements ({num_elements})"
+            )
+
         return cls(
             name,
             kind,

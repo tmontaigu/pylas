@@ -18,14 +18,6 @@ class ExtraBytesParams:
         offsets: Optional[np.ndarray] = None,
         scales: Optional[np.ndarray] = None,
     ) -> None:
-        if (
-            offsets is not None
-            and scales is None
-            or offsets is None
-            and scales is not None
-        ):
-            raise ValueError("Both scales and offsets needs to be provided")
-
         self.name = name
         """ The name of the extra dimension """
         self.type = type

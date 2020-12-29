@@ -270,6 +270,16 @@ class ExtraBytesStruct(ctypes.LittleEndianStructure):
             return "{}u1".format(self.options)
         return get_type_for_extra_dim(self.data_type)
 
+    def num_elements(self) -> int:
+        if self.data_type == 0:
+            return self.options
+        elif self.data_type <= 10:
+            return 1
+        elif self.data_type <= 20:
+            return 2
+        else:
+            return 3
+
     @staticmethod
     def size():
         return ctypes.sizeof(ExtraBytesStruct)
@@ -307,13 +317,15 @@ class ExtraBytesVlr(BaseKnownVLR):
     def type_of_extra_dims(self) -> List[ExtraBytesParams]:
         dim_info_list: List[ExtraBytesParams] = []
         for eb_struct in self.extra_bytes_structs:
+            num_elements = eb_struct.num_elements()
+
             scales = eb_struct.scale
             if scales is not None:
-                scales = np.array(scales)
+                scales = np.array(scales[:num_elements])
 
             offsets = eb_struct.offset
             if offsets is not None:
-                offsets = np.array(offsets)
+                offsets = np.array(offsets[:num_elements])
 
             dim_info_list.append(
                 ExtraBytesParams(
