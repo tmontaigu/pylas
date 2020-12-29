@@ -171,6 +171,9 @@ class PackedPointRecord:
         """Gives access to the underlying numpy array
         Unpack the dimension if item is the name a sub-field
         """
+        if isinstance(item, (int, slice, np.ndarray)):
+            return PackedPointRecord(self.array[item], self.point_format)
+
         # 1) Is it a sub field ?
         try:
             composed_dim, sub_field = self.sub_fields_dict[item]
@@ -199,10 +202,13 @@ class PackedPointRecord:
 
         return self.array[item]
 
-    def __setitem__(self, key: str, value):
+    def __setitem__(self, key, value):
         """Sets elements in the array"""
         self._append_zeros_if_too_small(value)
-        self[key][:] = value
+        if isinstance(key, str):
+            self[key][:] = value
+        else:
+            self.array[key] = value
 
     def __getattr__(self, item):
         try:
@@ -211,8 +217,11 @@ class PackedPointRecord:
             raise AttributeError("{} is not a valid dimension".format(item)) from None
 
     def __repr__(self):
-        return "<PackedPointRecord(fmt: {}, len: {}, point size: {})>".format(
-            self.point_format, len(self), self.point_format.size
+        return "<{}(fmt: {}, len: {}, point size: {})>".format(
+            self.__class__.__name__,
+            self.point_format,
+            len(self),
+            self.point_format.size,
         )
 
 
