@@ -167,7 +167,7 @@ class PackedPointRecord:
     def __len__(self):
         return self.array.shape[0]
 
-    def __getitem__(self, item: str):
+    def __getitem__(self, item):
         """Gives access to the underlying numpy array
         Unpack the dimension if item is the name a sub-field
         """
