@@ -18,6 +18,7 @@ from typing import (
     Generic,
     List,
     Union,
+    Any,
 )
 
 import numpy as np
@@ -477,18 +478,13 @@ class SubFieldView:
         return SubFieldView(self.array.copy(), int(self.bit_mask))
 
     def _do_comparison(self, value, comp):
-        if isinstance(value, (int, self.array.dtype)):
+        if isinstance(value, (int, type(self.array.dtype))):
             if value > self.max_value_allowed:
                 return np.zeros_like(self.array, np.bool)
         return comp(self.array & self.bit_mask, value << self.lsb)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        inpts = []
-        for inpt in inputs:
-            if isinstance(inpt, self.__class__):
-                inpts.append(inpt.masked_array())
-            else:
-                inpts.append(inpt)
+        inpts = SubFieldView._convert_sub_views_to_arrays(inputs)
         ret = getattr(ufunc, method)(*inpts, **kwargs)
         if ret is not None and isinstance(ret, np.ndarray):
             if ret.dtype == np.bool:
@@ -497,20 +493,8 @@ class SubFieldView:
         return ret
 
     def __array_function__(self, func, types, args, kwargs):
-        if func == np.allclose:
-            argslist = []
-            for i in range(len(args)):
-                if isinstance(args[i], SubFieldView):
-                    argslist.append(args[i].masked_array())
-                else:
-                    argslist.append(args[i])
-            return np.allclose(*argslist, **kwargs)
-        elif func == np.amax or func == np.max:
-            return np.max(self.masked_array())
-        elif func == np.amin or func == np.min:
-            return np.min(self.masked_array())
-        else:
-            return func(self.masked_array(), *args[1:], **kwargs)
+        argslist = SubFieldView._convert_sub_views_to_arrays(args)
+        return func(*argslist, **kwargs)
 
     def __array__(self, **kwargs):
         return self.masked_array()
@@ -553,14 +537,33 @@ class SubFieldView:
             raise OverflowError(
                 f"value {np.max(value)} is greater than allowed (max: {self.max_value_allowed})"
             )
+        value = np.array(value, copy=False)
         self.array[key] &= ~self.bit_mask
-        self.array[key] |= np.array(value, copy=False) << self.lsb
+        self.array[key] |= value << self.lsb
 
     def __getitem__(self, item):
-        return SubFieldView(self.array[item], int(self.bit_mask))
+        sliced = SubFieldView(self.array[item], int(self.bit_mask))
+        if isinstance(item, int):
+            return sliced.masked_array()
+        return sliced
 
     def __repr__(self):
         return f"<SubFieldView({self.masked_array()})>"
+
+    @staticmethod
+    def _convert_sub_views_to_arrays(
+        some_args: Union[List[Any], Tuple[Any, ...]]
+    ) -> List[Any]:
+        converted_args = []
+        for arg in some_args:
+            if isinstance(arg, (list, tuple)):
+                converted_args.append(SubFieldView._convert_sub_views_to_arrays(arg))
+            elif isinstance(arg, SubFieldView):
+                converted_args.append(arg.masked_array())
+            else:
+                converted_args.append(arg)
+
+        return converted_args
 
 
 class ScaledArrayView:
@@ -596,19 +599,7 @@ class ScaledArrayView:
         return self.scaled_array()
 
     def __array_function__(self, func, types, args, kwargs):
-        converted_args = []
-        for arg in args:
-            if isinstance(arg, (tuple, list)):
-                top_level_args = []
-                converted_args.append(top_level_args)
-            else:
-                top_level_args = converted_args
-                arg = [arg]
-            top_level_args.extend(
-                np.array(a) if isinstance(a, ScaledArrayView) else a for a in arg
-            )
-
-        args = converted_args
+        args = ScaledArrayView._convert_scaled_views_to_arrays(args)
         ret = func(*args, **kwargs)
         if ret is not None:
             if isinstance(ret, np.ndarray) and ret.dtype != np.bool:
@@ -618,12 +609,7 @@ class ScaledArrayView:
         return ret
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        inpts = []
-        for inpt in inputs:
-            if isinstance(inpt, self.__class__):
-                inpts.append(inpt.array)
-            else:
-                inpts.append(inpt)
+        inpts = ScaledArrayView._convert_scaled_views_to_arrays(inputs)
         ret = getattr(ufunc, method)(*inpts, **kwargs)
         if ret is not None:
             if isinstance(ret, np.ndarray):
@@ -633,6 +619,23 @@ class ScaledArrayView:
             else:
                 return ret
         return ret
+
+    @staticmethod
+    def _convert_scaled_views_to_arrays(
+        some_args: Union[List[Any], Tuple[Any, ...]]
+    ) -> List[Any]:
+        converted_args = []
+        for arg in some_args:
+            if isinstance(arg, (list, tuple)):
+                converted_args.append(
+                    ScaledArrayView._convert_scaled_views_to_arrays(arg)
+                )
+            elif isinstance(arg, ScaledArrayView):
+                converted_args.append(arg.scaled_array())
+            else:
+                converted_args.append(arg)
+
+        return converted_args
 
     def __len__(self):
         return len(self.array)

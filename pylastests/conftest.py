@@ -88,7 +88,7 @@ def all_las_file_path():
 def mmapped_file_path(tmp_path):
     import shutil
     copied_file = shutil.copy(SIMPLE_LAS_FILE_PATH, tmp_path)
-    return copied_file
+    yield copied_file
 
 
 

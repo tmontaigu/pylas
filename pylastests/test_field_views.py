@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+import pylas
 from pylas.point.dims import SubFieldView, ScaledArrayView
 
 
@@ -42,6 +43,38 @@ def test_sub_field_view_behaves_like_array():
         field[4] = 2
 
     assert np.mean(field) == 1
+
+
+def test_array_view_int_index_return_singular_elements():
+    a = np.array([1, 2, 3, 4], np.int32)
+    s = SubFieldView(a, 0x00_00_00_FF)
+
+    for i in range(len(s)):
+        assert type(s[i]) in (np.int32, np.int64)
+        assert a[i] == s[i]
+
+    s = ScaledArrayView(a, scale=2.0, offset=0.0)
+    for i in range(len(s)):
+        assert type(s[i]) == np.float64
+        assert (a[i] * 2.0) == s[i]
+
+
+def test_sub_field_view_with_self(simple_las_path):
+    las = pylas.read(simple_las_path)
+
+    rn = np.array(las.return_number)
+    order = np.argsort(las.return_number)[::-1]
+
+    las.return_number[:] = las.return_number[order]
+
+    assert np.all(las.return_number == rn[order])
+
+
+def test_can_use_array_func_with_list(simple_las_path):
+    las = pylas.read(simple_las_path)
+
+    np.concatenate([las.return_number, las.classification])
+    np.concatenate([las.x, las.y])
 
 
 def test_sub_field_as_array():
