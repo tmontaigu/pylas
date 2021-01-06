@@ -11,7 +11,6 @@ from typing import List, Optional, Any, Tuple, Dict
 
 import numpy as np
 
-from utils import encode_to_null_terminated
 from .vlr import BaseVLR, VLR
 from ..extradims import (
     get_type_for_extra_dim,
@@ -19,6 +18,7 @@ from ..extradims import (
 )
 from ..point.dims import DimensionKind
 from ..point.format import ExtraBytesParams
+from ..utils import encode_to_null_terminated
 
 abstractmethod = abc.abstractmethod
 
