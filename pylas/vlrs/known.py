@@ -8,6 +8,7 @@ import ctypes
 import struct
 from abc import abstractmethod
 
+from utils import encode_to_null_terminated
 from .rawvlr import NULL_BYTE, BaseVLR, VLR
 from ..extradims import get_type_for_extra_dim, get_signedness_for_extra_dim, DimensionSignedness
 
@@ -500,10 +501,11 @@ class WktMathTransformVlr(BaseKnownVLR):
         self.string = ""
 
     def _encode_string(self):
-        return self.string.encode("utf-8") + NULL_BYTE
+        return encode_to_null_terminated(self.string, codec="utf-8")
 
     def parse_record_data(self, record_data):
-        self.string = record_data.decode("utf-8")
+        self.string = record_data.decode("utf-8").rstrip('\0')
+        self.string = record_data.decode("utf-8").rstrip("\0")
 
     def record_data_bytes(self):
         return self._encode_string()
@@ -527,10 +529,11 @@ class WktCoordinateSystemVlr(BaseKnownVLR):
         self.string = wkt_string
 
     def _encode_string(self):
-        return self.string.encode("utf-8") + NULL_BYTE
+        return encode_to_null_terminated(self.string, codec="utf-8")
 
     def parse_record_data(self, record_data):
-        self.string = record_data.decode("utf-8")
+        self.string = record_data.decode("utf-8").rstrip('\0')
+        self.string = record_data.decode("utf-8").rstrip("\0")
 
     def record_data_bytes(self):
         return self._encode_string()

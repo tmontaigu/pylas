@@ -42,3 +42,10 @@ class ConveyorThread(threading.Thread):
                 self.output_stream.write(data)
             else:
                 break
+
+
+def encode_to_null_terminated(string: str, codec: str = "utf-8") -> bytes:
+    b = string.encode(codec)
+    if b[-1] != b"\0":
+        b += b"\0"
+    return b
