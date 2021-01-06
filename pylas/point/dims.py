@@ -465,11 +465,12 @@ def raise_if_version_not_compatible_with_fmt(point_format_id: int, file_version:
 
 
 class SubFieldView:
-    """ Offers a view onto a LAS field that is a bit field.
+    """Offers a view onto a LAS field that is a bit field.
 
     This class allows to read and modify, the array that stores the
     bit field directly.
     """
+
     def __init__(self, array: np.ndarray, bit_mask):
         self.array = array
         self.bit_mask = self.array.dtype.type(bit_mask)
