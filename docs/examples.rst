@@ -15,7 +15,7 @@ We use the classification field to filter points, but this can work with the oth
 
     las = pylas.read('pylastests/simple.las')
 
-    new_file = pylas.create(point_format_id=las.header.point_format_id, file_version=las.header.version)
+    new_file = pylas.create(point_format=las.header.point_format_id, file_version=las.header.version)
     new_file.points = las.points[las.classification == 1]
 
     new_file.write('extracted_points.las')
