@@ -122,6 +122,11 @@ class LasHeader:
         version: Optional[Version] = None,
         point_format: Optional[PointFormat] = None,
     ) -> None:
+        if isinstance(point_format, int):
+            point_format = PointFormat(point_format)
+        if isinstance(version, str):
+            version = Version.from_str(version)
+
         if version is None and point_format is None:
             version = LasHeader.DEFAULT_VERSION
             point_format = LasHeader.DEFAULT_POINT_FORMAT

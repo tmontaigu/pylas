@@ -223,11 +223,6 @@ def create_las(
        A new las data object
 
     """
-    if isinstance(point_format, int):
-        point_format = PointFormat(point_format)
-    if isinstance(file_version, str):
-        file_version = Version.from_str(file_version)
-
     header = LasHeader(point_format=point_format, version=file_version)
     return LasData(header=header)
 
