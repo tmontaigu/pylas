@@ -494,11 +494,12 @@ class LasHeader:
 
         return header
 
-    def write_to(self, stream: BinaryIO) -> None:
+    def write_to(self, stream: BinaryIO, write_vlrs: bool = True) -> None:
         little_endian = "little"
-        with io.BytesIO() as tmp:
-            self.vlrs.write_to(tmp)
-            vlr_bytes = tmp.getvalue()
+        if write_vlrs is True:
+            with io.BytesIO() as tmp:
+                self.vlrs.write_to(tmp)
+                vlr_bytes = tmp.getvalue()
 
         stream.write(LAS_FILE_SIGNATURE)
         stream.write(self.file_source_id.to_bytes(2, little_endian, signed=False))
@@ -538,7 +539,8 @@ class LasHeader:
         )
 
         header_size = LAS_HEADERS_SIZE[str(self.version)]
-        self.offset_to_point_data = header_size + len(vlr_bytes)
+        if write_vlrs is True:
+            self.offset_to_point_data = header_size + len(vlr_bytes)
 
         stream.write(header_size.to_bytes(2, little_endian, signed=False))
         stream.write(self.offset_to_point_data.to_bytes(4, little_endian, signed=False))
@@ -598,7 +600,8 @@ class LasHeader:
                     )
                 )
 
-        stream.write(vlr_bytes)
+        if write_vlrs is True:
+            stream.write(vlr_bytes)
 
     def _sync_extra_bytes_vlr(self) -> None:
         try:
