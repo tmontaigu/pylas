@@ -3,7 +3,7 @@ import io
 import logging
 import struct
 from datetime import date, timedelta
-from typing import NamedTuple, BinaryIO, Optional, List
+from typing import NamedTuple, BinaryIO, Optional, List, Union
 from uuid import UUID
 
 import numpy as np
@@ -109,6 +109,10 @@ class LasHeader:
     >>> header = LasHeader(version=Version(1, 4), point_format=PointFormat(6))
     >>> header
     <LasHeader(1.4, <PointFormat(6, 0 bytes of extra dims)>)>
+
+    >>> header = LasHeader(version="1.4", point_format=6)
+    >>> header
+    <LasHeader(1.4, <PointFormat(6, 0 bytes of extra dims)>)>
     """
 
     #: The default version used when None is given to init
@@ -119,8 +123,8 @@ class LasHeader:
     def __init__(
         self,
         *,
-        version: Optional[Version] = None,
-        point_format: Optional[PointFormat] = None,
+        version: Optional[Union[Version, str]] = None,
+        point_format: Optional[Union[PointFormat, int]] = None,
     ) -> None:
         if isinstance(point_format, int):
             point_format = PointFormat(point_format)
