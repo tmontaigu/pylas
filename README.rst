@@ -7,7 +7,10 @@ Another way of reading point clouds in the LAS/LAZ in Python.
     :target: https://pylas.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://travis-ci.org/tmontaigu/pylas.svg?branch=master
+
+.. image:: https://github.com/tmontaigu/pylas/workflows/.github/workflows/test.yml/badge.svg
+    :target: https://github.com/tmontaigu/pylas/actions?query=workflow%3A.github%2Fworkflows%2Ftest.yml
+    :alt: CI status
 
 
 Examples
