@@ -56,6 +56,7 @@ User Guide
     basic
     examples
     lessbasic
+    migration
 
 API Documentation
 =================
