@@ -7,7 +7,7 @@ From 0.4.x to 1.0.0
 Changes in LAZ backend
 ______________________
 
-With pylas 1.0.0, the lazrs backend
+With pylas 1.0.0, the lazperf backend
 support was dropped, and the laszip backend
 changed from using the laszip executable
 to using laszip python bindings.
