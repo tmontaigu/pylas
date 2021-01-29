@@ -171,7 +171,7 @@ class LasData:
     def write(
         self,
         destination: str,
-        laz_backend: Union[LazBackend, Sequence[LazBackend]] = ...,
+        laz_backend: Optional[Union[LazBackend, Sequence[LazBackend]]] = ...,
     ) -> None:
         ...
 
@@ -180,13 +180,11 @@ class LasData:
         self,
         destination: BinaryIO,
         do_compress: Optional[bool] = ...,
-        laz_backend: Union[LazBackend, Sequence[LazBackend]] = ...,
+        laz_backend: Optional[Union[LazBackend, Sequence[LazBackend]]] = ...,
     ) -> None:
         ...
 
-    def write(
-        self, destination, do_compress=None, laz_backend=LazBackend.detect_available()
-    ):
+    def write(self, destination, do_compress=None, laz_backend=None):
         """Writes to a stream or file
 
         .. note::
@@ -215,8 +213,6 @@ class LasData:
             with open(destination, mode="wb+") as out:
                 self._write_to(out, do_compress=do_compress, laz_backend=laz_backend)
         else:
-            if do_compress is None:
-                do_compress = False
             self._write_to(
                 destination, do_compress=do_compress, laz_backend=laz_backend
             )
@@ -224,10 +220,8 @@ class LasData:
     def _write_to(
         self,
         out_stream: BinaryIO,
-        do_compress: bool = False,
-        laz_backend: Union[
-            LazBackend, Sequence[LazBackend]
-        ] = LazBackend.detect_available(),
+        do_compress: Optional[bool] = None,
+        laz_backend: Optional[Union[LazBackend, Sequence[LazBackend]]] = None,
     ) -> None:
         with LasWriter(
             out_stream,

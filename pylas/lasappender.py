@@ -26,15 +26,14 @@ class LasAppender:
     def __init__(
         self,
         dest: BinaryIO,
-        laz_backend: Union[LazBackend, Iterable[LazBackend]] = (
-            LazBackend.LazrsParallel,
-            LazBackend.Lazrs,
-        ),
+        laz_backend: Optional[Union[LazBackend, Iterable[LazBackend]]] = None,
         closefd: bool = True,
     ) -> None:
         if not dest.seekable():
             raise TypeError("Expected the 'dest' to be a seekable file object")
         header = LasHeader.read_from(dest)
+        if laz_backend is None:
+            laz_backend = LazBackend.detect_available()
 
         self.dest = dest
         self.header = header

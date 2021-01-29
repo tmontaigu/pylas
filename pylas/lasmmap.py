@@ -1,11 +1,10 @@
 import io
 import mmap
 
-from . import lasreader, lasdata
+from . import lasdata
 from .header import LasHeader
-from .point import PointFormat, record
+from .point import record
 from .typehints import PathLike
-from .vlrs import vlrlist
 
 WHOLE_FILE = 0
 
