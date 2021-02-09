@@ -502,6 +502,18 @@ class SubFieldView:
         argslist = SubFieldView._convert_sub_views_to_arrays(args)
         return func(*argslist, **kwargs)
 
+    @property
+    def dtype(self):
+        return self.array.dtype
+    
+    @property
+    def shape(self):
+        return self.array.shape
+
+    @property
+    def ndim(self):
+        return self.array.ndim
+
     def __array__(self, **kwargs):
         return self.masked_array()
 
@@ -603,6 +615,18 @@ class ScaledArrayView:
 
     def __array__(self):
         return self.scaled_array()
+
+    @property
+    def dtype(self):
+        return np.dtype(np.float64)
+    
+    @property
+    def shape(self):
+        return self.array.shape
+
+    @property
+    def ndim(self):
+        return self.array.ndim
 
     def __array_function__(self, func, types, args, kwargs):
         args = ScaledArrayView._convert_scaled_views_to_arrays(args)
