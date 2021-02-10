@@ -505,7 +505,7 @@ class SubFieldView:
     @property
     def dtype(self):
         return self.array.dtype
-    
+
     @property
     def shape(self):
         return self.array.shape
@@ -619,7 +619,7 @@ class ScaledArrayView:
     @property
     def dtype(self):
         return np.dtype(np.float64)
-    
+
     @property
     def shape(self):
         return self.array.shape
