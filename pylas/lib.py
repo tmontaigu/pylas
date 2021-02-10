@@ -25,7 +25,7 @@ def open_las(
     source,
     mode="r",
     closefd=True,
-    laz_backend=LazBackend.detect_available(),
+    laz_backend=None,
     header=None,
     do_compress=None,
 ) -> Union[LasReader, LasWriter, LasAppender]:
@@ -81,6 +81,7 @@ def open_las(
 
     do_compress: optional, bool, only meaningful in writing mode:
         - None (default) guess if compression is needed using the file extension
+        or if a laz_backend was explicitely provided
         - True compresses the file
         - False do not compress the file
 
@@ -120,8 +121,7 @@ def open_las(
         else:
             assert source.seekable()
             stream = source
-        if do_compress is None:
-            do_compress = False
+
         return LasWriter(
             stream,
             header=header,
@@ -139,7 +139,7 @@ def open_las(
         return LasAppender(stream, closefd=closefd, laz_backend=laz_backend)
 
     else:
-        raise ValueError("Unknown mode '{}'".format(mode))
+        raise ValueError(f"Unknown mode '{mode}'")
 
 
 def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
@@ -182,7 +182,7 @@ def mmap_las(filename):
 def create_las(
     *,
     point_format: Optional[Union[int, PointFormat]] = None,
-    file_version: Optional[Union[str, Version]] = None
+    file_version: Optional[Union[str, Version]] = None,
 ):
     """Function to create a new empty las data object
 

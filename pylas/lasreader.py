@@ -31,11 +31,11 @@ class LasReader:
         self,
         source: BinaryIO,
         closefd: bool = True,
-        laz_backend: Union[
-            LazBackend, Iterable[LazBackend]
-        ] = LazBackend.detect_available(),
+        laz_backend: Optional[Union[LazBackend, Iterable[LazBackend]]] = None,
     ):
         self.closefd = closefd
+        if LazBackend is not None:
+            laz_backend = LazBackend.detect_available()
         self.laz_backend = laz_backend
         self.header = LasHeader.read_from(source)
 

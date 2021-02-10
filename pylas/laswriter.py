@@ -29,35 +29,63 @@ except ModuleNotFoundError:
 
 
 class LasWriter:
-    """Allows to write a complete LAS/LAZ file to the destination."""
+    """
+    Allows to write a complete LAS/LAZ file to the destination.
+    """
 
     def __init__(
         self,
         dest: BinaryIO,
         header: LasHeader,
-        do_compress: bool = False,
-        laz_backend: Union[
-            LazBackend, Iterable[LazBackend]
-        ] = LazBackend.detect_available(),
+        do_compress: Optional[bool] = None,
+        laz_backend: Optional[Union[LazBackend, Iterable[LazBackend]]] = None,
         closefd: bool = True,
     ) -> None:
+        """
+        Parameters
+        ----------
+        dest:
+            file object where the LAS/LAZ will be written
+
+        header:
+            The header of the file to be written
+
+        do_compress: optional bool
+            whether the file data should be written as LAS (uncompressed)
+            or LAZ (compressed).
+            If None, the file won't be compressed, unless a laz_backend is provided
+
+        laz_backend: optional LazBackend or sequence of LazBackend
+            The LazBackend to use (or if it is a sequence the LazBackend to try)
+            for the compression
+
+        closefd: default True
+            should the `dest` be closed when the writer is closed
+        """
         self.closefd = closefd
         self.header = copy(header)
         self.header.partial_reset()
         self.header.maxs = [np.finfo("f8").min] * 3
         self.header.mins = [np.finfo("f8").max] * 3
 
-        self.do_compress = do_compress
-        self.laz_backend = laz_backend
         self.dest = dest
         self.done = False
 
         dims.raise_if_version_not_compatible_with_fmt(
             header.point_format.id, str(self.header.version)
         )
-        self.header.are_points_compressed = self.do_compress
 
-        if self.do_compress:
+        if laz_backend is not None:
+            if do_compress is None:
+                do_compress = True
+            self.laz_backend = laz_backend
+        else:
+            if do_compress is None:
+                do_compress = False
+            self.laz_backend = LazBackend.detect_available()
+        self.header.are_points_compressed = do_compress
+
+        if do_compress:
             self.point_writer: IPointWriter = self._create_laz_backend(self.laz_backend)
         else:
             self.point_writer: IPointWriter = UncompressedPointWriter(self.dest)

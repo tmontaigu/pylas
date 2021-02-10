@@ -1,3 +1,5 @@
+import io
+
 import numpy as np
 import pytest
 
@@ -139,3 +141,13 @@ def test_create_fmt_6(file1_4):
         assert np.allclose(new[dim_name], file1_4[dim_name]), "{} not equal".format(
             dim_name
         )
+
+
+@pytest.mark.parametrize("laz_backend", (None,) + pylas.LazBackend.detect_available())
+def test_writing_empty_file(laz_backend):
+    las = pylas.create()
+    with io.BytesIO() as out:
+        if laz_backend is None:
+            las.write(out)
+        else:
+            las.write(out, laz_backend=laz_backend)
