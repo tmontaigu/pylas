@@ -104,3 +104,10 @@ it is easy to copy them to numpy arrays:
     array = np.array(las.return_number)
     # array([1, 1, 1, ..., 1, 1, 1], dtype=uint8)
 
+
+
+Changes in extra bytes creation
+_______________________________
+
+The API to create extra bytes changed slightly, now the parameters needed
+(and the optional ones) are coupled into :class:`.ExtraBytesParams`

@@ -5,6 +5,9 @@ Basic Manipulation
 Opening & Reading
 =================
 
+Reading
+-------
+
 Reading is done using :func:`pylas.read` function.
 This function will read everything in the file (Header, vlrs, point records, ...) and return an object
 that you can use to access to the data.
@@ -16,8 +19,11 @@ that you can use to access to the data.
     las = pylas.read('somefile.las')
     print(np.unique(las.classification))
 
+Opening
+-------
+
 pylas can also :func:`pylas.open` files reading just the header and vlrs but not the points, this is useful
-if you are interested in metadas that are contained in the header and do not need to read the points.
+if you are interested in metadata that are contained in the header and do not need to read the points.
 
 .. code:: python
 
@@ -29,6 +35,8 @@ if you are interested in metadas that are contained in the header and do not nee
          if f.header.point_count < 100_000_000:
              las = pylas.read(f)
 
+Chunked reading
+---------------
 
 Sometimes files are big, too big to be read entirely and fit into your RAM.
 The object returned by the :func:`pylas.open` function, :class:`.LasReader`
@@ -44,33 +52,19 @@ processing on large files (splitting, filtering, etc)
             do_something_with(points)
 
 
-
-Converting
-==========
-
-pylas also offers the ability to convert a file between the different version and point format available
-(as long as they are compatible).
-
-To convert, use the :func:`pylas.convert`
-
-Creating
-========
-
-Creating a new Las from scratch is simple.
-Use :func:`pylas.create`.
-
-
 Writing
 =======
+
 
 To be able to write a las file you will need a :class:`.LasData`.
 You obtain this type of object by using one of the function described in the section above
 use its method :meth:`.LasData.write` to write to a file or a stream.
 
+Chunked Writing
+---------------
 
 Similar to :class:`.LasReader` there exists a way to write a file
 chunk by chunk.
-
 
 .. code:: python
 
@@ -82,6 +76,21 @@ chunk by chunk.
                 writer.write_points(points[points.classification == 2]
 
 .. _accessing_header:
+
+Creating
+========
+
+Creating a new Las from scratch is simple.
+Use :func:`pylas.create`.
+
+
+Converting
+==========
+
+pylas also offers the ability to convert a file between the different version and point format available
+(as long as they are compatible).
+
+To convert, use the :func:`pylas.convert`
 
 Accessing the file header
 =========================

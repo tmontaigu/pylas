@@ -9,7 +9,7 @@ Extra Dimensions
 The LAS Specification version 1.4 defines a standard way to add extra dimensions to
 a LAS file.
 
-In pylas you can add extra dimensions using the :meth:`pylas.lasdata.LasData.add_extra_dim` function
+In pylas you can add extra dimensions using the :meth:`.LasData.add_extra_dim` function
 
 
 The Allowed base types for an extra dimensions are:
@@ -69,7 +69,7 @@ and an array field of 3 doubles for each points.
 
 .. note::
 
-   If you are adding multiple extra dimensions use :meth:`pylas.LasData.add_extra_dims`
+   If you are adding multiple extra dimensions use :meth:`.LasData.add_extra_dims`
    as it is more efficient (it allows to allocate all the dimensions at once instead
    of re-allocating each time a new dimension is added.
 
@@ -83,7 +83,7 @@ You can add you own VLRs to a file
 Fast & Easy way
 ---------------
 
-The fastest and easiest way to add your custom VLR to a file is to create a :class:`pylas.vlrs.rawvlr.VLR`,
+The fastest and easiest way to add your custom VLR to a file is to create a :class:`.VLR`,
 set its record_data (which must be bytes) and add it to the VLR list.
 
 
@@ -111,7 +111,7 @@ into a better structure, so you will have to find the VLR in the vlrs list and p
 one pylas is done.
 
 One way to automate this task is to create your own Custom VLR Class that extends
-:class:`pylas.vlrs.BaseKnownVLR` by implementing the missing methods pylas
+:class:`.BaseKnownVLR` by implementing the missing methods pylas
 will be able to automatically parse the VLR when reading the file & write it when saving the file.
 
 >>> class CustomVLR(pylas.vlrs.BaseKnownVLR):
