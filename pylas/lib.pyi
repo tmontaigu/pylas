@@ -1,15 +1,9 @@
-from typing import Union, BinaryIO, Iterable, Optional, overload, Literal
+from typing import Union, Iterable, BinaryIO, overload, Optional
 
-from . import LasWriter, PointFormat
-from .compression import LazBackend
-from .header import LasHeader
-from .lasappender import LasAppender
-from .lasdata import LasData
-from .lasmmap import LasMMAP
-from .lasreader import LasReader
-from .typehints import PathLike
-
-LazBackend = LazBackend
+from compression import LazBackend
+from lasappender import LasAppender
+from pylas import LasWriter, LasHeader, LasReader
+from typehints import Literal, PathLike
 @overload
 def open_las(
     source: PathLike,
@@ -53,25 +47,11 @@ def open_las(
     closefd: bool = ...,
     laz_backend: Union[LazBackend, Iterable[LazBackend]] = ...,
 ) -> LasAppender: ...
-def read_las(
-    source: Union[BinaryIO, PathLike],
-    closefd: bool = True,
-    laz_backend: Union[
-        LazBackend, Iterable[LazBackend]
-    ] = LazBackend.detect_available(),
-) -> LasData: ...
-def mmap_las(filename: PathLike) -> LasMMAP: ...
-def merge_las(las_files: Union[Iterable[LasData], LasData]) -> LasData: ...
-def create_las(
-    *, point_format: Union[int, PointFormat] = 0, file_version: Optional[str] = 0
-) -> LasData: ...
-def convert(
-    source_las: LasData,
-    *,
-    point_format_id: Optional[int] = ...,
-    file_version: Optional[str] = ...
-) -> LasData: ...
-def create_from_header(header: LasHeader) -> LasData: ...
-def write_then_read_again(
-    las: LasData, do_compress: bool = ..., laz_backend: LazBackend = ...
-) -> LasData: ...
+def open_las(
+    source,
+    mode="r",
+    closefd=True,
+    laz_backend=None,
+    header=None,
+    do_compress=None,
+): ...

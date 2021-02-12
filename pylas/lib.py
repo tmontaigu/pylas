@@ -6,7 +6,7 @@ import io
 import logging
 import os
 from pathlib import Path
-from typing import Union, Optional
+from typing import Union, Optional, Iterable, BinaryIO
 
 from .compression import LazBackend
 from .errors import PylasError
@@ -17,18 +17,21 @@ from .lasmmap import LasMMAP
 from .lasreader import LasReader
 from .laswriter import LasWriter
 from .point import dims, record, PointFormat
+from .typehints import PathLike
 
 logger = logging.getLogger(__name__)
 
 
+# When python 3.8 becomes our min supported version
+# we'll be able to use combinations of Literal + overload
 def open_las(
-    source,
-    mode="r",
-    closefd=True,
-    laz_backend=None,
-    header=None,
-    do_compress=None,
-) -> Union[LasReader, LasWriter, LasAppender]:
+    source: Union[PathLike, BinaryIO],
+    mode: str = "r",
+    closefd: bool = True,
+    laz_backend: Optional[Union[LazBackend, Iterable[LazBackend]]] = None,
+    header: Optional[LasHeader] = None,
+    do_compress: Optional[bool] = None,
+):
     """The pylas.open opens a LAS/LAZ file in one of the 3 supported
     mode:
 
@@ -142,7 +145,11 @@ def open_las(
         raise ValueError(f"Unknown mode '{mode}'")
 
 
-def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
+def read_las(
+    source: Union[PathLike, BinaryIO],
+    closefd: bool = True,
+    laz_backend: Optional[Union[LazBackend, Iterable[LazBackend]]] = None,
+) -> LasData:
     """Entry point for reading las data in pylas
 
     Reads the whole file into memory.
@@ -170,11 +177,11 @@ def read_las(source, closefd=True, laz_backend=LazBackend.detect_available()):
     pylas.lasdatas.base.LasBase
         The object you can interact with to get access to the LAS points & VLRs
     """
-    with open_las(source, closefd=closefd, laz_backend=laz_backend) as reader:
+    with open_las(source, mode="r", closefd=closefd, laz_backend=laz_backend) as reader:
         return reader.read()
 
 
-def mmap_las(filename):
+def mmap_las(filename: PathLike) -> LasMMAP:
     """MMap a file, much like laspy did"""
     return LasMMAP(filename)
 
@@ -183,7 +190,7 @@ def create_las(
     *,
     point_format: Optional[Union[int, PointFormat]] = None,
     file_version: Optional[Union[str, Version]] = None,
-):
+) -> LasData:
     """Function to create a new empty las data object
 
     .. note::
@@ -227,7 +234,12 @@ def create_las(
     return LasData(header=header)
 
 
-def convert(source_las, *, point_format_id=None, file_version=None):
+def convert(
+    source_las: LasData,
+    *,
+    point_format_id: Optional[int] = None,
+    file_version: Optional[str] = None,
+) -> LasData:
     """Converts a Las from one point format to another
     Automatically upgrades the file version if source file version is not compatible with
     the new point_format_id
@@ -329,8 +341,12 @@ def convert(source_las, *, point_format_id=None, file_version=None):
 
 
 def write_then_read_again(
-    las, do_compress=False, laz_backend=LazBackend.detect_available()
-):
+    las: LasData,
+    do_compress: bool = False,
+    laz_backend: Union[
+        LazBackend, Iterable[LazBackend]
+    ] = LazBackend.detect_available(),
+) -> LasData:
     """writes the given las into memory using BytesIO and
     reads it again, returning the newly read file.
 
