@@ -65,7 +65,6 @@ a bit field would no propagate to the real array.
     # array([7, 4, 4, ..., 1, 1, 1], dtype=uint8)
 
 
-
 In order to try to solve this inconsistency, pylas >= 0.5.0
 introduced the :class:`.SubFieldView` class that is meant to propagate
 modifications to the real array, and tries to act like a real numpy array.
@@ -103,6 +102,27 @@ it is easy to copy them to numpy arrays:
 
     array = np.array(las.return_number)
     # array([1, 1, 1, ..., 1, 1, 1], dtype=uint8)
+
+
+The logic is also the same for 'Scaled dimensions' such as x, y, z and scaled extra bytes,
+where a ScaledArrayView class has been introduced
+
+.. code-block:: python
+
+    import pylas
+    import numpy as np
+
+    las = pylas.read("pylastests/simple.las")
+    print(las.x)
+    # <ScaledArrayView([637012.24 636896.33 636784.74 ... 637501.67 637433.27 637342.85])>>
+
+    # ScaledArray view should behave as much as possible as a numpy array
+    # However if something breaks in your code when upgrading, and / or
+    # you need a true numpy array you can get one by doing
+
+    array = np.array(las.x)
+    # array([637012.24, 636896.33, 636784.74, ..., 637501.67, 637433.27,
+    #        637342.85])
 
 
 
