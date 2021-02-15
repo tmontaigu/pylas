@@ -103,6 +103,10 @@ class LasData:
     def vlrs(self) -> VLRList:
         return self.header.vlrs
 
+    @vlrs.setter
+    def vlrs(self, vlrs) -> None:
+        self.header.vlrs = VLRList(vlrs)
+
     def add_extra_dim(self, params: ExtraBytesParams) -> None:
         """Adds a new extra dimension to the point record
 
