@@ -461,12 +461,15 @@ class LasHeader:
                 header.number_of_points_by_return[i] = int.from_bytes(
                     stream.read(8), little_endian, signed=False
                 )
+
         if seekable:
             current_pos = stream.tell()
-            if current_pos < header_size:
-                header.extra_header_bytes = stream.read(header_size - current_pos)
-            elif current_pos > header_size:
-                raise PylasError("Incoherent header size")
+        else:
+            current_pos = LAS_HEADERS_SIZE[str(header.version)]
+        if current_pos < header_size:
+            header.extra_header_bytes = stream.read(header_size - current_pos)
+        elif current_pos > header_size:
+            raise PylasError("Incoherent header size")
 
         header.vlrs = VLRList.read_from(stream, num_to_read=number_of_vlrs)
 
