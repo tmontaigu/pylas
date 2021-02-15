@@ -550,6 +550,21 @@ class SubFieldView:
         else:
             return self._do_comparison(other, operator.ne)
 
+    def __add__(self, other):
+        return np.array(self) + other
+
+    def __sub__(self, other):
+        return np.array(self) - other
+
+    def __mul__(self, other):
+        return np.array(self) * other
+
+    def __truediv__(self, other):
+        return np.array(self) / other
+
+    def __floordiv__(self, other):
+        return np.array(self) // other
+
     def __setitem__(self, key, value):
         if np.max(value) > self.max_value_allowed:
             raise OverflowError(
@@ -689,6 +704,21 @@ class ScaledArrayView:
             )
         else:
             return self.scaled_array() != other
+
+    def __add__(self, other):
+        return np.array(self) + other
+
+    def __sub__(self, other):
+        return np.array(self) - other
+
+    def __mul__(self, other):
+        return np.array(self) * other
+
+    def __truediv__(self, other):
+        return np.array(self) / other
+
+    def __floordiv__(self, other):
+        return np.array(self) // other
 
     def __lt__(self, other):
         return self.array < self._remove_scale(other)
