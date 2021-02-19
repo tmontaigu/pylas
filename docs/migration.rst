@@ -131,3 +131,22 @@ _______________________________
 
 The API to create extra bytes changed slightly, now the parameters needed
 (and the optional ones) are coupled into :class:`.ExtraBytesParams`
+
+
+Other changes
+_____________
+
+The `points` attribute of as :class:`.LasData` used to return a numpy array
+it now returns a :class:`.PackedPointRecord` to get the same array as before,
+use the `array` property of the point record.
+
+.. code-block:: python
+
+    # pylas <= 0.4.3
+    las = pylas.read("somefile.las")
+    array = las.points
+
+    # pylas 1.0.0
+    las = pylas.read("somefile.las")
+    array = las.points.array
+ 
