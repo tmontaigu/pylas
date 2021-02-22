@@ -34,7 +34,7 @@ class LasReader:
         laz_backend: Optional[Union[LazBackend, Iterable[LazBackend]]] = None,
     ):
         self.closefd = closefd
-        if LazBackend is not None:
+        if LazBackend is None:
             laz_backend = LazBackend.detect_available()
         self.laz_backend = laz_backend
         self.header = LasHeader.read_from(source)
