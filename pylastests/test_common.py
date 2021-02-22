@@ -190,7 +190,7 @@ def test_can_write_then_re_read_files(las, do_compress):
 
 
 def test_point_record_setitem_scaled_view():
-    las = pylas.read("pylastests/simple.las")
+    las = pylas.read(simple_las)
     las.add_extra_dim(
         pylas.ExtraBytesParams(
             'lol',
