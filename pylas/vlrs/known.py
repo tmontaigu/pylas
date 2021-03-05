@@ -570,7 +570,7 @@ class WktMathTransformVlr(BaseKnownVLR):
 
     @staticmethod
     def official_record_ids():
-        return (2112,)
+        return (2111,)
 
 
 class WktCoordinateSystemVlr(BaseKnownVLR):
