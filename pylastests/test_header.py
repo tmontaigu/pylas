@@ -1,5 +1,9 @@
+import io
+
 import pylas
+from pylas import LasHeader
 from pylastests import test_common
+from datetime import date
 
 all_las_but_1_4 = test_common.all_las_but_1_4
 
@@ -116,3 +120,15 @@ def test_point_count_stays_synchronized():
     las.points = las.points[:120]
     assert 120 == las.header.point_count
     assert las.header.point_count == len(las.points)
+
+
+def test_header_date():
+    las = pylas.read(test_common.extra_bytes_las)
+    with io.BytesIO() as out:
+        las.header.write_to(out)
+        out.seek(0)
+        header_2 = LasHeader.read_from(out)
+
+    expected_date = date(year=2015, month=2, day=22)
+    assert las.header.creation_date == expected_date
+    assert las.header.creation_date == header_2.creation_date

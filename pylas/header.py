@@ -409,10 +409,10 @@ class LasHeader:
         header.system_identifier = stream.read(32).rstrip(b"\0").decode()
         header.generating_software = stream.read(32).rstrip(b"\0").decode()
 
-        creation_year = int.from_bytes(stream.read(2), little_endian, signed=False)
         creation_day_of_year = int.from_bytes(
             stream.read(2), little_endian, signed=False
         )
+        creation_year = int.from_bytes(stream.read(2), little_endian, signed=False)
         try:
             header.creation_date = date(creation_year, 1, 1) + timedelta(
                 creation_day_of_year - 1
@@ -543,12 +543,12 @@ class LasHeader:
         if self.creation_date is None:
             self.creation_date = date.today()
 
-        stream.write(self.creation_date.year.to_bytes(2, little_endian, signed=False))
         stream.write(
             self.creation_date.timetuple().tm_yday.to_bytes(
                 2, little_endian, signed=False
             )
         )
+        stream.write(self.creation_date.year.to_bytes(2, little_endian, signed=False))
 
         header_size = LAS_HEADERS_SIZE[str(self.version)]
         if write_vlrs is True:
