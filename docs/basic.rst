@@ -73,7 +73,7 @@ chunk by chunk.
     with pylas.open("some_big_file.laz") as f:
         with pylas.open("grounds.laz", mode="w", header=f.header) as writer:
             for points in f.chunk_iterator(1_234_567):
-                writer.write_points(points[points.classification == 2]
+                writer.write_points(points[points.classification == 2])
 
 .. _accessing_header:
 
