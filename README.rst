@@ -1,6 +1,19 @@
 pylas
 -----
 
+.. important::
+
+    pylas is deprecated in favor of laspy_ 2.0
+
+    laspy 2.0 being essentially what pylas 1.0 was meant to be,
+    moving from pylas >= 0.5 to laspy 2.0 should be as simple as
+    doing a text replace of 'pylas' with 'laspy'
+
+    moving from pylas 0.4.x to laspy 2.0 may require small adjustments
+    (the same as would have been needed to upgrade to pylas 0.5/1.0)
+
+.. _laspy: https://github.com/laspy/laspy
+
 Another way of reading point clouds in the LAS/LAZ in Python.
 
 .. image:: https://readthedocs.org/projects/pylas/badge/?version=latest
